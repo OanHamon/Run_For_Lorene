@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use App\Notifications\CodeEmailNotification;
+use App\Services\Auth\CodeEmail;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
 
@@ -159,4 +161,135 @@ test('un compte connecté mais non vérifié est envoyé vers la saisie du code'
 test('déconnexion', function () {
     $this->actingAs(User::factory()->create())->post('/deconnexion')->assertRedirect('/');
     $this->assertGuest();
+});
+
+test("après 5 essais ratés, on ne peut pas redemander un code aussitôt (pas de force brute)", function () {
+    $user = User::factory()->create(['email' => 'camille@exemple.fr']);
+
+    $composant = Volt::test('auth.identification')
+        ->set('email', 'camille@exemple.fr')
+        ->call('continuerEmail')
+        ->call('recevoirCode');
+
+    $bon = codeEnvoyeA($user);
+    $faux = $bon === '111111' ? '222222' : '111111';
+
+    foreach (range(1, 5) as $_) {
+        $composant->set('code', $faux)->call('validerCode');
+    }
+
+    $composant->call('recevoirCode')->assertHasErrors('code');
+
+    Notification::assertSentToTimes($user, CodeEmailNotification::class, 1);
+});
+
+test("le quota de codes par heure est respecté", function () {
+    $user = User::factory()->create(['email' => 'camille@exemple.fr']);
+    $codes = app(CodeEmail::class);
+
+    foreach (range(1, CodeEmail::ENVOIS_MAX_PAR_HEURE) as $_) {
+        expect($codes->envoyer($user))->toBeTrue();
+        $this->travel(CodeEmail::DELAI_RENVOI_SECONDES + 1)->seconds();
+    }
+
+    expect($codes->envoyer($user))->toBeFalse();
+    Notification::assertSentToTimes($user, CodeEmailNotification::class, CodeEmail::ENVOIS_MAX_PAR_HEURE);
+});
+
+test("changer la casse de l'email ne contourne pas la limite d'essais de mot de passe", function () {
+    User::factory()->create(['email' => 'camille@exemple.fr']);
+
+    $composant = Volt::test('auth.identification')
+        ->set('email', 'camille@exemple.fr')
+        ->call('continuerEmail');
+
+    foreach (['Camille@exemple.fr', 'CAMILLE@exemple.fr', 'cAmille@exemple.fr', 'caMille@exemple.fr', 'camIlle@exemple.fr'] as $variante) {
+        $composant->set('email', $variante)->set('password', 'faux')->call('seConnecter');
+    }
+
+    $composant->set('email', 'CamillE@exemple.fr')->set('password', 'password')->call('seConnecter')->assertHasErrors('password');
+    $this->assertGuest();
+});
+
+test("un compte créé par un tiers avec mon adresse : son mot de passe est effacé quand je vérifie l'adresse", function () {
+    // Le tiers crée le compte avec l'adresse de la victime, sans pouvoir la vérifier.
+    Volt::test('auth.identification')
+        ->set('email', 'victime@exemple.fr')->call('continuerEmail')
+        ->set('prenom', 'Pirate')->set('nom', 'X')->set('password', 'motdepassedutiers')
+        ->call('creerCompte');
+
+    $user = User::where('email', 'victime@exemple.fr')->first();
+    $this->travel(CodeEmail::DELAI_RENVOI_SECONDES + 1)->seconds();
+
+    // La victime se connecte par code (« mot de passe oublié »).
+    $victime = Volt::test('auth.identification')
+        ->set('email', 'victime@exemple.fr')->call('continuerEmail')
+        ->assertSet('mode', 'password')
+        ->call('renvoyerCode');
+
+    $code = null;
+    Notification::assertSentTo($user, CodeEmailNotification::class, function ($n) use (&$code) {
+        $code = $n->code;
+
+        return true;
+    });
+
+    $victime->set('code', $code)->call('validerCode')->assertRedirect(route('espace'));
+    expect($user->fresh()->mot_de_passe)->toBeNull();
+
+    // Le tiers ne peut plus utiliser son mot de passe.
+    auth()->logout();
+    Volt::test('auth.identification')
+        ->set('email', 'victime@exemple.fr')->call('continuerEmail')
+        ->assertSet('mode', 'code');
+    $this->assertGuest();
+});
+
+test("le titulaire qui a créé son compte garde son mot de passe après le code", function () {
+    $composant = Volt::test('auth.identification')
+        ->set('email', 'lea@exemple.fr')->call('continuerEmail')
+        ->set('prenom', 'Léa')->set('nom', 'Durand')->set('password', 'motdepasse1')
+        ->call('creerCompte');
+
+    $user = User::where('email', 'lea@exemple.fr')->first();
+    $composant->set('code', codeEnvoyeA($user))->call('validerCode')->assertRedirect(route('espace'));
+
+    expect(Hash::check('motdepasse1', $user->fresh()->mot_de_passe))->toBeTrue();
+});
+
+test("la page « vérifie ton email » renvoie un compte déjà vérifié vers son espace", function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/verification-email')->assertRedirect(route('espace'));
+    Notification::assertNothingSent();
+});
+
+test("mot de passe oublié : après connexion par code, on redéfinit son mot de passe sans l'ancien", function () {
+    $user = User::factory()->create(['email' => 'camille@exemple.fr']);
+
+    $composant = Volt::test('auth.identification')
+        ->set('email', 'camille@exemple.fr')->call('continuerEmail')->call('recevoirCode');
+    $composant->set('code', codeEnvoyeA($user))->call('validerCode');
+
+    Volt::test('settings.password')
+        ->set('password', 'nouveaumotdepasse')
+        ->set('password_confirmation', 'nouveaumotdepasse')
+        ->call('updatePassword')
+        ->assertHasNoErrors();
+
+    expect(Hash::check('nouveaumotdepasse', $user->fresh()->mot_de_passe))->toBeTrue();
+});
+
+test("après une connexion par mot de passe, le mot de passe actuel reste exigé", function () {
+    $user = User::factory()->create(['email' => 'camille@exemple.fr']);
+
+    Volt::test('auth.identification')
+        ->set('email', 'camille@exemple.fr')->call('continuerEmail')
+        ->set('password', 'password')->call('seConnecter');
+
+    Volt::test('settings.password')
+        ->set('password', 'nouveaumotdepasse')
+        ->set('password_confirmation', 'nouveaumotdepasse')
+        ->call('updatePassword')
+        ->assertHasErrors('current_password');
 });

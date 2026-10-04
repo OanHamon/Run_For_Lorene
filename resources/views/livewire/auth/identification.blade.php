@@ -21,10 +21,20 @@ use Livewire\Volt\Component;
  * Un compte n'est connecté qu'une fois son adresse vérifiée. Après connexion, la page est
  * réellement rechargée vers $destination : Auth::login() régénère la session et donc le
  * jeton CSRF déjà chargé dans la page.
+ *
+ * Les propriétés publiques sont modifiables depuis le navigateur : chaque action relit le
+ * compte à partir de l'email normalisé et ne se fie pas à $mode.
  */
 new class extends Component {
     #[Locked]
     public string $destination = '';
+
+    /**
+     * Compte dont le mot de passe a été prouvé dans ce formulaire (connexion ou création).
+     * Permet, au moment du code, de reconnaître le vrai titulaire d'un compte non vérifié.
+     */
+    #[Locked]
+    public ?int $motDePasseProuvePour = null;
 
     public string $mode = 'email';
 
@@ -46,6 +56,12 @@ new class extends Component {
 
         // Utilisé par la page « vérifie ton email » pour un compte connecté mais non vérifié.
         if ($mode === 'code' && Auth::check()) {
+            if (Auth::user()->hasVerifiedEmail()) {
+                $this->redirect($this->destination);
+
+                return;
+            }
+
             $this->email = Auth::user()->email;
             $this->mode = 'code';
 
@@ -68,12 +84,29 @@ new class extends Component {
 
         $this->resetErrorBag();
         $this->info = null;
-        $this->mode = $this->utilisateur() ? 'password' : 'creation';
+        $this->motDePasseProuvePour = null;
+
+        $user = $this->utilisateur();
+
+        if (! $user) {
+            $this->mode = 'creation';
+
+            return;
+        }
+
+        // Compte sans mot de passe (connexion par code uniquement) : inutile de le demander.
+        if (! $user->mot_de_passe) {
+            $this->recevoirCode();
+
+            return;
+        }
+
+        $this->mode = 'password';
     }
 
     public function changerEmail(): void
     {
-        $this->reset('password', 'code', 'info');
+        $this->reset('password', 'code', 'info', 'motDePasseProuvePour');
         $this->resetErrorBag();
         $this->mode = 'email';
     }
@@ -82,26 +115,35 @@ new class extends Component {
     {
         $this->validate(['password' => 'required|string'], [], ['password' => 'mot de passe']);
 
-        $cle = 'mdp:'.$this->email.'|'.request()->ip();
-        if ($this->limiter($cle, 5, 'password')) {
+        $user = $this->utilisateur();
+
+        // Limites par compte (quelle que soit l'adresse IP) et par adresse IP (quel que soit le compte).
+        $cleCompte = 'mdp:'.($user?->id_user ?? $this->email);
+        $cleIp = 'mdp-ip:'.request()->ip();
+        if ($this->limiter($cleCompte, 5, 'password', compter: false) || $this->limiter($cleIp, 20, 'password', compter: false)) {
+            $this->password = '';
+
             return null;
         }
 
-        $user = $this->utilisateur();
-
         if (! $user || ! $user->mot_de_passe || ! Hash::check($this->password, $user->mot_de_passe)) {
-            RateLimiter::hit($cle, 60);
+            RateLimiter::hit($cleCompte, 60);
+            RateLimiter::hit($cleIp, 60);
+            $this->password = '';
             $this->addError('password', 'Mot de passe incorrect. Tu peux aussi recevoir un code par email.');
 
             return null;
         }
 
-        RateLimiter::clear($cle);
+        RateLimiter::clear($cleCompte);
+        $this->password = '';
+        $this->motDePasseProuvePour = $user->id_user;
 
         if (! $user->hasVerifiedEmail()) {
-            $this->envoyerCode($user);
-            $this->info = 'Il reste à confirmer ton adresse : on vient de t\'envoyer un code.';
             $this->mode = 'code';
+            $this->info = $this->envoyerCode($user)
+                ? 'Il reste à confirmer ton adresse : on vient de t\'envoyer un code.'
+                : null;
 
             return null;
         }
@@ -120,6 +162,7 @@ new class extends Component {
         }
 
         $this->resetErrorBag();
+        $this->password = '';
         $this->mode = 'code';
 
         if (! app(CodeEmail::class)->aUnCodeActif($user)) {
@@ -156,6 +199,7 @@ new class extends Component {
         ]);
 
         $this->password = '';
+        $this->motDePasseProuvePour = $user->id_user;
         $this->envoyerCode($user);
         $this->info = null;
         $this->mode = 'code';
@@ -168,6 +212,11 @@ new class extends Component {
             'code.required' => 'Saisis le code à 6 chiffres reçu par email.',
             'code.digits' => 'Le code contient 6 chiffres.',
         ]);
+
+        // En plus des 5 essais par code : limite par adresse IP, tous comptes confondus.
+        if ($this->limiter('code-ip:'.request()->ip(), 20, 'code')) {
+            return null;
+        }
 
         $user = $this->utilisateur();
 
@@ -193,10 +242,18 @@ new class extends Component {
         }
 
         if (! $user->hasVerifiedEmail()) {
+            // Le compte a pu être créé par un tiers avec cette adresse : si son mot de passe
+            // n'a pas été prouvé ici, on l'efface, sinon ce tiers pourrait se connecter au
+            // compte une fois l'adresse vérifiée par son vrai titulaire.
+            if ($this->motDePasseProuvePour !== $user->id_user) {
+                $user->forceFill(['mot_de_passe' => null]);
+                $user->setRememberToken(Str::random(60));
+            }
+
             $user->markEmailAsVerified();
         }
 
-        return $this->connecter($user);
+        return $this->connecter($user, parCode: true);
     }
 
     public function renvoyerCode(): void
@@ -207,51 +264,64 @@ new class extends Component {
             return;
         }
 
-        $attente = app(CodeEmail::class)->secondesAvantRenvoi($user);
-        if ($attente > 0) {
-            $this->addError('code', "Patiente encore {$attente} s avant de redemander un code.");
-
-            return;
-        }
-
         $this->resetErrorBag();
         $this->code = '';
-        $this->envoyerCode($user);
-        $this->info = 'Nouveau code envoyé.';
+
+        if ($this->envoyerCode($user)) {
+            $this->info = 'Nouveau code envoyé.';
+        }
     }
 
     // ------------------------------------------------------------------
 
+    /** Le compte de l'email saisi, toujours relu à partir de l'adresse normalisée. */
     private function utilisateur(): ?User
     {
+        $this->email = Str::lower(trim($this->email));
+
         return $this->email !== '' ? User::where('email', $this->email)->first() : null;
     }
 
-    private function envoyerCode(User $user): void
+    /** Vrai si un code vient de partir ; sinon, message d'attente posé sur le champ code. */
+    private function envoyerCode(User $user): bool
     {
         $codes = app(CodeEmail::class);
 
-        if ($codes->secondesAvantRenvoi($user) > 0 && $codes->aUnCodeActif($user)) {
-            return;
+        if ($codes->envoyer($user)) {
+            return true;
         }
 
-        $codes->envoyer($user);
+        $attente = $codes->secondesAvantRenvoi($user);
+        $this->addError('code', $codes->aUnCodeActif($user)
+            ? "Patiente encore {$attente} s avant de redemander un code."
+            : 'Trop de codes demandés. Réessaie dans '.(int) ceil($attente / 60).' min.');
+
+        return false;
     }
 
-    private function connecter(User $user)
+    private function connecter(User $user, bool $parCode = false)
     {
         Auth::login($user, remember: true);
         session()->regenerate();
         session()->forget('url.intended');
 
+        // Le code prouve l'accès à la boîte mail : il vaut confirmation du mot de passe et
+        // permet de redéfinir celui-ci dans les réglages (cas « mot de passe oublié »).
+        if ($parCode) {
+            session()->put('auth.password_confirmed_at', time());
+        }
+
         return $this->redirect($this->destination);
     }
 
-    /** Vrai (et message d'erreur posé) si la limite de tentatives est atteinte. */
-    private function limiter(string $cle, int $max, string $champ = 'email'): bool
+    /**
+     * Vrai (et message d'erreur posé) si la limite de tentatives est atteinte.
+     * Avec $compter, la tentative en cours est décomptée ; sinon l'appelant ne décompte que les échecs.
+     */
+    private function limiter(string $cle, int $max, string $champ = 'email', bool $compter = true): bool
     {
         if (! RateLimiter::tooManyAttempts($cle, $max)) {
-            if ($champ === 'email') {
+            if ($compter) {
                 RateLimiter::hit($cle, 60);
             }
 

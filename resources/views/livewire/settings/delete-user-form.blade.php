@@ -12,9 +12,12 @@ new class extends Component {
      */
     public function deleteUser(Logout $logout): void
     {
-        $this->validate([
-            'password' => ['required', 'string', 'current_password'],
-        ]);
+        // Compte sans mot de passe, ou connecté par code à l'instant : rien à confirmer.
+        if (Auth::user()->doitConfirmerMotDePasse()) {
+            $this->validate([
+                'password' => ['required', 'string', 'current_password'],
+            ]);
+        }
 
         tap(Auth::user(), $logout(...))->delete();
 
@@ -44,7 +47,9 @@ new class extends Component {
                 </flux:subheading>
             </div>
 
-            <flux:input wire:model="password" id="password" label="{{ __('Password') }}" type="password" name="password" />
+            @if (auth()->user()->doitConfirmerMotDePasse())
+                <flux:input wire:model="password" id="password" label="{{ __('Password') }}" type="password" name="password" />
+            @endif
 
             <div class="flex justify-end space-x-2">
                 <flux:modal.close>

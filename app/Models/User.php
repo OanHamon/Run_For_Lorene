@@ -61,6 +61,27 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->mot_de_passe;
     }
 
+    /** Utilisé par Laravel pour réécrire le hash (rehash à la connexion, logoutOtherDevices). */
+    public function getAuthPasswordName(): string
+    {
+        return 'mot_de_passe';
+    }
+
+    /**
+     * Faut-il redemander le mot de passe actuel avant une action sensible ? Non si le compte
+     * n'en a pas (connexion par code uniquement) ou s'il vient de se connecter par code.
+     */
+    public function doitConfirmerMotDePasse(): bool
+    {
+        if (! $this->mot_de_passe) {
+            return false;
+        }
+
+        $confirmeLe = (int) session('auth.password_confirmed_at', 0);
+
+        return time() - $confirmeLe > (int) config('auth.password_timeout', 10800);
+    }
+
     /**
      * La date de vérification est stockée dans `email_verifie_le` (spec) et non
      * `email_verified_at` (défaut du trait MustVerifyEmail).

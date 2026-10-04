@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\RateLimiter;
  * dans les deux cas, il prouve que la personne a accès à la boîte mail.
  *
  * Le code est stocké haché en cache, valable 15 minutes, invalidé après 5 essais ratés.
+ * Les envois sont limités (un par minute, six par heure) : sans cette limite, redemander un
+ * code après 5 essais ratés permettrait de deviner le code par force brute.
  */
 class CodeEmail
 {
@@ -26,26 +28,33 @@ class CodeEmail
 
     public const ENVOIS_MAX_PAR_HEURE = 6;
 
-    public function envoyer(User $user): void
+    /** Faux (et rien n'est envoyé) si le délai entre deux envois ou le quota horaire n'est pas respecté. */
+    public function envoyer(User $user): bool
     {
+        if ($this->secondesAvantRenvoi($user) > 0) {
+            return false;
+        }
+
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $expireA = now()->addMinutes(self::VALIDITE_MINUTES);
 
         Cache::put($this->cle($user), [
             'hash' => Hash::make($code),
-            'essais' => 0,
             'expire_a' => $expireA->getTimestamp(),
         ], $expireA);
+        Cache::forget($this->cleEssais($user));
 
         RateLimiter::hit($this->cleRenvoi($user), self::DELAI_RENVOI_SECONDES);
         RateLimiter::hit($this->cleQuota($user), 3600);
 
-        if (config('auth.otp_dans_les_logs')) {
+        if (config('auth.otp_dans_les_logs') && ! app()->isProduction()) {
             Log::info("[Code email] {$user->email} : {$code}");
         }
 
         $user->notify(new CodeEmailNotification($code));
+
+        return true;
     }
 
     /** Secondes à attendre avant de pouvoir redemander un code (0 = possible tout de suite). */
@@ -77,21 +86,28 @@ class CodeEmail
             return 'expire';
         }
 
-        if (Hash::check(preg_replace('/\D/', '', $code), $entree['hash'])) {
-            Cache::forget($cle);
+        // Compteur incrémenté avant la vérification, de façon atomique : des requêtes lancées en
+        // parallèle ne peuvent pas dépasser le nombre d'essais autorisés.
+        $essais = Cache::increment($this->cleEssais($user));
 
-            return 'ok';
-        }
-
-        $entree['essais']++;
-
-        if ($entree['essais'] >= self::ESSAIS_MAX) {
+        if ($essais > self::ESSAIS_MAX) {
             Cache::forget($cle);
 
             return 'expire';
         }
 
-        Cache::put($cle, $entree, now()->setTimestamp($entree['expire_a']));
+        if (Hash::check(preg_replace('/\D/', '', $code), $entree['hash'])) {
+            Cache::forget($cle);
+            Cache::forget($this->cleEssais($user));
+
+            return 'ok';
+        }
+
+        if ($essais >= self::ESSAIS_MAX) {
+            Cache::forget($cle);
+
+            return 'expire';
+        }
 
         return 'invalide';
     }
@@ -99,6 +115,11 @@ class CodeEmail
     private function cle(User $user): string
     {
         return "code-email:{$user->id_user}";
+    }
+
+    private function cleEssais(User $user): string
+    {
+        return "code-email-essais:{$user->id_user}";
     }
 
     private function cleRenvoi(User $user): string
