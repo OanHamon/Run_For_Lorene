@@ -3,8 +3,12 @@
 use App\Models\Commande;
 use App\Models\Inscription;
 use App\Models\Paiement;
+use App\Models\QuestionnaireSante;
+use App\Models\QuestionSante;
 use App\Models\TexteLegal;
 use App\Services\Inscriptions\Consentements;
+use App\Services\Inscriptions\MettreAJourStatut;
+use App\Services\Inscriptions\Questionnaires;
 use App\Services\Inscriptions\SupprimerInscription;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +50,11 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     public string $urgenceTel = '';
 
     public bool $droitImage = false;
+
+    /** @var array<int, string> 'oui' | 'non' par id_question */
+    public array $reponsesSante = [];
+
+    public bool $attestationSante = false;
 
     public function mount(Inscription $inscription): void
     {
@@ -110,6 +119,34 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     public function historique()
     {
         return app(Consentements::class)->historique($this->inscription);
+    }
+
+    #[Computed]
+    public function questionnaireSante(): ?QuestionnaireSante
+    {
+        return app(Questionnaires::class)->dernier($this->inscription, QuestionSante::SANTE);
+    }
+
+    #[Computed]
+    public function questionnaireDecharge(): ?QuestionnaireSante
+    {
+        return app(Questionnaires::class)->dernier($this->inscription, QuestionSante::DECHARGE);
+    }
+
+    #[Computed]
+    public function questionsSante()
+    {
+        return app(Questionnaires::class)->questions(QuestionSante::SANTE);
+    }
+
+    /** Questionnaire de santé demandé, pas encore rempli, et encore modifiable. */
+    #[Computed]
+    public function santeARemplir(): bool
+    {
+        return $this->modifiable
+            && $this->inscription->tarif->course->questionnaire_requis
+            && $this->questionnaireSante === null
+            && $this->questionsSante->isNotEmpty();
     }
 
     #[Computed]
@@ -256,6 +293,40 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
 
         unset($this->historique);
         session()->flash('statut', $valeur ? "Droit à l'image accordé." : "Droit à l'image retiré.");
+    }
+
+    public function enregistrerSante(): void
+    {
+        abort_unless($this->santeARemplir, 403);
+
+        $regles = ['attestationSante' => 'accepted'];
+        foreach ($this->questionsSante as $q) {
+            $regles["reponsesSante.{$q->id_question}"] = 'required|in:'.implode(',', Questionnaires::REPONSES);
+        }
+
+        $this->validate($regles, [
+            'reponsesSante.*.required' => 'Réponds par oui ou par non.',
+            'reponsesSante.*.in' => 'Réponds par oui ou par non.',
+            'attestationSante.accepted' => "Coche l'attestation pour valider le questionnaire.",
+        ]);
+
+        $i = $this->inscription;
+
+        DB::transaction(function () use ($i) {
+            app(Questionnaires::class)->enregistrer($i, QuestionSante::SANTE, $this->reponsesSante, $this->attestationSante, Auth::id());
+
+            // Payée mais en attente du questionnaire : elle peut maintenant être validée (et recevoir son dossard).
+            if ($i->statut === Inscription::DOSSIER_INCOMPLET) {
+                app(MettreAJourStatut::class)($i);
+            }
+        });
+
+        $this->reset('reponsesSante', 'attestationSante');
+        unset($this->inscription, $this->questionnaireSante, $this->santeARemplir, $this->etapes);
+
+        session()->flash('statut', $this->inscription->statut === Inscription::VALIDEE
+            ? 'Questionnaire de santé enregistré : l\'inscription est validée.'
+            : 'Questionnaire de santé enregistré.');
     }
 
     public function supprimer()
@@ -524,6 +595,10 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                         <span class="{{ $c ? 'text-gris-texte' : 'font-medium text-[#8A6A0B]' }}">{{ $c ? 'Acceptée le '.\Illuminate\Support\Carbon::parse($c->date_depot)->translatedFormat('j F Y').' · v'.$c->version : 'À accepter' }}</span>
                                     </li>
                                 @endforeach
+                                <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
+                                    <span class="text-encre">Questionnaire de décharge</span>
+                                    <span class="{{ $this->questionnaireDecharge ? 'text-gris-texte' : 'font-medium text-[#8A6A0B]' }}">{{ $this->questionnaireDecharge ? 'Rempli le '.$this->questionnaireDecharge->document->date_depot->translatedFormat('j F Y') : 'À remplir' }}</span>
+                                </li>
                             </ul>
 
                             <label class="mt-3 flex items-start gap-3 rounded-lg border border-bordure bg-creme/50 px-4 py-3 text-sm text-encre">
@@ -553,10 +628,35 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                             <p class="mt-2 text-sm text-gris-texte">
                                 @switch($etapes['sante'])
                                     @case('non_requis') Aucun questionnaire n'est demandé pour {{ $course->nom }}. @break
-                                    @case('fait') Questionnaire rempli. @break
-                                    @default Le questionnaire sera à remplir ici, avant le {{ $i->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}. Le formulaire en ligne arrive bientôt.
+                                    @case('fait') Questionnaire rempli le {{ $this->questionnaireSante?->document->date_depot->translatedFormat('j F Y') }}. Les réponses sont confidentielles. @break
+                                    @default
+                                        À remplir avant le {{ $i->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.
+                                        @if ($i->statut === Inscription::DOSSIER_INCOMPLET) L'inscription sera validée dès qu'il sera rempli. @endif
                                 @endswitch
                             </p>
+
+                            @if ($this->santeARemplir)
+                                <form wire:submit="enregistrerSante" class="mt-3 rounded-lg border border-bordure px-4 py-2" novalidate>
+                                    <p class="pt-2 text-sm text-gris-texte">{{ $this->estMoi ? 'Réponds à chaque question.' : "Réponds à chaque question pour {$p->user->prenom}." }} Seules les personnes habilitées de l'association peuvent consulter les réponses.</p>
+                                    <div class="divide-y divide-bordure">
+                                        @foreach ($this->questionsSante as $q)
+                                            <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesSante" />
+                                        @endforeach
+                                    </div>
+
+                                    <div class="border-t border-bordure py-3">
+                                        <label class="flex items-start gap-3 text-sm text-encre">
+                                            <input wire:model="attestationSante" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0">
+                                            <span>{{ $this->estMoi ? "J'atteste avoir répondu avec exactitude à toutes les questions." : "J'atteste avoir répondu avec exactitude pour {$p->user->prenom}." }}</span>
+                                        </label>
+                                        @error('attestationSante') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div class="flex justify-end border-t border-bordure py-3">
+                                        <button type="submit" class="{{ $bouton }}" wire:loading.attr="disabled">Envoyer le questionnaire</button>
+                                    </div>
+                                </form>
+                            @endif
                         </div>
                     </li>
 

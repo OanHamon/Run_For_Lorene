@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Questionnaire rempli pour une inscription : santé ou décharge (colonne type_questionnaire,
+ * mêmes valeurs que QuestionSante::SANTE / DECHARGE). Les réponses sont chiffrées.
+ */
 class QuestionnaireSante extends Model
 {
     protected $table = 'questionnaire_santes';
@@ -18,6 +22,7 @@ class QuestionnaireSante extends Model
 
     protected $fillable = [
         'id_document',
+        'type_questionnaire',
         'attestation',
     ];
 

@@ -63,7 +63,7 @@ flowchart TB
         E4["Tes documents<br/>« aucun certificat médical ni licence »"]:::ecran
         D4[/"📝 ☑ Règlement* (lien PDF)<br/>📝 ☑ Décharge de responsabilité* (lien PDF)<br/>📝 ☑ Données personnelles RGPD* (lien PDF)<br/>📝 ☐ Droit à l'image (facultatif)"/]:::saisie
         V4{{"documents + consentements<br/>version du texte, date, IP, oui/non"}}:::serveur
-        P4[/"Questionnaire de santé + attestation<br/>prévu au spec, pas encore codé"/]:::prevu
+        P4[/"Questionnaire de décharge (oui/non) + questionnaire de santé (oui/non) + attestation<br/>santé « plus tard » possible"/]:::saisie
         E4 --- D4 --- V4
         D4 -.- P4
     end
@@ -213,7 +213,7 @@ flowchart LR
     C1 --> CS{{"Nouveau consentement<br/>historisé (date, IP)"}}:::serveur
 
     F --> S["③ Questionnaire de santé<br/>Non requis · À faire avant J-15 · Fait"]:::ecran
-    S -.- S1[/"Formulaire en ligne + attestation<br/>« arrive bientôt »"/]:::prevu
+    S -.- S1[/"Formulaire en ligne (oui/non) + attestation"/]:::saisie
     S1 -.->|"complété"| SV{{"DOSSIER INCOMPLET → VALIDÉE<br/>+ dossard"}}:::serveur
 
     F --> P["④ Paiement<br/>Fait · En attente · À faire"]:::ecran
@@ -267,7 +267,8 @@ stateDiagram-v2
 | | | Date de naissance | calendrier | ✅ | passée, après 1900 ; filtre les épreuves (âge au jour J) |
 | 3/7 Épreuve | Choisis ton épreuve | Épreuve | carte à sélectionner | ✅ | âge, places, tarif en vigueur |
 | 4/7 Documents | Tes documents | Règlement | case | ✅ | version + date + IP |
-| | | Décharge de responsabilité | case | ✅ | idem |
+| | | Décharge : questions + case | oui/non + case | ✅ | toutes les questions répondues ; réponses chiffrées, version + date + IP |
+| | | Questionnaire de santé + attestation | oui/non + case | — | « plus tard » possible ; sinon toutes les questions et l'attestation ; réponses chiffrées |
 | | | RGPD | case | ✅ | idem |
 | | | Droit à l'image | case | — | oui/non enregistré |
 | 5/7 Don | Coup de pouce | Montant | 5/10/20/50 € ou libre | — | 0 à 10 000 €, 2 décimales ; « Passer » |
@@ -295,7 +296,7 @@ stateDiagram-v2
 - **Ordre du tunnel** : le spec prévoit Épreuve (02) → Compte (03-04) → Participant (05). Le code fait Compte → Participant → Épreuve, pour filtrer les épreuves selon l'âge avant de les afficher (choix documenté dans `tunnel.blade.php`).
 - **Écran 05 allégé** : sexe, téléphone, adresse et contact d'urgence ne sont pas demandés dans le tunnel. Ils se remplissent après coup dans l'espace (tous facultatifs).
 - **Lien magique → code** : le spec parle d'un lien magique valable 15 minutes. Le code envoie un code à 6 chiffres valable 15 minutes, qui sert aussi à vérifier l'email.
-- **Questionnaire de santé** : pas encore saisi dans le tunnel. L'espace affiche « Le formulaire en ligne arrive bientôt ».
+- **Questions de santé et de décharge** : provisoires (version 1), en attendant celles du Google Form et le texte définitif de la décharge.
 - **Option t-shirt** (écran 07) : absente du tunnel ; seule l'étape Don existe.
 - **Don seul sans inscription** : le bouton « Faire un don » de la page événement pointe vers une ancre, sans parcours dédié.
 - **Espace participant** : le billet QR, le reçu fiscal PDF, la gestion des participants gérés et le profil ne sont pas encore codés.

@@ -353,8 +353,9 @@ CREATE TABLE `documents` (
 
 DROP TABLE IF EXISTS `questionnaire_santes`;
 CREATE TABLE `questionnaire_santes` (
-    `id_document`  INT UNSIGNED NOT NULL,
-    `attestation`  TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Attestation finale du questionnaire',
+    `id_document`        INT UNSIGNED NOT NULL,
+    `type_questionnaire` ENUM('sante','decharge') NOT NULL DEFAULT 'sante',
+    `attestation`        TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Attestation finale du questionnaire',
     PRIMARY KEY (`id_document`),
     CONSTRAINT `questionnaire_santes_id_document_foreign`
         FOREIGN KEY (`id_document`) REFERENCES `documents` (`id_document`) ON DELETE CASCADE
@@ -376,11 +377,13 @@ CREATE TABLE `consentements` (
 DROP TABLE IF EXISTS `question_santes`;
 CREATE TABLE `question_santes` (
     `id_question`           SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `type_questionnaire`    ENUM('sante','decharge') NOT NULL DEFAULT 'sante',
     `libelle`               VARCHAR(255) NOT NULL,
     `ordre`                 SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     `version_questionnaire` SMALLINT UNSIGNED NOT NULL,
     `active`                TINYINT(1) NOT NULL DEFAULT 1,
-    PRIMARY KEY (`id_question`)
+    PRIMARY KEY (`id_question`),
+    KEY `question_santes_type_version_index` (`type_questionnaire`, `version_questionnaire`, `active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `reponse_santes`;

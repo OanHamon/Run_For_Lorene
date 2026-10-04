@@ -34,9 +34,7 @@ function inscrire($tunnel, string $choix, string $prenom, string $naissance, int
         ->call('epreuveSuivant')
         ->assertHasNoErrors()
         ->assertSet('etape', 'documents')
-        ->set('accepteReglement', true)
-        ->set('accepteDecharge', true)
-        ->set('accepteRgpd', true)
+        ->set(documentsRemplis())
         ->call('documentsSuivant')
         ->assertHasNoErrors();
 
@@ -149,12 +147,12 @@ test('les consentements obligatoires bloquent la suite, le droit à l\'image est
         ->assertHasErrors(['accepteDecharge', 'accepteRgpd'])
         ->assertSet('etape', 'documents');
 
-    $tunnel->set('accepteDecharge', true)->set('accepteRgpd', true)->call('documentsSuivant')->assertSet('etape', 'don');
+    $tunnel->set(documentsRemplis())->set('accepteImage', false)->call('documentsSuivant')->assertSet('etape', 'don');
 
     $inscription = Inscription::sole();
     expect($inscription->consentementsComplets())->toBeTrue()
-        ->and($inscription->documents()->count())->toBe(4) // 3 obligatoires + droit à l'image (refusé)
-        ->and($inscription->documents()->with('consentement')->get()->pluck('consentement.ip')->unique()->all())->toBe(['127.0.0.1']);
+        ->and($inscription->documents()->has('consentement')->count())->toBe(4) // 3 obligatoires + droit à l'image (refusé)
+        ->and($inscription->documents()->has('consentement')->with('consentement')->get()->pluck('consentement.ip')->unique()->all())->toBe(['127.0.0.1']);
 });
 
 test('une épreuve complète ne peut pas être choisie', function () {

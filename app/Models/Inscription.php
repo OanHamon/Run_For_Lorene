@@ -13,9 +13,13 @@ class Inscription extends Model
     protected $primaryKey = 'id_inscription';
 
     public const BROUILLON = 'brouillon';
+
     public const EN_ATTENTE_PAIEMENT = 'en_attente_paiement';
+
     public const VALIDEE = 'validee';
+
     public const DOSSIER_INCOMPLET = 'dossier_incomplet';
+
     public const ANNULEE = 'annulee';
 
     public const LIBELLES = [
@@ -77,12 +81,24 @@ class Inscription extends Model
         return self::LIBELLES[$this->statut] ?? $this->statut;
     }
 
-    /** Consentements obligatoires (règlement, décharge, RGPD) tous donnés sur la dernière version des textes. */
+    /**
+     * Consentements obligatoires (règlement, décharge, RGPD) tous donnés, et questionnaire de
+     * décharge rempli dès qu'il comporte des questions.
+     */
     public function consentementsComplets(): bool
     {
         $types = $this->typesConsentis();
 
-        return collect(TexteLegal::OBLIGATOIRES)->every(fn ($type) => in_array($type, $types, true));
+        return collect(TexteLegal::OBLIGATOIRES)->every(fn ($type) => in_array($type, $types, true))
+            && ! $this->dechargeManquante();
+    }
+
+    /** Questionnaire de décharge publié mais pas encore rempli pour cette inscription. */
+    public function dechargeManquante(): bool
+    {
+        $questionsActives = QuestionSante::where('type_questionnaire', QuestionSante::DECHARGE)->where('active', true)->exists();
+
+        return $questionsActives && ! $this->aRempli(QuestionSante::DECHARGE);
     }
 
     /** @return list<string> types de textes acceptés pour cette inscription */
@@ -107,6 +123,13 @@ class Inscription extends Model
             return false;
         }
 
-        return ! $this->documents()->whereHas('questionnaireSante')->exists();
+        return ! $this->aRempli(QuestionSante::SANTE);
+    }
+
+    private function aRempli(string $type): bool
+    {
+        return $this->documents()
+            ->whereHas('questionnaireSante', fn ($q) => $q->where('type_questionnaire', $type))
+            ->exists();
     }
 }

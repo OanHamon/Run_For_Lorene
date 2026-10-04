@@ -182,9 +182,9 @@ Héritages traduits en une table par entité, la table fille partageant la clé 
 - `remboursement (#id_remboursement, montant, motif, date_remboursement, id_paiement*)`
 - `texte_legal (#id_texte, type_texte, version, date_publication, fichier, id_evenement*)`
 - `document (#id_document, date_depot, statut, motif_refus, date_validation, id_deposant*, id_validateur*, id_inscription*)`
-- `questionnaire_sante (#id_document*, attestation)`
+- `questionnaire_sante (#id_document*, type_questionnaire, attestation)` : `type_questionnaire` vaut `sante` ou `decharge`
 - `consentement (#id_document*, accepte, ip, id_texte*)`
-- `question_sante (#id_question, libelle, ordre, version_questionnaire, active)`
+- `question_sante (#id_question, type_questionnaire, libelle, ordre, version_questionnaire, active)`
 - `reponse_sante (#id_document*, #id_question*, reponse)`
 
 ### Contraintes et types clés
@@ -234,10 +234,10 @@ Transitions (version texte du schéma) :
 | Document | Qui | Quand il est exigé |
 | --- | --- | --- |
 | Acceptation du règlement (consentement) | Tous | Toujours, avant paiement |
-| Décharge de responsabilité (consentement) | Tous | Toujours, avant paiement |
+| Décharge de responsabilité (questionnaire oui/non + consentement au texte PDF) | Tous | Toujours, avant paiement ; toutes les questions répondues |
 | RGPD (consentement) | Tous | Toujours, avant paiement |
 | Droit à l'image (consentement) | Tous | Facultatif, oui ou non enregistré |
-| Questionnaire de santé (questions reprises du Google Form actuel + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
+| Questionnaire de santé (questions oui/non reprises du Google Form actuel + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
 
 Pas d'autorisation parentale pour les mineurs : décision de l'association.
 
@@ -270,7 +270,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 03 | Identification (étape 2/7) | Email seul, puis mot de passe ou lien magique | Comme Google : l'email détermine connexion ou création |
 | 04 | Création du compte (étape 2/7) | Pastille de l'email saisi, prénom, nom, mot de passe | Vérification de l'email par lien |
 | 05 | Participant (étape 3/7) | « Pour qui ? » : moi-même, un participant déjà enregistré, ou un nouveau participant (enfant). Identité, date de naissance (calendrier), sexe, téléphone, adresse, contact d'urgence | Âge à la date de l'événement vérifié par rapport aux âges min et max de la course |
-| 06 | Documents et consentements (étape 4/7) | Questionnaire de santé (questions du Google Form actuel) avec attestation finale, cases règlement (lien PDF), décharge, RGPD, droit à l'image | Questionnaire « plus tard » possible ; les consentements obligatoires bloquent la suite |
+| 06 | Documents et consentements (étape 4/7) | Questionnaire de décharge (oui/non) et case décharge (lien PDF), questionnaire de santé (oui/non) avec attestation finale, cases règlement (lien PDF), RGPD, droit à l'image | Questionnaire de santé « plus tard » possible ; décharge et consentements obligatoires bloquent la suite |
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
 | 09 | Paiement (étape 7/7) | Redirection vers Stripe Checkout (carte, Apple Pay) | Place réservée pendant le paiement |
@@ -371,8 +371,8 @@ Ces sujets sont volontairement reportés ; aucun ne bloque la V1.
 **À vérifier avec l'association**
 
 - [ ] Hébergement : offre OVH exacte (mutualisé, VPS ou cloud) et compatibilité avec les files d'attente et tâches planifiées de Laravel.
-- [ ] Récupérer les questions exactes du Google Form de santé et leur format de réponse (oui/non, texte libre).
-- [ ] Usage des réponses de santé : qui les consulte et que fait-on d'une réponse « oui ».
+- [ ] Récupérer les questions exactes du Google Form de santé et le texte définitif de la décharge (questions provisoires en base, version 1 ; toutes les réponses sont oui/non).
+- [x] Usage des réponses de santé : stockées (chiffrées) par coureur, une réponse « oui » ne bloque pas l'inscription. Qui les consulte : admins habilités (lot admin).
 - [ ] Limites réelles de l'offre Brevo par rapport au volume d'emails attendu.
 - [ ] Audit TimePulse : champs et fonctionnalités réellement utilisés.
 - [ ] Contenu RFL3 : lieu, épreuves, horaires, âges, tarifs, quotas, plages de dossards, options et tailles, textes légaux en PDF, texte « La cause » et photos.

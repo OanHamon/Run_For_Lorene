@@ -33,7 +33,7 @@ function panier(array $personnes, Course $course, bool $commander = true)
             ->call('participantSuivant')
             ->call('choisirCourse', $course->id_course)
             ->call('epreuveSuivant')
-            ->set('accepteReglement', true)->set('accepteDecharge', true)->set('accepteRgpd', true)
+            ->set(documentsRemplis())
             ->call('documentsSuivant');
     }
 
@@ -46,7 +46,7 @@ function panier(array $personnes, Course $course, bool $commander = true)
     return Inscription::orderBy('id_inscription')->get();
 }
 
-test("chaque inscription du tableau de bord mène à sa page de suivi", function () {
+test('chaque inscription du tableau de bord mène à sa page de suivi', function () {
     [$inscription] = panier([['moi', 'Sam', '1985-06-01']], $this->marche);
 
     $this->get('/espace')->assertOk()->assertSee(route('espace.inscription', $inscription));
@@ -71,7 +71,7 @@ test('la timeline reflète l\'avancement', function () {
 
     $page = Volt::test('espace.inscription', ['inscription' => $inscription]);
     expect($page->instance()->etapes)->toBe([
-        'infos' => 'fait', 'decharge' => 'fait', 'sante' => 'non_requis', 'paiement' => 'en_cours',
+        'infos' => 'fait', 'decharge' => 'fait', 'sante' => 'fait', 'paiement' => 'en_cours',
     ]);
 
     app(EnregistrerPaiement::class)->reussi(Paiement::sole()->reference, 22.0);

@@ -7,8 +7,6 @@ use App\Models\Paiement;
 use App\Models\User;
 use App\Notifications\CommandeConfirmee;
 use App\Services\Inscriptions\AttribuerDossard;
-use App\Services\Inscriptions\PasserCommande;
-use App\Services\Paiement\DemarrerPaiement;
 use App\Services\Paiement\EnregistrerPaiement;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
@@ -36,9 +34,7 @@ function commandeEnAttente(User $user, Course $course): array
         ->call('participantSuivant')
         ->call('choisirCourse', $course->id_course)
         ->call('epreuveSuivant')
-        ->set('accepteReglement', true)
-        ->set('accepteDecharge', true)
-        ->set('accepteRgpd', true)
+        ->set(documentsRemplis())
         ->call('documentsSuivant')
         ->call('donPasser')
         ->call('payer')
@@ -209,7 +205,7 @@ test('deux participants du panier sur la dernière place : la commande est refus
             ->call('participantSuivant')
             ->call('choisirCourse', $this->marche->id_course)
             ->call('epreuveSuivant')
-            ->set('accepteReglement', true)->set('accepteDecharge', true)->set('accepteRgpd', true)
+            ->set(documentsRemplis())
             ->call('documentsSuivant');
     }
 

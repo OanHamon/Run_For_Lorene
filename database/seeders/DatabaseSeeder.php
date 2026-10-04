@@ -83,7 +83,7 @@ class DatabaseSeeder extends Seeder
                 'age_min' => $data['age_min'],
                 'age_max' => $data['age_max'],
                 'quota' => $data['quota'],
-                'questionnaire_requis' => false,
+                'questionnaire_requis' => true,
                 'dossard_debut' => $data['dossard_debut'],
                 'dossard_fin' => $data['dossard_fin'],
                 'id_evenement' => $evenement->id_evenement,
@@ -109,6 +109,8 @@ class DatabaseSeeder extends Seeder
                 'id_evenement' => $evenement->id_evenement,
             ]);
         }
+
+        $this->call(QuestionnairesSeeder::class);
 
         $tshirt = OptionEvenement::create([
             'libelle' => 'T-shirt',

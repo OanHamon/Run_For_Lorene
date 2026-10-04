@@ -12,7 +12,12 @@ class QuestionSante extends Model
 
     public $timestamps = false;
 
+    public const SANTE = 'sante';
+
+    public const DECHARGE = 'decharge';
+
     protected $fillable = [
+        'type_questionnaire',
         'libelle',
         'ordre',
         'version_questionnaire',
