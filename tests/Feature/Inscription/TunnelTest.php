@@ -144,7 +144,7 @@ test('les consentements obligatoires bloquent la suite, le droit à l\'image est
         ->call('epreuveSuivant')
         ->set('accepteReglement', true)
         ->call('documentsSuivant')
-        ->assertHasErrors(['accepteDecharge', 'accepteRgpd'])
+        ->assertHasErrors(['accepteRgpd', 'questionnaires'])
         ->assertSet('etape', 'documents');
 
     $tunnel->set(documentsRemplis())->set('accepteImage', false)->call('documentsSuivant')->assertSet('etape', 'don');

@@ -49,7 +49,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     /** Champs de l'étape Documents, propres à chaque participant. */
     private const CHAMPS_DOCUMENTS = [
         'accepteReglement', 'accepteDecharge', 'accepteRgpd', 'accepteImage',
-        'reponsesDecharge', 'reponsesSante', 'attestationSante', 'santePlusTard',
+        'reponsesDecharge', 'reponsesSante', 'attestationSante', 'questionnaires',
     ];
 
     public string $etape = 'compte';
@@ -86,8 +86,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     public bool $attestationSante = false;
 
-    /** Questionnaire de santé remis à plus tard (à remplir depuis l'espace). */
-    public bool $santePlusTard = false;
+    /** Décharge et questionnaire de santé : 'maintenant' ou 'plus_tard' (depuis l'espace). */
+    public string $questionnaires = '';
 
     // Don
     public string $don = '';
@@ -143,7 +143,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         }
 
         // Reprise : un brouillon sans ses consentements reprend aux documents, sinon récapitulatif.
-        $aCompleter = $this->panier->first(fn (Inscription $i) => ! $i->consentementsComplets());
+        $aCompleter = $this->panier->first(fn (Inscription $i) => ! $i->consentementsAcceptes());
 
         if ($aCompleter) {
             $this->chargerInscription($aCompleter);
@@ -319,7 +319,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 ? 'Déjà inscrit(e) à cet événement.'
                 : $eligibilite->erreur($i->participant, $i->tarif->course, $this->evenement);
 
-            if (! $erreur && ! $i->consentementsComplets()) {
+            if (! $erreur && ! $i->consentementsAcceptes()) {
                 $erreur = 'Consentements à compléter.';
             }
 
@@ -410,7 +410,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $this->reponsesDecharge = $questionnaires->reponses($inscription, QuestionSante::DECHARGE);
         $this->reponsesSante = $questionnaires->reponses($inscription, QuestionSante::SANTE);
         $this->attestationSante = (bool) $questionnaires->dernier($inscription, QuestionSante::SANTE)?->attestation;
-        $this->santePlusTard = false;
+        // Déjà commencés : on les montre tels quels ; sinon la question « maintenant ou plus tard » est reposée.
+        $this->questionnaires = $this->reponsesDecharge || $this->reponsesSante ? 'maintenant' : '';
     }
 
     public function modifier(int $idInscription, string $etape): void
@@ -654,15 +655,20 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $ouiNon = 'required|in:'.implode(',', Questionnaires::REPONSES);
         $regles = [
             'accepteReglement' => 'accepted',
-            'accepteDecharge' => 'accepted',
             'accepteRgpd' => 'accepted',
+            'questionnaires' => 'required|in:maintenant,plus_tard',
         ];
 
-        foreach ($this->questionsDecharge as $q) {
-            $regles["reponsesDecharge.{$q->id_question}"] = $ouiNon;
-        }
+        // « Plus tard » : rien à valider ici, la décharge et la santé se rempliront dans l'espace.
+        $maintenant = $this->questionnaires === 'maintenant';
+        $remplirSante = $maintenant && $this->santeRequise;
 
-        $remplirSante = $this->santeRequise && ! $this->santePlusTard;
+        if ($maintenant) {
+            $regles['accepteDecharge'] = 'accepted';
+            foreach ($this->questionsDecharge as $q) {
+                $regles["reponsesDecharge.{$q->id_question}"] = $ouiNon;
+            }
+        }
 
         if ($remplirSante) {
             foreach ($this->questionsSante as $q) {
@@ -673,13 +679,15 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
         $this->validate($regles, [
             'accepteReglement.accepted' => 'Il faut accepter le règlement pour continuer.',
-            'accepteDecharge.accepted' => 'Il faut accepter la décharge de responsabilité pour continuer.',
             'accepteRgpd.accepted' => 'Il faut accepter le traitement des données pour continuer.',
+            'questionnaires.required' => 'Choisis de remplir la décharge et le questionnaire maintenant ou plus tard.',
+            'questionnaires.in' => 'Choisis de remplir la décharge et le questionnaire maintenant ou plus tard.',
+            'accepteDecharge.accepted' => 'Coche la case pour accepter la décharge, ou choisis « Plus tard ».',
             'reponsesDecharge.*.required' => 'Réponds par oui ou par non.',
             'reponsesDecharge.*.in' => 'Réponds par oui ou par non.',
             'reponsesSante.*.required' => 'Réponds par oui ou par non.',
             'reponsesSante.*.in' => 'Réponds par oui ou par non.',
-            'attestationSante.accepted' => "Coche l'attestation, ou choisis de remplir le questionnaire plus tard.",
+            'attestationSante.accepted' => "Coche l'attestation, ou choisis « Plus tard ».",
         ]);
 
         $consentements = app(Consentements::class);
@@ -693,11 +701,11 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             return;
         }
 
-        DB::transaction(function () use ($inscription, $consentements, $remplirSante) {
+        DB::transaction(function () use ($inscription, $consentements, $maintenant, $remplirSante) {
             $questionnaires = app(Questionnaires::class);
 
-            if ($this->questionsDecharge->isNotEmpty()) {
-                $questionnaires->enregistrer($inscription, QuestionSante::DECHARGE, $this->reponsesDecharge, true, Auth::id());
+            if ($maintenant) {
+                $questionnaires->remplirDecharge($inscription, $this->reponsesDecharge, Auth::id(), request()->ip());
             }
 
             if ($remplirSante) {
@@ -995,62 +1003,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     @if ($etape === 'documents' && $this->participant)
         @php($pour = $this->estMoi ? null : $this->participant->user->prenom)
         <h1 class="font-display text-2xl font-bold text-encre">{{ $pour ? "Les documents de {$pour}" : 'Tes documents' }}</h1>
+        @php($documents = $this->santeRequise ? 'la décharge et le questionnaire de santé' : 'la décharge')
         <p class="mt-1 mb-6 text-sm text-gris-texte">
-            La décharge, {{ $this->santeRequise ? 'le questionnaire de santé ' : '' }}et quelques cases à cocher.
+            Quelques cases à cocher, puis {{ $documents }}.
             @if ($pour) En tant que responsable, tu réponds pour {{ $pour }}. @endif
         </p>
 
-        {{-- Décharge de responsabilité --}}
-        <section class="rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-decharge">
-            <h2 id="titre-decharge" class="font-display font-bold text-encre">Décharge de responsabilité</h2>
-            @if ($this->questionsDecharge->isNotEmpty())
-                <p class="mt-1 text-sm text-gris-texte">Réponds à chaque question{{ $pour ? " pour {$pour}" : '' }}.</p>
-                <div class="mt-2 divide-y divide-bordure">
-                    @foreach ($this->questionsDecharge as $q)
-                        <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesDecharge" />
-                    @endforeach
-                </div>
-            @endif
-
-            <div class="mt-3 border-t border-bordure pt-4">
-                <label class="flex items-start gap-3 text-sm text-encre">
-                    <input wire:model.live="accepteDecharge" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                    <span>J'accepte la <a href="{{ route('textes.show', 'decharge') }}" target="_blank" rel="noopener" class="rfl-lien underline">décharge de responsabilité</a> <span class="text-gris-texte">(obligatoire)</span></span>
-                </label>
-                @error('accepteDecharge') <p class="rfl-erreur">{{ $message }}</p> @enderror
-            </div>
-        </section>
-
-        {{-- Questionnaire de santé --}}
-        @if ($this->santeRequise)
-            <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-sante">
-                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <h2 id="titre-sante" class="font-display font-bold text-encre">Questionnaire de santé</h2>
-                    <button type="button" wire:click="$toggle('santePlusTard')" class="text-sm rfl-lien">{{ $santePlusTard ? 'Le remplir maintenant' : 'Remplir plus tard' }}</button>
-                </div>
-
-                @if ($santePlusTard)
-                    <p class="mt-2 text-sm text-gris-texte">Pas de souci : tu pourras le remplir depuis ton espace, avant le {{ $this->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}. L'inscription sera validée une fois le questionnaire rempli.</p>
-                @else
-                    <p class="mt-1 text-sm text-gris-texte">Tes réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.</p>
-                    <div class="mt-2 divide-y divide-bordure">
-                        @foreach ($this->questionsSante as $q)
-                            <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesSante" />
-                        @endforeach
-                    </div>
-
-                    <div class="mt-3 border-t border-bordure pt-4">
-                        <label class="flex items-start gap-3 text-sm text-encre">
-                            <input wire:model="attestationSante" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                            <span>{{ $pour ? "J'atteste avoir répondu avec exactitude pour {$pour}." : "J'atteste avoir répondu avec exactitude à toutes les questions." }}</span>
-                        </label>
-                        @error('attestationSante') <p class="rfl-erreur">{{ $message }}</p> @enderror
-                    </div>
-                @endif
-            </section>
-        @endif
-
-        <div class="mt-6 space-y-4">
+        <div class="space-y-4">
             <div>
                 <label class="flex items-start gap-3 text-sm text-encre">
                     <input wire:model.live="accepteReglement" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
@@ -1077,13 +1036,84 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
         <p class="mt-6 rounded-xl bg-aqua-clair px-4 py-3 text-sm text-canard">Aucun certificat médical ni licence : Run For Lorène est un événement non compétitif.</p>
 
+        {{-- Décharge et questionnaire de santé : maintenant ou plus tard --}}
+        <section class="mt-8 border-t border-bordure pt-6" aria-labelledby="titre-questionnaires">
+            <h2 id="titre-questionnaires" class="font-display text-lg font-bold text-encre">{{ ucfirst($documents) }}</h2>
+            <p class="mt-1 text-sm text-gris-texte">
+                Obligatoire{{ $this->santeRequise ? 's' : '' }} pour prendre le départ. Tu peux {{ $this->santeRequise ? 'les' : 'la' }} remplir maintenant ou plus tard depuis ton espace.
+            </p>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-labelledby="titre-questionnaires">
+                @foreach (['maintenant' => ['Maintenant', 'Je remplis tout de suite.'], 'plus_tard' => ['Plus tard', 'Depuis mon espace, après le paiement.']] as $valeur => [$titre, $detail])
+                    <button type="button" role="radio" aria-checked="{{ $questionnaires === $valeur ? 'true' : 'false' }}"
+                        wire:click="$set('questionnaires', '{{ $valeur }}')"
+                        class="rounded-xl border-2 px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-canard {{ $questionnaires === $valeur ? 'border-canard bg-aqua-clair' : 'border-bordure hover:border-canard/50' }}">
+                        <span class="block font-medium text-encre">{{ $titre }}</span>
+                        <span class="block text-sm text-gris-texte">{{ $detail }}</span>
+                    </button>
+                @endforeach
+            </div>
+            @error('questionnaires') <p class="rfl-erreur">{{ $message }}</p> @enderror
+
+            @if ($questionnaires === 'plus_tard')
+                <div class="mt-4 rounded-xl border-2 border-moutarde bg-moutarde/15 px-4 py-3 text-sm text-encre" role="note">
+                    <p class="font-display font-bold">Sans {{ $documents }}, {{ $pour ? "{$pour} ne pourra pas" : 'tu ne pourras pas' }} prendre le départ.</p>
+                    <p class="mt-1">L'inscription restera « dossier incomplet », sans dossard, jusqu'à ce qu'{{ $this->santeRequise ? 'ils soient remplis' : 'elle soit remplie' }} depuis ton espace, avant le {{ $this->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.</p>
+                </div>
+            @endif
+
+            @if ($questionnaires === 'maintenant')
+                {{-- Décharge de responsabilité --}}
+                <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-decharge">
+                    <h3 id="titre-decharge" class="font-display font-bold text-encre">Décharge de responsabilité</h3>
+                    @if ($this->questionsDecharge->isNotEmpty())
+                        <p class="mt-1 text-sm text-gris-texte">Réponds à chaque question{{ $pour ? " pour {$pour}" : '' }}.</p>
+                        <div class="mt-2 divide-y divide-bordure">
+                            @foreach ($this->questionsDecharge as $q)
+                                <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesDecharge" />
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="mt-3 border-t border-bordure pt-4">
+                        <label class="flex items-start gap-3 text-sm text-encre">
+                            <input wire:model="accepteDecharge" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                            <span>J'accepte la <a href="{{ route('textes.show', 'decharge') }}" target="_blank" rel="noopener" class="rfl-lien underline">décharge de responsabilité</a></span>
+                        </label>
+                        @error('accepteDecharge') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                    </div>
+                </section>
+
+                {{-- Questionnaire de santé --}}
+                @if ($this->santeRequise)
+                    <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-sante">
+                        <h3 id="titre-sante" class="font-display font-bold text-encre">Questionnaire de santé</h3>
+                        <p class="mt-1 text-sm text-gris-texte">Tes réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.</p>
+                        <div class="mt-2 divide-y divide-bordure">
+                            @foreach ($this->questionsSante as $q)
+                                <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesSante" />
+                            @endforeach
+                        </div>
+
+                        <div class="mt-3 border-t border-bordure pt-4">
+                            <label class="flex items-start gap-3 text-sm text-encre">
+                                <input wire:model="attestationSante" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                                <span>{{ $pour ? "J'atteste avoir répondu avec exactitude pour {$pour}." : "J'atteste avoir répondu avec exactitude à toutes les questions." }}</span>
+                            </label>
+                            @error('attestationSante') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                        </div>
+                    </section>
+                @endif
+            @endif
+        </section>
+
         @if ($errors->hasAny(['reponsesDecharge.*', 'reponsesSante.*']))
             <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
         @endif
 
         <div class="mt-8 flex items-center justify-between">
             <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
-            <button type="button" wire:click="documentsSuivant" @disabled(! ($accepteReglement && $accepteDecharge && $accepteRgpd)) wire:loading.attr="disabled" class="rfl-btn">Continuer</button>
+            <button type="button" wire:click="documentsSuivant" @disabled(! ($accepteReglement && $accepteRgpd && $questionnaires)) wire:loading.attr="disabled" class="rfl-btn">Continuer</button>
         </div>
     @endif
 
@@ -1148,11 +1178,16 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                         <p class="shrink-0 font-display font-bold text-encre">{{ $this->euros((float) ($this->tarifActuel($i)?->montant ?? $i->tarif->montant)) }}</p>
                     </div>
                     <p class="mt-2 text-sm text-gris-texte">
-                        {{ $i->consentementsComplets() ? 'Consentements acceptés' : 'Consentements à compléter' }}
-                        @if ($i->tarif->course->questionnaire_requis)
-                            &middot; {{ $i->questionnaireManquant() ? 'questionnaire de santé à remplir depuis ton espace' : 'questionnaire de santé rempli' }}
+                        {{ $i->consentementsAcceptes() ? 'Consentements acceptés' : 'Consentements à compléter' }}
+                        @if (! $i->documentsManquants())
+                            &middot; {{ $i->tarif->course->questionnaire_requis ? 'décharge et questionnaire de santé remplis' : 'décharge remplie' }}
                         @endif
                     </p>
+                    @if ($manquants = $i->documentsManquants())
+                        <p class="mt-2 rounded-lg bg-moutarde/15 px-3 py-2 text-sm text-encre">
+                            <span class="font-medium">Pas de départ sans {{ implode(' et ', $manquants) }}</span> : à remplir depuis ton espace après le paiement.
+                        </p>
+                    @endif
                     @isset($this->alertesPanier[$i->id_inscription])
                         <p class="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ $this->alertesPanier[$i->id_inscription] }}</p>
                     @endisset

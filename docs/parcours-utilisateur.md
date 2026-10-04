@@ -61,9 +61,9 @@ flowchart TB
     subgraph S4["Étape 4/7 · Documents et consentements (écran 06)"]
         direction LR
         E4["Tes documents<br/>« aucun certificat médical ni licence »"]:::ecran
-        D4[/"📝 ☑ Règlement* (lien PDF)<br/>📝 ☑ Décharge de responsabilité* (lien PDF)<br/>📝 ☑ Données personnelles RGPD* (lien PDF)<br/>📝 ☐ Droit à l'image (facultatif)"/]:::saisie
+        D4[/"📝 ☑ Règlement* (lien PDF)<br/>📝 ☑ Données personnelles RGPD* (lien PDF)<br/>📝 ☐ Droit à l'image (facultatif)<br/>📝 ◉ Décharge + santé : maintenant ou plus tard*"/]:::saisie
         V4{{"documents + consentements<br/>version du texte, date, IP, oui/non"}}:::serveur
-        P4[/"Questionnaire de décharge (oui/non) + questionnaire de santé (oui/non) + attestation<br/>santé « plus tard » possible"/]:::saisie
+        P4[/"Maintenant : décharge (oui/non + case PDF) + santé (oui/non + attestation)<br/>Plus tard : « pas de départ sans ces documents »"/]:::saisie
         E4 --- D4 --- V4
         D4 -.- P4
     end
@@ -208,7 +208,7 @@ flowchart LR
     I --> I1[/"📝 Prénom* · Nom* (max 100)<br/>📝 Date de naissance* (reste dans l'âge de l'épreuve)<br/>📝 Sexe : Femme · Homme · Autre<br/>📝 Téléphone (FR : 06 12 34 56 78)<br/>📝 Adresse (max 255) · Code postal (5 chiffres) · Ville<br/>📝 Urgence : nom et prénom + téléphone (l'un exige l'autre)"/]:::saisie
     I1 -->|"Enregistrer"| IS{{"maj users, participants,<br/>inscriptions.urgence_*"}}:::serveur
 
-    F --> C["② Décharge et consentements<br/>acceptés le …, version"]:::ecran
+    F --> C["② Décharge et consentements<br/>acceptés le …, version · formulaire de décharge si manquante"]:::ecran
     C --> C1[/"📝 ☐ Droit à l'image<br/>modifiable à tout moment"/]:::saisie
     C1 --> CS{{"Nouveau consentement<br/>historisé (date, IP)"}}:::serveur
 
@@ -235,10 +235,10 @@ stateDiagram-v2
     en_attente_paiement --> brouillon : « Modifier ma commande »<br/>(commande abandonnée)
     en_attente_paiement --> en_attente_paiement : paiement échoué / abandonné<br/>(réessayer ou payer plus tard)
     en_attente_paiement --> validee : paiement réussi (webhook)<br/>+ consentements + questionnaire
-    en_attente_paiement --> dossier_incomplet : paiement réussi<br/>mais questionnaire manquant
+    en_attente_paiement --> dossier_incomplet : paiement réussi<br/>mais décharge ou questionnaire manquant
     en_attente_paiement --> annulee : abandon définitif / admin
     en_attente_paiement --> [*] : suppression depuis l'espace
-    dossier_incomplet --> validee : questionnaire complété
+    dossier_incomplet --> validee : décharge et questionnaire complétés
     brouillon --> validee : total 0 € ou inscription gratuite admin
     validee --> [*]
 
@@ -267,8 +267,9 @@ stateDiagram-v2
 | | | Date de naissance | calendrier | ✅ | passée, après 1900 ; filtre les épreuves (âge au jour J) |
 | 3/7 Épreuve | Choisis ton épreuve | Épreuve | carte à sélectionner | ✅ | âge, places, tarif en vigueur |
 | 4/7 Documents | Tes documents | Règlement | case | ✅ | version + date + IP |
-| | | Décharge : questions + case | oui/non + case | ✅ | toutes les questions répondues ; réponses chiffrées, version + date + IP |
-| | | Questionnaire de santé + attestation | oui/non + case | — | « plus tard » possible ; sinon toutes les questions et l'attestation ; réponses chiffrées |
+| | | Décharge + santé : maintenant ou plus tard | choix | ✅ | « plus tard » : avertissement « pas de départ sans ces documents » |
+| | | Décharge : questions + case (si maintenant) | oui/non + case | ✅ | toutes les questions répondues ; réponses chiffrées, version + date + IP |
+| | | Questionnaire de santé + attestation (si maintenant) | oui/non + case | ✅ | toutes les questions et l'attestation ; réponses chiffrées |
 | | | RGPD | case | ✅ | idem |
 | | | Droit à l'image | case | — | oui/non enregistré |
 | 5/7 Don | Coup de pouce | Montant | 5/10/20/50 € ou libre | — | 0 à 10 000 €, 2 décimales ; « Passer » |

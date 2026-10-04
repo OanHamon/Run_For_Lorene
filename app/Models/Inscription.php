@@ -81,24 +81,42 @@ class Inscription extends Model
         return self::LIBELLES[$this->statut] ?? $this->statut;
     }
 
-    /**
-     * Consentements obligatoires (règlement, décharge, RGPD) tous donnés, et questionnaire de
-     * décharge rempli dès qu'il comporte des questions.
-     */
-    public function consentementsComplets(): bool
+    /** Règlement et RGPD acceptés : exigés dans le tunnel avant de payer. */
+    public function consentementsAcceptes(): bool
     {
         $types = $this->typesConsentis();
 
-        return collect(TexteLegal::OBLIGATOIRES)->every(fn ($type) => in_array($type, $types, true))
-            && ! $this->dechargeManquante();
+        return collect(TexteLegal::AVANT_PAIEMENT)->every(fn ($type) => in_array($type, $types, true));
     }
 
-    /** Questionnaire de décharge publié mais pas encore rempli pour cette inscription. */
+    /** Tous les consentements obligatoires, décharge comprise (questionnaire et acceptation). */
+    public function consentementsComplets(): bool
+    {
+        return $this->consentementsAcceptes() && ! $this->dechargeManquante();
+    }
+
+    /**
+     * Décharge pas encore faite : texte non accepté, ou questionnaire publié mais pas rempli.
+     * Peut être complétée après le paiement ; sans elle, pas de départ.
+     */
     public function dechargeManquante(): bool
     {
+        if (! in_array('decharge', $this->typesConsentis(), true)) {
+            return true;
+        }
+
         $questionsActives = QuestionSante::where('type_questionnaire', QuestionSante::DECHARGE)->where('active', true)->exists();
 
         return $questionsActives && ! $this->aRempli(QuestionSante::DECHARGE);
+    }
+
+    /** @return list<string> libellés des documents à remplir pour pouvoir prendre le départ */
+    public function documentsManquants(): array
+    {
+        return array_values(array_filter([
+            $this->dechargeManquante() ? 'la décharge de responsabilité' : null,
+            $this->questionnaireManquant() ? 'le questionnaire de santé' : null,
+        ]));
     }
 
     /** @return list<string> types de textes acceptés pour cette inscription */

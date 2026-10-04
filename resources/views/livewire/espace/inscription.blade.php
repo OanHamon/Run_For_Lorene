@@ -52,6 +52,11 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     public bool $droitImage = false;
 
     /** @var array<int, string> 'oui' | 'non' par id_question */
+    public array $reponsesDecharge = [];
+
+    public bool $accepteDecharge = false;
+
+    /** @var array<int, string> 'oui' | 'non' par id_question */
     public array $reponsesSante = [];
 
     public bool $attestationSante = false;
@@ -137,6 +142,19 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     public function questionsSante()
     {
         return app(Questionnaires::class)->questions(QuestionSante::SANTE);
+    }
+
+    #[Computed]
+    public function questionsDecharge()
+    {
+        return app(Questionnaires::class)->questions(QuestionSante::DECHARGE);
+    }
+
+    /** Décharge pas encore faite, et inscription encore modifiable. */
+    #[Computed]
+    public function dechargeARemplir(): bool
+    {
+        return $this->modifiable && $this->inscription->dechargeManquante();
     }
 
     /** Questionnaire de santé demandé, pas encore rempli, et encore modifiable. */
@@ -310,23 +328,58 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
             'attestationSante.accepted' => "Coche l'attestation pour valider le questionnaire.",
         ]);
 
-        $i = $this->inscription;
-
-        DB::transaction(function () use ($i) {
+        $this->apresDocument('Questionnaire de santé enregistré', function (Inscription $i) {
             app(Questionnaires::class)->enregistrer($i, QuestionSante::SANTE, $this->reponsesSante, $this->attestationSante, Auth::id());
+        });
 
-            // Payée mais en attente du questionnaire : elle peut maintenant être validée (et recevoir son dossard).
+        $this->reset('reponsesSante', 'attestationSante');
+    }
+
+    public function enregistrerDecharge(): void
+    {
+        abort_unless($this->dechargeARemplir, 403);
+
+        $regles = ['accepteDecharge' => 'accepted'];
+        foreach ($this->questionsDecharge as $q) {
+            $regles["reponsesDecharge.{$q->id_question}"] = 'required|in:'.implode(',', Questionnaires::REPONSES);
+        }
+
+        $this->validate($regles, [
+            'reponsesDecharge.*.required' => 'Réponds par oui ou par non.',
+            'reponsesDecharge.*.in' => 'Réponds par oui ou par non.',
+            'accepteDecharge.accepted' => 'Coche la case pour accepter la décharge.',
+        ]);
+
+        $this->apresDocument('Décharge enregistrée', function (Inscription $i) {
+            app(Questionnaires::class)->remplirDecharge($i, $this->reponsesDecharge, Auth::id(), request()->ip());
+        });
+
+        $this->reset('reponsesDecharge', 'accepteDecharge');
+    }
+
+    /** Enregistre un document puis, si l'inscription payée l'attendait, la valide (avec son dossard). */
+    private function apresDocument(string $message, callable $enregistrer): void
+    {
+        $i = $this->inscription;
+        $avant = $i->statut;
+
+        DB::transaction(function () use ($i, $enregistrer) {
+            $enregistrer($i);
+
             if ($i->statut === Inscription::DOSSIER_INCOMPLET) {
                 app(MettreAJourStatut::class)($i);
             }
         });
 
-        $this->reset('reponsesSante', 'attestationSante');
-        unset($this->inscription, $this->questionnaireSante, $this->santeARemplir, $this->etapes);
+        unset($this->inscription, $this->questionnaireSante, $this->questionnaireDecharge, $this->santeARemplir, $this->dechargeARemplir, $this->etapes, $this->historique);
 
-        session()->flash('statut', $this->inscription->statut === Inscription::VALIDEE
-            ? 'Questionnaire de santé enregistré : l\'inscription est validée.'
-            : 'Questionnaire de santé enregistré.');
+        $manquants = $this->inscription->documentsManquants();
+
+        session()->flash('statut', match (true) {
+            $avant === Inscription::DOSSIER_INCOMPLET && $this->inscription->statut === Inscription::VALIDEE => "{$message} : l'inscription est validée.",
+            $manquants !== [] => "{$message}. Il reste ".implode(' et ', $manquants).' à remplir.',
+            default => "{$message}.",
+        });
     }
 
     public function supprimer()
@@ -407,6 +460,18 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
 
     @if (session('statut'))
         <p class="mb-6 rfl-alerte-info text-sm text-canard" role="status">{{ session('statut') }}</p>
+    @endif
+
+    @if ($i->statut !== Inscription::ANNULEE && ($manquants = $i->documentsManquants()))
+        <div class="mb-6 rounded-lg border-2 border-moutarde bg-moutarde/15 px-5 py-4" role="alert">
+            <p class="font-display font-bold text-encre">
+                {{ $this->estMoi ? 'Tu ne pourras pas' : "{$p->user->prenom} ne pourra pas" }} prendre le départ sans {{ implode(' et ', $manquants) }}.
+            </p>
+            <p class="mt-1 text-sm text-encre">
+                À remplir ci-dessous avant le {{ $i->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.
+                @if ($i->statut === Inscription::DOSSIER_INCOMPLET) L'inscription sera validée et le dossard attribué dès que tout sera rempli. @endif
+            </p>
+        </div>
     @endif
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
@@ -609,8 +674,34 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                 </span>
                             </label>
 
-                            @if ($etapes['decharge'] === 'a_faire' && $i->statut === Inscription::BROUILLON)
-                                <a href="{{ route('inscription.tunnel') }}" class="mt-3 inline-block text-sm rfl-lien">Reprendre l'inscription pour les accepter</a>
+                            @if (! $i->consentementsAcceptes() && $i->statut === Inscription::BROUILLON)
+                                <a href="{{ route('inscription.tunnel') }}" class="mt-3 inline-block text-sm rfl-lien">Reprendre l'inscription pour accepter le règlement et le RGPD</a>
+                            @endif
+
+                            @if ($this->dechargeARemplir)
+                                <form wire:submit="enregistrerDecharge" class="mt-3 rounded-lg border border-bordure px-4 py-2" novalidate>
+                                    <p class="pt-2 font-medium text-encre">Décharge de responsabilité</p>
+                                    @if ($this->questionsDecharge->isNotEmpty())
+                                        <p class="text-sm text-gris-texte">{{ $this->estMoi ? 'Réponds à chaque question.' : "Réponds à chaque question pour {$p->user->prenom}." }}</p>
+                                        <div class="divide-y divide-bordure">
+                                            @foreach ($this->questionsDecharge as $q)
+                                                <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesDecharge" />
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <div class="border-t border-bordure py-3">
+                                        <label class="flex items-start gap-3 text-sm text-encre">
+                                            <input wire:model="accepteDecharge" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0">
+                                            <span>J'accepte la <a href="{{ route('textes.show', 'decharge') }}" target="_blank" rel="noopener" class="underline underline-offset-4 hover:text-canard">décharge de responsabilité</a>.</span>
+                                        </label>
+                                        @error('accepteDecharge') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                                    </div>
+
+                                    <div class="flex justify-end border-t border-bordure py-3">
+                                        <button type="submit" class="{{ $bouton }}" wire:loading.attr="disabled">Envoyer la décharge</button>
+                                    </div>
+                                </form>
                             @endif
                         </div>
                     </li>

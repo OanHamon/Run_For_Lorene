@@ -71,10 +71,10 @@
 
             @if ($incompletes->isNotEmpty())
                 <div class="mb-6 rfl-alerte">
-                    <p class="font-display font-bold text-encre">Action requise : questionnaire de santé</p>
+                    <p class="font-display font-bold text-encre">Action requise : pas de départ sans décharge ni questionnaire de santé</p>
                     <p class="mt-1 text-sm text-gris-texte">
-                        Le dossier de {{ $incompletes->map(fn ($i) => $i->participant->user->prenom)->join(', ', ' et ') }} sera validé dès que le questionnaire de santé sera complété{{ $evenement ? ', avant le '.$evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') : '' }}.
-                        Le formulaire en ligne arrive très bientôt dans ton espace.
+                        Le dossier de {{ $incompletes->map(fn ($i) => $i->participant->user->prenom)->join(', ', ' et ') }} sera validé, avec son dossard, dès que les documents seront remplis{{ $evenement ? ', avant le '.$evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') : '' }}.
+                        Ouvre l'inscription concernée ci-dessous pour les remplir.
                     </p>
                 </div>
             @endif

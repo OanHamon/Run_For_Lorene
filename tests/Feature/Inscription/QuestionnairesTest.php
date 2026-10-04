@@ -42,6 +42,8 @@ test('les questions provisoires sont en base : 10 de santé et 10 de décharge',
         ->and($questionnaires->questions(QuestionSante::DECHARGE))->toHaveCount(10);
 
     auxDocuments()
+        ->assertDontSee(QuestionSante::where('type_questionnaire', 'sante')->first()->libelle)
+        ->set('questionnaires', 'maintenant')
         ->assertSee('Décharge de responsabilité')
         ->assertSee('Questionnaire de santé')
         ->assertSee(QuestionSante::where('type_questionnaire', 'sante')->first()->libelle);
@@ -132,18 +134,25 @@ test('revenir aux documents reprend les réponses ; les modifier archive l\'anci
         ->and(app(Questionnaires::class)->reponses($inscription, QuestionSante::SANTE))->toBe($sante);
 });
 
-test('santé remplie plus tard : dossier incomplet après paiement, puis validé avec dossard depuis l\'espace', function () {
+test('il faut choisir de remplir les questionnaires maintenant ou plus tard', function () {
     auxDocuments()
         ->set(documentsRemplis())
-        ->set('reponsesSante', [])
-        ->set('attestationSante', false)
-        ->set('santePlusTard', true)
-        ->assertSee('tu pourras le remplir depuis ton espace')
+        ->set('questionnaires', '')
+        ->call('documentsSuivant')
+        ->assertHasErrors(['questionnaires'])
+        ->assertSet('etape', 'documents');
+});
+
+test('décharge et santé remplies plus tard : payé en dossier incomplet, puis validé avec dossard depuis l\'espace', function () {
+    auxDocuments()
+        ->set(['accepteReglement' => true, 'accepteRgpd' => true, 'questionnaires' => 'plus_tard'])
+        ->assertSee('tu ne pourras pas prendre le départ')
+        ->assertDontSee('Envoyer la décharge')
         ->call('documentsSuivant')
         ->assertHasNoErrors()
         ->assertSet('etape', 'don')
         ->call('donPasser')
-        ->assertSee('questionnaire de santé à remplir depuis ton espace')
+        ->assertSee('Pas de départ sans la décharge de responsabilité et le questionnaire de santé')
         ->call('payer')
         ->assertHasNoErrors();
 
@@ -152,24 +161,51 @@ test('santé remplie plus tard : dossier incomplet après paiement, puis validé
     $inscription = Inscription::sole();
     expect($inscription->statut)->toBe(Inscription::DOSSIER_INCOMPLET)
         ->and($inscription->dossard)->toBeNull()
-        ->and($inscription->questionnaireManquant())->toBeTrue();
+        ->and($inscription->documentsManquants())->toBe(['la décharge de responsabilité', 'le questionnaire de santé']);
+
+    $this->get('/espace')->assertSee('pas de départ sans décharge ni questionnaire de santé');
 
     $page = Volt::test('espace.inscription', ['inscription' => $inscription])
-        ->assertSee('Envoyer le questionnaire')
-        ->call('enregistrerSante')
-        ->assertHasErrors(['attestationSante']);
+        ->assertSee('Tu ne pourras pas prendre le départ sans la décharge de responsabilité et le questionnaire de santé')
+        ->assertSee('Envoyer la décharge')
+        ->assertSee('Envoyer le questionnaire');
 
+    // Décharge d'abord : les réponses et la case sont exigées, puis il reste la santé.
+    $page->call('enregistrerDecharge')->assertHasErrors(['accepteDecharge', 'reponsesDecharge.'.array_key_first(reponses('decharge'))]);
+    $page->set('reponsesDecharge', reponses('decharge', 'oui'))
+        ->set('accepteDecharge', true)
+        ->call('enregistrerDecharge')
+        ->assertHasNoErrors()
+        ->assertSee('Il reste le questionnaire de santé à remplir')
+        ->assertDontSee('Envoyer la décharge');
+
+    expect($inscription->fresh()->statut)->toBe(Inscription::DOSSIER_INCOMPLET)
+        ->and($inscription->fresh()->typesConsentis())->toContain('decharge');
+
+    $page->call('enregistrerSante')->assertHasErrors(['attestationSante']);
     $page->set('reponsesSante', reponses('sante'))
         ->set('attestationSante', true)
         ->call('enregistrerSante')
         ->assertHasNoErrors()
         ->assertSee('l\'inscription est validée')
-        ->assertDontSee('Envoyer le questionnaire');
+        ->assertDontSee('Envoyer le questionnaire')
+        ->assertDontSee('prendre le départ sans');
 
     $inscription->refresh();
     expect($inscription->statut)->toBe(Inscription::VALIDEE)
         ->and($inscription->dossard)->toBe(3000)
-        ->and($page->instance()->etapes['sante'])->toBe('fait');
+        ->and($page->instance()->etapes)->toMatchArray(['decharge' => 'fait', 'sante' => 'fait']);
+});
+
+test('une décharge déjà remplie ne se renvoie pas depuis l\'espace', function () {
+    auxDocuments()->set(documentsRemplis())->call('documentsSuivant');
+
+    Volt::test('espace.inscription', ['inscription' => Inscription::sole()])
+        ->assertDontSee('Envoyer la décharge')
+        ->set('reponsesDecharge', reponses('decharge', 'non'))
+        ->set('accepteDecharge', true)
+        ->call('enregistrerDecharge')
+        ->assertForbidden();
 });
 
 test('un questionnaire de santé déjà rempli ne se renvoie pas depuis l\'espace', function () {
@@ -194,7 +230,7 @@ test('une nouvelle version des questions remplace l\'ancienne pour les nouveaux 
 
     expect(app(Questionnaires::class)->questions('sante')->pluck('id_question')->all())->toBe([$nouvelle->id_question]);
 
-    auxDocuments()->assertSee('Question de la version 2 ?')
+    auxDocuments()->set('questionnaires', 'maintenant')->assertSee('Question de la version 2 ?')
         ->set(documentsRemplis())
         ->call('documentsSuivant')
         ->assertHasNoErrors();

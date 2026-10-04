@@ -56,9 +56,14 @@
             </ul>
 
             @if ($incompletes->isNotEmpty())
-                <p class="mt-6 rounded-xl bg-moutarde/15 px-4 py-3 text-sm text-encre">
-                    Il reste le questionnaire de santé à remplir depuis ton espace{{ $evenement ? ', avant le '.$evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') : '' }}.
-                </p>
+                <div class="mt-6 rounded-xl border-2 border-moutarde bg-moutarde/15 px-4 py-3 text-sm text-encre" role="alert">
+                    <p class="font-bold">Pas de départ sans ces documents, à remplir depuis ton espace{{ $evenement ? ' avant le '.$evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') : '' }} :</p>
+                    <ul class="mt-1 list-disc pl-5">
+                        @foreach ($incompletes as $i)
+                            <li>{{ $i->participant->user->prenom }} : {{ implode(' et ', $i->documentsManquants()) }}</li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
 
             <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">

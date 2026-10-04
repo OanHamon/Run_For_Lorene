@@ -26,25 +26,31 @@ class Consentements
             ->keyBy('type_texte');
     }
 
-    /** Enregistre les consentements obligatoires manquants et la réponse au droit à l'image. */
+    /** Enregistre les consentements du tunnel (règlement, RGPD) manquants et la réponse au droit à l'image. */
     public function enregistrer(Inscription $inscription, bool $droitImage, int $deposant, ?string $ip): void
     {
-        $textes = $this->textes($inscription->evenement);
-
-        DB::transaction(function () use ($inscription, $textes, $droitImage, $deposant, $ip) {
-            $dejaAcceptes = Consentement::whereHas('document', fn ($q) => $q->where('id_inscription', $inscription->id_inscription))
-                ->where('accepte', true)
-                ->pluck('id_texte')
-                ->all();
-
-            foreach (TexteLegal::OBLIGATOIRES as $type) {
-                if ($textes->has($type) && ! in_array($textes[$type]->id_texte, $dejaAcceptes, true)) {
-                    $this->ajouter($inscription, $textes[$type], true, $deposant, $ip);
-                }
+        DB::transaction(function () use ($inscription, $droitImage, $deposant, $ip) {
+            foreach (TexteLegal::AVANT_PAIEMENT as $type) {
+                $this->accepter($inscription, $type, $deposant, $ip);
             }
 
             $this->droitImage($inscription, $droitImage, $deposant, $ip);
         });
+    }
+
+    /** Accepte la dernière version d'un texte, sauf si c'est déjà fait. */
+    public function accepter(Inscription $inscription, string $type, int $deposant, ?string $ip): void
+    {
+        $texte = $this->textes($inscription->evenement)->get($type);
+
+        $dejaAccepte = $texte && Consentement::whereHas('document', fn ($q) => $q->where('id_inscription', $inscription->id_inscription))
+            ->where('accepte', true)
+            ->where('id_texte', $texte->id_texte)
+            ->exists();
+
+        if ($texte && ! $dejaAccepte) {
+            $this->ajouter($inscription, $texte, true, $deposant, $ip);
+        }
     }
 
     /** Droit à l'image : facultatif, mais le oui comme le non est enregistré (spec). */
@@ -66,7 +72,7 @@ class Consentements
 
     /**
      * @return Collection<int, object{type_texte: string, version: int, accepte: bool, date_depot: string, ip: string}>
-     *         du plus récent au plus ancien
+     *                                                                                                                  du plus récent au plus ancien
      */
     public function historique(Inscription $inscription): Collection
     {

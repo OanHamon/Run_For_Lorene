@@ -207,7 +207,7 @@ Héritages traduits en une table par entité, la table fille partageant la clé 
 
 ## Règles métier et statuts
 
-Une inscription n'est validée qu'avec un paiement réussi (ou une gratuité admin) et le questionnaire de santé et les consentements obligatoires.
+Une inscription n'est validée qu'avec un paiement réussi (ou une gratuité admin), les consentements obligatoires, la décharge et le questionnaire de santé. La décharge et le questionnaire peuvent être remplis après le paiement, mais sans eux le participant ne prend pas le départ.
 
 &#91;embedded content: cycle de vie d'une inscription · 5 états\]
 
@@ -216,9 +216,9 @@ Un paiement échoué ou abandonné laisse l'inscription « en attente de paiemen
 Transitions (version texte du schéma) :
 
 - Brouillon → En attente de paiement : récapitulatif confirmé.
-- En attente de paiement → Validée : paiement réussi, questionnaire et consentements complets.
-- En attente de paiement → Dossier incomplet : paiement réussi mais questionnaire manquant.
-- Dossier incomplet → Validée : questionnaire complété (et vérifié si besoin).
+- En attente de paiement → Validée : paiement réussi, consentements, décharge et questionnaire complets.
+- En attente de paiement → Dossier incomplet : paiement réussi mais décharge ou questionnaire de santé manquant.
+- Dossier incomplet → Validée : décharge et questionnaire complétés depuis l'espace (et vérifiés si besoin).
 - Brouillon → Validée ou Dossier incomplet : inscription gratuite créée par un admin, sans paiement.
 - En attente de paiement → Annulée : abandon définitif ou annulation par un admin.
 - Le dossard est attribué à l'entrée dans l'état Validée.
@@ -234,7 +234,7 @@ Transitions (version texte du schéma) :
 | Document | Qui | Quand il est exigé |
 | --- | --- | --- |
 | Acceptation du règlement (consentement) | Tous | Toujours, avant paiement |
-| Décharge de responsabilité (questionnaire oui/non + consentement au texte PDF) | Tous | Toujours, avant paiement ; toutes les questions répondues |
+| Décharge de responsabilité (questionnaire oui/non + consentement au texte PDF) | Tous | Toujours ; dans le tunnel ou plus tard depuis l'espace, obligatoire pour prendre le départ |
 | RGPD (consentement) | Tous | Toujours, avant paiement |
 | Droit à l'image (consentement) | Tous | Facultatif, oui ou non enregistré |
 | Questionnaire de santé (questions oui/non reprises du Google Form actuel + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
@@ -243,7 +243,7 @@ Pas d'autorisation parentale pour les mineurs : décision de l'association.
 
 - Chaque consentement enregistre la version du texte accepté, la date et l'IP.
 - Le questionnaire est saisi en ligne dans le tunnel, plus de formulaire externe. Les questions sont en base, versionnées ; chaque réponse est liée à la version posée.
-- Un admin habilité peut consulter les questionnaires et les marquer « vérifié » ; un questionnaire manquant laisse l'inscription en « dossier incomplet ».
+- Un admin habilité peut consulter les questionnaires et les marquer « vérifié » ; une décharge ou un questionnaire manquant laisse l'inscription en « dossier incomplet », sans dossard.
 - **Conservation** : documents, consentements et réponses de santé sont gardés jusqu'à l'édition suivante (12 mois après l'événement), puis purgés automatiquement.
 
 ### Tarifs, options et dossards
@@ -270,7 +270,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 03 | Identification (étape 2/7) | Email seul, puis mot de passe ou lien magique | Comme Google : l'email détermine connexion ou création |
 | 04 | Création du compte (étape 2/7) | Pastille de l'email saisi, prénom, nom, mot de passe | Vérification de l'email par lien |
 | 05 | Participant (étape 3/7) | « Pour qui ? » : moi-même, un participant déjà enregistré, ou un nouveau participant (enfant). Identité, date de naissance (calendrier), sexe, téléphone, adresse, contact d'urgence | Âge à la date de l'événement vérifié par rapport aux âges min et max de la course |
-| 06 | Documents et consentements (étape 4/7) | Questionnaire de décharge (oui/non) et case décharge (lien PDF), questionnaire de santé (oui/non) avec attestation finale, cases règlement (lien PDF), RGPD, droit à l'image | Questionnaire de santé « plus tard » possible ; décharge et consentements obligatoires bloquent la suite |
+| 06 | Documents et consentements (étape 4/7) | Cases règlement (lien PDF), RGPD, droit à l'image ; choix « maintenant » ou « plus tard » pour la décharge (questions oui/non + case, lien PDF) et le questionnaire de santé (oui/non + attestation) | Règlement, RGPD et le choix bloquent la suite ; « plus tard » affiche qu'il n'y a pas de départ sans ces documents |
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
 | 09 | Paiement (étape 7/7) | Redirection vers Stripe Checkout (carte, Apple Pay) | Place réservée pendant le paiement |
@@ -323,7 +323,7 @@ Stripe Checkout encaisse, les webhooks font foi, Brevo envoie les emails et les 
 | Paiement réussi | Titulaire | Récapitulatif de la commande, documents manquants et date limite |
 | Inscription validée | Titulaire | Numéro de dossard, billet QR, infos pratiques |
 | Document refusé | Titulaire | Motif et lien pour redéposer |
-| Relance documents | Titulaire | Rappel automatique 15 jours avant l'événement si le questionnaire de santé manque |
+| Relance documents | Titulaire | Rappel automatique 15 jours avant l'événement si la décharge ou le questionnaire de santé manque |
 | Paiement en attente | Titulaire | Rappel 24 h après l'abandon, lien pour payer |
 | Reçu de don | Titulaire | Reçu fiscal en PDF, si demandé |
 

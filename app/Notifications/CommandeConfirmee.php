@@ -38,7 +38,7 @@ class CommandeConfirmee extends Notification implements ShouldQueue
             $ligne .= match (true) {
                 $inscription->statut === Inscription::VALIDEE && $inscription->dossard !== null => " · dossard n° {$inscription->dossard}",
                 $inscription->statut === Inscription::VALIDEE => ' · inscription validée',
-                default => ' · dossier à compléter (questionnaire de santé)',
+                default => ' · à compléter dans ton espace : '.implode(' et ', $inscription->documentsManquants()).' (obligatoire pour prendre le départ)',
             };
 
             $mail->line($ligne);

@@ -20,6 +20,24 @@ class Questionnaires
 {
     public const REPONSES = ['oui', 'non'];
 
+    public function __construct(private Consentements $consentements) {}
+
+    /**
+     * Décharge : questionnaire (s'il a des questions) et acceptation du texte, ensemble.
+     *
+     * @param  array<int|string, mixed>  $reponses
+     */
+    public function remplirDecharge(Inscription $inscription, array $reponses, int $deposant, ?string $ip): void
+    {
+        DB::transaction(function () use ($inscription, $reponses, $deposant, $ip) {
+            if ($this->questions(QuestionSante::DECHARGE)->isNotEmpty()) {
+                $this->enregistrer($inscription, QuestionSante::DECHARGE, $reponses, true, $deposant);
+            }
+
+            $this->consentements->accepter($inscription, 'decharge', $deposant, $ip);
+        });
+    }
+
     /** @return Collection<int, QuestionSante> questions actives de la dernière version, dans l'ordre */
     public function questions(string $type): Collection
     {

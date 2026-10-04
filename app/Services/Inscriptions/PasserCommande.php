@@ -64,7 +64,8 @@ class PasserCommande
                     throw ValidationException::withMessages(['commande' => "{$nom} : {$erreur}"]);
                 }
 
-                if (! $inscription->consentementsComplets()) {
+                // La décharge et le questionnaire de santé peuvent attendre : l'inscription sera alors « dossier incomplet ».
+                if (! $inscription->consentementsAcceptes()) {
                     throw ValidationException::withMessages(['commande' => "{$nom} : il manque des consentements obligatoires."]);
                 }
 

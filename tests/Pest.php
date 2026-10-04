@@ -70,6 +70,7 @@ function documentsRemplis(): array
         'accepteReglement' => true,
         'accepteDecharge' => true,
         'accepteRgpd' => true,
+        'questionnaires' => 'maintenant',
         'reponsesDecharge' => reponses('decharge', 'oui'),
         'reponsesSante' => reponses('sante'),
         'attestationSante' => true,
