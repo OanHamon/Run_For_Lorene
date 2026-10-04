@@ -7,7 +7,8 @@ use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $name = '';
+    public string $prenom = '';
+    public string $nom = '';
     public string $email = '';
 
     /**
@@ -15,7 +16,8 @@ new class extends Component {
      */
     public function mount(): void
     {
-        $this->name = Auth::user()->name;
+        $this->prenom = Auth::user()->prenom;
+        $this->nom = Auth::user()->nom;
         $this->email = Auth::user()->email;
     }
 
@@ -27,22 +29,23 @@ new class extends Component {
         $user = Auth::user();
 
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'prenom' => ['required', 'string', 'max:100'],
+            'nom' => ['required', 'string', 'max:100'],
 
             'email' => [
                 'required',
                 'string',
                 'lowercase',
                 'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($user->id)
+                'max:254',
+                Rule::unique(User::class, 'email')->ignore($user->id_user, 'id_user')
             ],
         ]);
 
         $user->fill($validated);
 
         if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
+            $user->email_verifie_le = null;
         }
 
         $user->save();
@@ -74,7 +77,10 @@ new class extends Component {
 
     <x-settings.layout heading="Profile" subheading="Update your name and email address">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="name" label="{{ __('Name') }}" type="text" name="name" required autofocus autocomplete="name" />
+            <div class="grid grid-cols-2 gap-4">
+                <flux:input wire:model="prenom" label="{{ __('Prénom') }}" type="text" name="prenom" required autofocus autocomplete="given-name" />
+                <flux:input wire:model="nom" label="{{ __('Nom') }}" type="text" name="nom" required autocomplete="family-name" />
+            </div>
 
             <div>
                 <flux:input wire:model="email" label="{{ __('Email') }}" type="email" name="email" required autocomplete="email" />

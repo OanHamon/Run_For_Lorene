@@ -45,3 +45,25 @@ function something()
 {
     // ..
 }
+
+/** Inscription déjà réglée et validée pour $user sur $course (données de contexte des tests). */
+function inscriptionPayee(App\Models\User $user, App\Models\Course $course, string $statut = App\Models\Inscription::VALIDEE): App\Models\Inscription
+{
+    App\Models\Participant::firstOrCreate(['id_user' => $user->id_user], ['date_naissance' => '1980-01-01']);
+
+    $commande = App\Models\Commande::create([
+        'date_commande' => now(),
+        'montant_total' => 10,
+        'statut' => App\Models\Commande::PAYEE,
+        'id_user' => $user->id_user,
+    ]);
+
+    return App\Models\Inscription::create([
+        'id_participant' => $user->id_user,
+        'id_tarif' => $course->tarifs()->first()->id_tarif,
+        'id_evenement' => $course->id_evenement,
+        'id_commande' => $commande->id_commande,
+        'statut' => $statut,
+        'prix_paye' => 10,
+    ]);
+}

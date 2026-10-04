@@ -28,7 +28,7 @@ new class extends Component {
         }
 
         Auth::user()->update([
-            'password' => Hash::make($validated['password']),
+            'mot_de_passe' => Hash::make($validated['password']),
         ]);
 
         $this->reset('current_password', 'password', 'password_confirmation');

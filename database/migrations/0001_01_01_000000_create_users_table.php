@@ -12,11 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->increments('id_user');
+            $table->string('email', 254)->nullable()->unique();
+            $table->string('mot_de_passe')->nullable()->comment('Hash Laravel ; NULL pour un participant géré sans compte');
+            $table->string('nom', 100);
+            $table->string('prenom', 100);
+            $table->string('telephone', 20)->nullable();
+            $table->dateTime('email_verifie_le')->nullable()->comment("Hors MCD/MLD — mécanique Laravel (vérification email, écran 04)");
             $table->rememberToken();
             $table->timestamps();
         });

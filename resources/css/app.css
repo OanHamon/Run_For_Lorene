@@ -9,7 +9,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+
+    /* Run For Lorène — direction artistique */
+    --color-canard: #00695F;
+    --color-profond: #0B4F48;
+    --color-moutarde: #D6AD2B;
+    --color-aqua: #5DBBAA;
+    --color-aqua-clair: #E3F3EF;
+    --color-creme: #F5F3EC;
+    --color-encre: #16403B;
+    --color-gris-texte: #5B6B67;
+    --color-bordure: #E1DED3;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -37,6 +49,12 @@
 }
 
 @layer base {
+    /* Cases à cocher et boutons radio aux couleurs de la DA (au lieu du bleu du navigateur). */
+    input[type='checkbox'],
+    input[type='radio'] {
+        accent-color: var(--color-canard);
+    }
+
 
     *,
     ::after,
@@ -64,3 +82,65 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* Run For Lorène — éléments de formulaire partagés (tunnel, connexion, espace) */
+@layer components {
+    .rfl-label {
+        @apply mb-2 block text-sm font-medium text-encre;
+    }
+
+    .rfl-champ {
+        @apply h-[52px] w-full rounded-xl border border-bordure bg-white px-4 text-encre placeholder:text-gris-texte/60 focus:border-canard focus:ring-2 focus:ring-canard/20 focus:outline-none;
+    }
+
+    .rfl-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-canard px-6 py-3.5 font-medium text-white transition-colors hover:bg-profond focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-canard disabled:cursor-not-allowed disabled:opacity-40;
+    }
+
+    .rfl-btn-secondaire {
+        @apply inline-flex items-center justify-center gap-2 rounded-full border border-bordure bg-white px-6 py-3.5 font-medium text-encre transition-colors hover:border-canard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-canard disabled:cursor-not-allowed disabled:opacity-40;
+    }
+
+    .rfl-lien {
+        @apply font-medium text-canard hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-canard;
+    }
+
+    .rfl-erreur {
+        @apply mt-2 text-sm text-rose-700;
+    }
+
+    /* Bandeaux : fond teinté, bord de la même teinte à peine plus soutenu. */
+    .rfl-alerte {
+        @apply rounded-lg border border-moutarde/20 bg-moutarde/10 px-5 py-4;
+    }
+
+    .rfl-alerte-erreur {
+        @apply rounded-lg border border-rose-200/70 bg-rose-50 px-5 py-4 text-sm text-rose-800;
+    }
+
+    .rfl-alerte-info {
+        @apply rounded-lg border border-canard/15 bg-aqua-clair px-5 py-4;
+    }
+
+    .rfl-pastille {
+        @apply inline-flex max-w-full items-center gap-2 rounded-full border border-bordure py-1.5 pr-4 pl-1.5;
+    }
+}
+
+/* Tunnel : « Continuer » fait glisser le panneau suivant vers la gauche, « Retour » le ramène. */
+@keyframes rfl-glisse-avant {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes rfl-glisse-arriere {
+    from { opacity: 0; transform: translateX(-24px); }
+    to { opacity: 1; transform: none; }
+}
+
+.rfl-glisse-avant { animation: rfl-glisse-avant 0.25s ease-out; }
+.rfl-glisse-arriere { animation: rfl-glisse-arriere 0.25s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+    .rfl-glisse-avant, .rfl-glisse-arriere { animation: none; }
+}

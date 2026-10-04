@@ -112,4 +112,11 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+
+    /*
+    | Codes de vérification envoyés par email (vérification du compte et connexion sans
+    | mot de passe). En local, le code est aussi écrit dans les logs pour tester sans email.
+    */
+    'otp_dans_les_logs' => env('OTP_DANS_LES_LOGS', false),
+
 ];

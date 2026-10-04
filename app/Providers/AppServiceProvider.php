@@ -2,7 +2,12 @@
 
 namespace App\Providers;
 
+use App\Services\Paiement\Passerelle;
+use App\Services\Paiement\PasserelleSimulation;
+use App\Services\Paiement\PasserelleStripe;
 use Illuminate\Support\ServiceProvider;
+use RuntimeException;
+use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +16,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(StripeClient::class, fn () => new StripeClient((string) config('services.stripe.secret')));
+
+        $this->app->bind(Passerelle::class, function ($app) {
+            if (config('paiement.passerelle') === 'stripe') {
+                return $app->make(PasserelleStripe::class);
+            }
+
+            if ($app->isProduction()) {
+                throw new RuntimeException('Paiement : la simulation est interdite en production, configure STRIPE_SECRET.');
+            }
+
+            return $app->make(PasserelleSimulation::class);
+        });
     }
 
     /**
