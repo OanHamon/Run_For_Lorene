@@ -51,7 +51,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
 
     public bool $droitImage = false;
 
-    /** @var array<int, string> 'oui' | 'non' par id_question */
+    /** @var array<int, bool> affirmations de la décharge cochées, par id_question */
     public array $reponsesDecharge = [];
 
     public bool $accepteDecharge = false;
@@ -341,13 +341,12 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
 
         $regles = ['accepteDecharge' => 'accepted'];
         foreach ($this->questionsDecharge as $q) {
-            $regles["reponsesDecharge.{$q->id_question}"] = 'required|in:'.implode(',', Questionnaires::REPONSES);
+            $regles["reponsesDecharge.{$q->id_question}"] = 'accepted';
         }
 
         $this->validate($regles, [
-            'reponsesDecharge.*.required' => 'Réponds par oui ou par non.',
-            'reponsesDecharge.*.in' => 'Réponds par oui ou par non.',
-            'accepteDecharge.accepted' => 'Coche la case pour accepter la décharge.',
+            'reponsesDecharge.*.accepted' => Questionnaires::AFFIRMATION_REQUISE,
+            'accepteDecharge.accepted' => "Coche « J'ai lu et j'approuve » pour valider la décharge.",
         ]);
 
         $this->apresDocument('Décharge enregistrée', function (Inscription $i) {
@@ -681,22 +680,8 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                             @if ($this->dechargeARemplir)
                                 <form wire:submit="enregistrerDecharge" class="mt-3 rounded-lg border border-bordure px-4 py-2" novalidate>
                                     <p class="pt-2 font-medium text-encre">Décharge de responsabilité</p>
-                                    @if ($this->questionsDecharge->isNotEmpty())
-                                        <p class="text-sm text-gris-texte">{{ $this->estMoi ? 'Réponds à chaque question.' : "Réponds à chaque question pour {$p->user->prenom}." }}</p>
-                                        <div class="divide-y divide-bordure">
-                                            @foreach ($this->questionsDecharge as $q)
-                                                <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesDecharge" />
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    <div class="border-t border-bordure py-3">
-                                        <label class="flex items-start gap-3 text-sm text-encre">
-                                            <input wire:model="accepteDecharge" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0">
-                                            <span>J'accepte la <a href="{{ route('textes.show', 'decharge') }}" target="_blank" rel="noopener" class="underline underline-offset-4 hover:text-canard">décharge de responsabilité</a>.</span>
-                                        </label>
-                                        @error('accepteDecharge') <p class="rfl-erreur">{{ $message }}</p> @enderror
-                                    </div>
+                                    <p class="text-sm text-gris-texte">{{ $this->estMoi ? '' : "En tant que responsable, tu remplis la décharge pour {$p->user->prenom}. " }}Toutes les cases sont obligatoires.</p>
+                                    <x-questionnaire-decharge class="mt-3 pb-3" :questions="$this->questionsDecharge" :evenement="$i->evenement" :signataire="auth()->user()->nom.' '.auth()->user()->prenom" />
 
                                     <div class="flex justify-end border-t border-bordure py-3">
                                         <button type="submit" class="{{ $bouton }}" wire:loading.attr="disabled">Envoyer la décharge</button>

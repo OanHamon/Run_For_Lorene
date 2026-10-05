@@ -63,6 +63,12 @@ function reponses(string $type, string $valeur = 'non'): array
         ->all();
 }
 
+/** Toutes les affirmations de la décharge cochées, par id_question. */
+function affirmations(): array
+{
+    return array_map(fn () => true, reponses('decharge'));
+}
+
 /** Étape Documents du tunnel complète : consentements, décharge et questionnaire de santé (pour ->set()). */
 function documentsRemplis(): array
 {
@@ -71,7 +77,7 @@ function documentsRemplis(): array
         'accepteDecharge' => true,
         'accepteRgpd' => true,
         'questionnaires' => 'maintenant',
-        'reponsesDecharge' => reponses('decharge', 'oui'),
+        'reponsesDecharge' => affirmations(),
         'reponsesSante' => reponses('sante'),
         'attestationSante' => true,
     ];

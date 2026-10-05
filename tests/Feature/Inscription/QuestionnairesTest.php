@@ -11,6 +11,7 @@ use App\Services\Inscriptions\Questionnaires;
 use App\Services\Paiement\EnregistrerPaiement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
 
 beforeEach(function () {
@@ -35,24 +36,33 @@ function auxDocuments()
         ->assertSet('etape', 'documents');
 }
 
-test('les questions provisoires sont en base : 10 de santé et 10 de décharge', function () {
+test('les questions sont en base : 10 de santé et les 6 affirmations de la décharge du Google Form', function () {
     $questionnaires = app(Questionnaires::class);
+    $decharge = $questionnaires->questions(QuestionSante::DECHARGE);
 
     expect($questionnaires->questions(QuestionSante::SANTE))->toHaveCount(10)
-        ->and($questionnaires->questions(QuestionSante::DECHARGE))->toHaveCount(10);
+        ->and($decharge)->toHaveCount(6)
+        ->and($decharge->last()->libelle)->toBe("J'envoie le présent formulaire volontairement et sans contrainte.");
 
     auxDocuments()
         ->assertDontSee(QuestionSante::where('type_questionnaire', 'sante')->first()->libelle)
         ->set('questionnaires', 'maintenant')
         ->assertSee('Décharge de responsabilité')
+        ->assertSee('samedi 3 avril 2027')
+        ->assertSee('Je certifie que :')
+        ->assertSee($decharge->first()->libelle)
+        ->assertSee('Je coche les affirmations suivantes')
+        ->assertSee('Leroy Sam')
+        ->assertSee(today()->translatedFormat('j F Y'))
+        ->assertSee("J'ai lu et j'approuve l'ensemble de mes réponses à ce questionnaire.", false)
         ->assertSee('Questionnaire de santé')
         ->assertSee(QuestionSante::where('type_questionnaire', 'sante')->first()->libelle);
 });
 
 test('la décharge incomplète bloque la suite, rien n\'est enregistré', function () {
-    $decharge = reponses('decharge', 'oui');
+    $decharge = affirmations();
     $oubliee = array_key_last($decharge);
-    unset($decharge[$oubliee]);
+    $decharge[$oubliee] = false;
 
     auxDocuments()
         ->set(documentsRemplis())
@@ -60,10 +70,30 @@ test('la décharge incomplète bloque la suite, rien n\'est enregistré', functi
         ->call('documentsSuivant')
         ->assertHasErrors(["reponsesDecharge.{$oubliee}"])
         ->assertSet('etape', 'documents')
+        ->assertSee('Coche cette affirmation pour continuer.')
         ->assertSee('Il manque des réponses');
 
     expect(Document::count())->toBe(0)
         ->and(Inscription::sole()->consentementsComplets())->toBeFalse();
+});
+
+test('la décharge exige l\'approbation finale', function () {
+    auxDocuments()
+        ->set(documentsRemplis())
+        ->set('accepteDecharge', false)
+        ->call('documentsSuivant')
+        ->assertHasErrors(['accepteDecharge'])
+        ->assertSet('etape', 'documents');
+});
+
+test('le service refuse une affirmation de décharge non cochée', function () {
+    $inscription = auxDocuments()->instance()->panier->first();
+    $decharge = affirmations();
+    $decharge[array_key_first($decharge)] = 'non';
+
+    expect(fn () => app(Questionnaires::class)->enregistrer($inscription, QuestionSante::DECHARGE, $decharge, true, $this->user->id_user))
+        ->toThrow(ValidationException::class);
+    expect(Document::count())->toBe(0);
 });
 
 test('seuls oui et non sont acceptés', function () {
@@ -115,7 +145,7 @@ test('revenir aux documents reprend les réponses ; les modifier archive l\'anci
 
     // Retour sans rien changer : réponses pré-remplies, pas de nouveau document.
     $tunnel->call('modifier', $inscription->id_inscription, 'documents')
-        ->assertSet('reponsesDecharge', reponses('decharge', 'oui'))
+        ->assertSet('reponsesDecharge', affirmations())
         ->assertSet('reponsesSante', reponses('sante'))
         ->assertSet('attestationSante', true)
         ->call('documentsSuivant');
@@ -170,9 +200,9 @@ test('décharge et santé remplies plus tard : payé en dossier incomplet, puis 
         ->assertSee('Envoyer la décharge')
         ->assertSee('Envoyer le questionnaire');
 
-    // Décharge d'abord : les réponses et la case sont exigées, puis il reste la santé.
-    $page->call('enregistrerDecharge')->assertHasErrors(['accepteDecharge', 'reponsesDecharge.'.array_key_first(reponses('decharge'))]);
-    $page->set('reponsesDecharge', reponses('decharge', 'oui'))
+    // Décharge d'abord : les affirmations et l'approbation sont exigées, puis il reste la santé.
+    $page->call('enregistrerDecharge')->assertHasErrors(['accepteDecharge', 'reponsesDecharge.'.array_key_first(affirmations())]);
+    $page->set('reponsesDecharge', affirmations())
         ->set('accepteDecharge', true)
         ->call('enregistrerDecharge')
         ->assertHasNoErrors()
@@ -202,7 +232,7 @@ test('une décharge déjà remplie ne se renvoie pas depuis l\'espace', function
 
     Volt::test('espace.inscription', ['inscription' => Inscription::sole()])
         ->assertDontSee('Envoyer la décharge')
-        ->set('reponsesDecharge', reponses('decharge', 'non'))
+        ->set('reponsesDecharge', affirmations())
         ->set('accepteDecharge', true)
         ->call('enregistrerDecharge')
         ->assertForbidden();

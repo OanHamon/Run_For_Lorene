@@ -6,8 +6,8 @@ use App\Models\QuestionSante;
 use Illuminate\Database\Seeder;
 
 /**
- * Questions provisoires (version 1), en attendant celles du Google Form de santé et le texte
- * définitif de la décharge. Toutes se répondent par oui ou non.
+ * Santé : questions provisoires (version 1), en attendant celles du Google Form, à répondre par
+ * oui ou non. Décharge : affirmations du Google Form, à cocher, toutes obligatoires.
  */
 class QuestionnairesSeeder extends Seeder
 {
@@ -24,17 +24,14 @@ class QuestionnairesSeeder extends Seeder
         'Penses-tu avoir besoin d\'un avis médical avant de participer ?',
     ];
 
+    /** Décharge : affirmations à cocher du Google Form « Décharge Responsabilité Adulte ». */
     public const DECHARGE = [
-        'Reconnais-tu participer à Run For Lorène sous ta propre responsabilité ?',
-        'As-tu pris connaissance du parcours et de ses difficultés ?',
-        'T\'engages-tu à respecter le code de la route sur les portions ouvertes à la circulation ?',
-        'T\'engages-tu à suivre les consignes des signaleurs et des bénévoles ?',
-        'Sais-tu que l\'association n\'est pas responsable des vols ou pertes d\'objets personnels ?',
-        'Es-tu couvert(e) par une assurance responsabilité civile ?',
-        'Acceptes-tu d\'être pris(e) en charge par les secours si ton état le nécessite ?',
-        'T\'engages-tu à t\'arrêter en cas de malaise ou de douleur ?',
-        'Sais-tu que l\'événement n\'est ni chronométré ni compétitif ?',
-        'Renonces-tu à tout recours contre l\'organisateur pour un accident qui ne lui est pas imputable ?',
+        'Je suis en bonne condition physique, je ne souffre d\'aucune blessure, maladie ou handicap, et je n\'ai jamais eu de problèmes cardiaques ou respiratoires décelés à ce jour.',
+        'Aucun médecin, infirmier ou entraîneur ne m\'a déconseillé la pratique de ce sport.',
+        'J\'ai une assurance en responsabilité civile.',
+        'Je déclare dégager de toutes responsabilités en cas d\'accident de quelque nature que ce soit ou de dommages, sans aucune exception ni réserve, l\'organisation de la « RUN FOR LORÈNE » ainsi que toutes les personnes œuvrant pour l\'organisation.',
+        'J\'ai lu le présent document et je comprends qu\'en complétant ce formulaire je renonce à des droits importants. C\'est donc en toute connaissance de cause que j\'envoie mes réponses.',
+        'J\'envoie le présent formulaire volontairement et sans contrainte.',
     ];
 
     public function run(): void

@@ -63,7 +63,7 @@ flowchart TB
         E4["Tes documents<br/>« aucun certificat médical ni licence »"]:::ecran
         D4[/"📝 ☑ Règlement* (lien PDF)<br/>📝 ☑ Données personnelles RGPD* (lien PDF)<br/>📝 ☐ Droit à l'image (facultatif)<br/>📝 ◉ Décharge + santé : maintenant ou plus tard*"/]:::saisie
         V4{{"documents + consentements<br/>version du texte, date, IP, oui/non"}}:::serveur
-        P4[/"Maintenant : décharge (oui/non + case PDF) + santé (oui/non + attestation)<br/>Plus tard : « pas de départ sans ces documents »"/]:::saisie
+        P4[/"Maintenant : décharge (affirmations à cocher + approbation) + santé (oui/non + attestation)<br/>Plus tard : « pas de départ sans ces documents »"/]:::saisie
         E4 --- D4 --- V4
         D4 -.- P4
     end
@@ -268,7 +268,7 @@ stateDiagram-v2
 | 3/7 Épreuve | Choisis ton épreuve | Épreuve | carte à sélectionner | ✅ | âge, places, tarif en vigueur |
 | 4/7 Documents | Tes documents | Règlement | case | ✅ | version + date + IP |
 | | | Décharge + santé : maintenant ou plus tard | choix | ✅ | « plus tard » : avertissement « pas de départ sans ces documents » |
-| | | Décharge : questions + case (si maintenant) | oui/non + case | ✅ | toutes les questions répondues ; réponses chiffrées, version + date + IP |
+| | | Décharge : affirmations + approbation (si maintenant) | cases | ✅ | toutes les affirmations cochées ; nom du signataire et date affichés ; réponses chiffrées, version + date + IP |
 | | | Questionnaire de santé + attestation (si maintenant) | oui/non + case | ✅ | toutes les questions et l'attestation ; réponses chiffrées |
 | | | RGPD | case | ✅ | idem |
 | | | Droit à l'image | case | — | oui/non enregistré |
@@ -297,7 +297,7 @@ stateDiagram-v2
 - **Ordre du tunnel** : le spec prévoit Épreuve (02) → Compte (03-04) → Participant (05). Le code fait Compte → Participant → Épreuve, pour filtrer les épreuves selon l'âge avant de les afficher (choix documenté dans `tunnel.blade.php`).
 - **Écran 05 allégé** : sexe, téléphone, adresse et contact d'urgence ne sont pas demandés dans le tunnel. Ils se remplissent après coup dans l'espace (tous facultatifs).
 - **Lien magique → code** : le spec parle d'un lien magique valable 15 minutes. Le code envoie un code à 6 chiffres valable 15 minutes, qui sert aussi à vérifier l'email.
-- **Questions de santé et de décharge** : provisoires (version 1), en attendant celles du Google Form et le texte définitif de la décharge.
+- **Questions de santé** : provisoires (version 1), en attendant celles du Google Form. **Décharge** : affirmations du Google Form « Décharge Responsabilité Adulte ».
 - **Option t-shirt** (écran 07) : absente du tunnel ; seule l'étape Don existe.
 - **Don seul sans inscription** : le bouton « Faire un don » de la page événement pointe vers une ancre, sans parcours dédié.
 - **Espace participant** : le billet QR, le reçu fiscal PDF, la gestion des participants gérés et le profil ne sont pas encore codés.

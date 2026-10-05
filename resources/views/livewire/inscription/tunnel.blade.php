@@ -78,7 +78,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     public bool $accepteImage = false;
 
-    /** @var array<int, string> 'oui' | 'non' par id_question */
+    /** @var array<int, bool> affirmations de la décharge cochées, par id_question */
     public array $reponsesDecharge = [];
 
     /** @var array<int, string> 'oui' | 'non' par id_question */
@@ -407,7 +407,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $this->accepteImage = app(Consentements::class)->dernierDroitImage($inscription) ?? false;
 
         $questionnaires = app(Questionnaires::class);
-        $this->reponsesDecharge = $questionnaires->reponses($inscription, QuestionSante::DECHARGE);
+        $this->reponsesDecharge = array_map(fn ($r) => $r === 'oui', $questionnaires->reponses($inscription, QuestionSante::DECHARGE));
         $this->reponsesSante = $questionnaires->reponses($inscription, QuestionSante::SANTE);
         $this->attestationSante = (bool) $questionnaires->dernier($inscription, QuestionSante::SANTE)?->attestation;
         // Déjà commencés : on les montre tels quels ; sinon la question « maintenant ou plus tard » est reposée.
@@ -666,7 +666,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         if ($maintenant) {
             $regles['accepteDecharge'] = 'accepted';
             foreach ($this->questionsDecharge as $q) {
-                $regles["reponsesDecharge.{$q->id_question}"] = $ouiNon;
+                $regles["reponsesDecharge.{$q->id_question}"] = 'accepted';
             }
         }
 
@@ -682,9 +682,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             'accepteRgpd.accepted' => 'Il faut accepter le traitement des données pour continuer.',
             'questionnaires.required' => 'Choisis de remplir la décharge et le questionnaire maintenant ou plus tard.',
             'questionnaires.in' => 'Choisis de remplir la décharge et le questionnaire maintenant ou plus tard.',
-            'accepteDecharge.accepted' => 'Coche la case pour accepter la décharge, ou choisis « Plus tard ».',
-            'reponsesDecharge.*.required' => 'Réponds par oui ou par non.',
-            'reponsesDecharge.*.in' => 'Réponds par oui ou par non.',
+            'accepteDecharge.accepted' => "Coche « J'ai lu et j'approuve » pour valider la décharge, ou choisis « Plus tard ».",
+            'reponsesDecharge.*.accepted' => Questionnaires::AFFIRMATION_REQUISE,
             'reponsesSante.*.required' => 'Réponds par oui ou par non.',
             'reponsesSante.*.in' => 'Réponds par oui ou par non.',
             'attestationSante.accepted' => "Coche l'attestation, ou choisis « Plus tard ».",
@@ -1066,22 +1065,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 {{-- Décharge de responsabilité --}}
                 <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-decharge">
                     <h3 id="titre-decharge" class="font-display font-bold text-encre">Décharge de responsabilité</h3>
-                    @if ($this->questionsDecharge->isNotEmpty())
-                        <p class="mt-1 text-sm text-gris-texte">Réponds à chaque question{{ $pour ? " pour {$pour}" : '' }}.</p>
-                        <div class="mt-2 divide-y divide-bordure">
-                            @foreach ($this->questionsDecharge as $q)
-                                <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesDecharge" />
-                            @endforeach
-                        </div>
-                    @endif
-
-                    <div class="mt-3 border-t border-bordure pt-4">
-                        <label class="flex items-start gap-3 text-sm text-encre">
-                            <input wire:model="accepteDecharge" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                            <span>J'accepte la <a href="{{ route('textes.show', 'decharge') }}" target="_blank" rel="noopener" class="rfl-lien underline">décharge de responsabilité</a></span>
-                        </label>
-                        @error('accepteDecharge') <p class="rfl-erreur">{{ $message }}</p> @enderror
-                    </div>
+                    <p class="mt-1 text-sm text-gris-texte">{{ $pour ? "En tant que responsable, tu remplis la décharge pour {$pour}. " : '' }}Toutes les cases sont obligatoires.</p>
+                    <x-questionnaire-decharge class="mt-4" :questions="$this->questionsDecharge" :evenement="$this->evenement" :signataire="auth()->user()->nom.' '.auth()->user()->prenom" />
                 </section>
 
                 {{-- Questionnaire de santé --}}
@@ -1108,7 +1093,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         </section>
 
         @if ($errors->hasAny(['reponsesDecharge.*', 'reponsesSante.*']))
-            <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
+            <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses ou des cases à cocher : elles sont signalées plus haut.</p>
         @endif
 
         <div class="mt-8 flex items-center justify-between">

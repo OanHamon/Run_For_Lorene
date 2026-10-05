@@ -234,7 +234,7 @@ Transitions (version texte du schéma) :
 | Document | Qui | Quand il est exigé |
 | --- | --- | --- |
 | Acceptation du règlement (consentement) | Tous | Toujours, avant paiement |
-| Décharge de responsabilité (questionnaire oui/non + consentement au texte PDF) | Tous | Toujours ; dans le tunnel ou plus tard depuis l'espace, obligatoire pour prendre le départ |
+| Décharge de responsabilité (affirmations du Google Form à cocher + approbation finale, qui vaut consentement au texte) | Tous | Toujours ; dans le tunnel ou plus tard depuis l'espace, obligatoire pour prendre le départ |
 | RGPD (consentement) | Tous | Toujours, avant paiement |
 | Droit à l'image (consentement) | Tous | Facultatif, oui ou non enregistré |
 | Questionnaire de santé (questions oui/non reprises du Google Form actuel + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
@@ -270,7 +270,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 03 | Identification (étape 2/7) | Email seul, puis mot de passe ou lien magique | Comme Google : l'email détermine connexion ou création |
 | 04 | Création du compte (étape 2/7) | Pastille de l'email saisi, prénom, nom, mot de passe | Vérification de l'email par lien |
 | 05 | Participant (étape 3/7) | « Pour qui ? » : moi-même, un participant déjà enregistré, ou un nouveau participant (enfant). Identité, date de naissance (calendrier), sexe, téléphone, adresse, contact d'urgence | Âge à la date de l'événement vérifié par rapport aux âges min et max de la course |
-| 06 | Documents et consentements (étape 4/7) | Cases règlement (lien PDF), RGPD, droit à l'image ; choix « maintenant » ou « plus tard » pour la décharge (questions oui/non + case, lien PDF) et le questionnaire de santé (oui/non + attestation) | Règlement, RGPD et le choix bloquent la suite ; « plus tard » affiche qu'il n'y a pas de départ sans ces documents |
+| 06 | Documents et consentements (étape 4/7) | Cases règlement (lien PDF), RGPD, droit à l'image ; choix « maintenant » ou « plus tard » pour la décharge (6 affirmations à cocher, nom et date, approbation finale) et le questionnaire de santé (oui/non + attestation) | Règlement, RGPD et le choix bloquent la suite ; « plus tard » affiche qu'il n'y a pas de départ sans ces documents |
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
 | 09 | Paiement (étape 7/7) | Redirection vers Stripe Checkout (carte, Apple Pay) | Place réservée pendant le paiement |
@@ -371,7 +371,7 @@ Ces sujets sont volontairement reportés ; aucun ne bloque la V1.
 **À vérifier avec l'association**
 
 - [ ] Hébergement : offre OVH exacte (mutualisé, VPS ou cloud) et compatibilité avec les files d'attente et tâches planifiées de Laravel.
-- [ ] Récupérer les questions exactes du Google Form de santé et le texte définitif de la décharge (questions provisoires en base, version 1 ; toutes les réponses sont oui/non).
+- [ ] Récupérer les questions exactes du Google Form de santé (questions provisoires en base, version 1, réponses oui/non). Décharge : reprise du Google Form « Décharge Responsabilité Adulte » (fait le 2026-10-05).
 - [x] Usage des réponses de santé : stockées (chiffrées) par coureur, une réponse « oui » ne bloque pas l'inscription. Qui les consulte : admins habilités (lot admin).
 - [ ] Limites réelles de l'offre Brevo par rapport au volume d'emails attendu.
 - [ ] Audit TimePulse : champs et fonctionnalités réellement utilisés.

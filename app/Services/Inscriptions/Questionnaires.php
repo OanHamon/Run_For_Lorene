@@ -12,20 +12,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Questionnaires oui/non d'une inscription : santé (avec attestation finale) et décharge.
- * Chaque réponse est chiffrée et liée à la question posée, donc à sa version. Remplir à
+ * Questionnaires d'une inscription : santé (oui/non, avec attestation finale) et décharge
+ * (affirmations toutes à cocher, avec approbation finale). Chaque réponse est chiffrée et liée à la question posée, donc à sa version. Remplir à
  * nouveau archive l'ancien questionnaire (suppression logique) au lieu de le modifier.
  */
 class Questionnaires
 {
     public const REPONSES = ['oui', 'non'];
 
+    public const AFFIRMATION_REQUISE = 'Coche cette affirmation pour continuer.';
+
     public function __construct(private Consentements $consentements) {}
 
     /**
-     * Décharge : questionnaire (s'il a des questions) et acceptation du texte, ensemble.
+     * Décharge : affirmations cochées (s'il y en a) et acceptation du texte, ensemble. L'appelant
+     * a vérifié l'approbation finale (« J'ai lu et j'approuve… »), enregistrée comme attestation.
      *
-     * @param  array<int|string, mixed>  $reponses
+     * @param  array<int|string, mixed>  $reponses  par id_question : true ou 'oui' si cochée
      */
     public function remplirDecharge(Inscription $inscription, array $reponses, int $deposant, ?string $ip): void
     {
@@ -75,8 +78,9 @@ class Questionnaires
     }
 
     /**
-     * Enregistre un questionnaire complet. Toutes les questions de la version en cours
-     * attendent oui ou non ; la santé exige en plus l'attestation finale.
+     * Enregistre un questionnaire complet. Santé : toutes les questions de la version en cours
+     * attendent oui ou non. Décharge : toutes les affirmations doivent être cochées (enregistrées
+     * « oui »). Les deux exigent l'attestation finale.
      *
      * @param  array<int|string, mixed>  $reponses  par id_question
      *
@@ -91,14 +95,20 @@ class Questionnaires
         foreach ($questions as $question) {
             $reponse = $reponses[$question->id_question] ?? null;
 
-            if (! in_array($reponse, self::REPONSES, true)) {
+            if ($type === QuestionSante::DECHARGE) {
+                if ($reponse === true || $reponse === 'oui') {
+                    $propres[$question->id_question] = 'oui';
+                } else {
+                    $erreurs["reponses.{$question->id_question}"] = self::AFFIRMATION_REQUISE;
+                }
+            } elseif (! in_array($reponse, self::REPONSES, true)) {
                 $erreurs["reponses.{$question->id_question}"] = 'Réponds par oui ou par non.';
             } else {
                 $propres[$question->id_question] = $reponse;
             }
         }
 
-        if ($type === QuestionSante::SANTE && ! $attestation) {
+        if (! $attestation) {
             $erreurs['attestation'] = "Coche l'attestation pour valider le questionnaire.";
         }
 
