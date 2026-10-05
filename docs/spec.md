@@ -184,7 +184,7 @@ Héritages traduits en une table par entité, la table fille partageant la clé 
 - `document (#id_document, date_depot, statut, motif_refus, date_validation, id_deposant*, id_validateur*, id_inscription*)`
 - `questionnaire_sante (#id_document*, type_questionnaire, attestation)` : `type_questionnaire` vaut `sante` ou `decharge`
 - `consentement (#id_document*, accepte, ip, id_texte*)`
-- `question_sante (#id_question, type_questionnaire, libelle, ordre, version_questionnaire, active)`
+- `question_sante (#id_question, type_questionnaire, libelle, rubrique, ordre, version_questionnaire, active)` : `rubrique` (santé uniquement) parmi `annee`, `semaines`, `aujourdhui`, `parents`
 - `reponse_sante (#id_document*, #id_question*, reponse)`
 
 ### Contraintes et types clés
@@ -237,7 +237,7 @@ Transitions (version texte du schéma) :
 | Décharge de responsabilité (affirmations du Google Form à cocher + approbation finale, qui vaut consentement au texte) | Tous | Toujours ; dans le tunnel ou plus tard depuis l'espace, obligatoire pour prendre le départ |
 | RGPD (consentement) | Tous | Toujours, avant paiement |
 | Droit à l'image (consentement) | Tous | Facultatif, oui ou non enregistré |
-| Questionnaire de santé (questions oui/non reprises du Google Form actuel + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
+| Questionnaire de santé (24 questions oui/non du Google Form, en 4 rubriques sur 3 diapos, avertissement « consulte un médecin si un OUI » + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
 
 Pas d'autorisation parentale pour les mineurs : décision de l'association.
 
@@ -371,7 +371,9 @@ Ces sujets sont volontairement reportés ; aucun ne bloque la V1.
 **À vérifier avec l'association**
 
 - [ ] Hébergement : offre OVH exacte (mutualisé, VPS ou cloud) et compatibilité avec les files d'attente et tâches planifiées de Laravel.
-- [ ] Récupérer les questions exactes du Google Form de santé (questions provisoires en base, version 1, réponses oui/non). Décharge : reprise du Google Form « Décharge Responsabilité Adulte » (fait le 2026-10-05).
+- [x] Questions du Google Form de santé reprises (version 1). Même questionnaire pour tous ; si le coureur est mineur le jour de l'événement, la rubrique famille est titrée « à faire remplir par tes parents ». Sexe et âge non redemandés (profil). La personne qui inscrit répond.
+- [x] Décharge : reprise du Google Form « Décharge Responsabilité Adulte » (6 affirmations à cocher, version 1).
+- [ ] Décharge pour les mineurs : le Google Form est la version « Adulte » ; une version mineur existe-t-elle ?
 - [x] Usage des réponses de santé : stockées (chiffrées) par coureur, une réponse « oui » ne bloque pas l'inscription. Qui les consulte : admins habilités (lot admin).
 - [ ] Limites réelles de l'offre Brevo par rapport au volume d'emails attendu.
 - [ ] Audit TimePulse : champs et fonctionnalités réellement utilisés.

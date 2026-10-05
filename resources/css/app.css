@@ -83,6 +83,11 @@ select:focus[data-flux-control] {
     @apply size-4;
 } */
 
+/* Masqué jusqu'à l'initialisation d'Alpine (diapos du questionnaire de santé). */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Run For Lorène — éléments de formulaire partagés (tunnel, connexion, espace) */
 @layer components {
     .rfl-label {

@@ -293,6 +293,14 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         return app(Questionnaires::class)->questions(QuestionSante::SANTE);
     }
 
+    /** Le participant aura moins de 18 ans le jour de l'événement. */
+    #[Computed]
+    public function participantMineur(): bool
+    {
+        return $this->participant && $this->evenement
+            && $this->participant->ageAu($this->evenement->date_evenement) < 18;
+    }
+
     /** L'épreuve choisie demande le questionnaire de santé. */
     #[Computed]
     public function santeRequise(): bool
@@ -1073,20 +1081,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 @if ($this->santeRequise)
                     <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-sante">
                         <h3 id="titre-sante" class="font-display font-bold text-encre">Questionnaire de santé</h3>
-                        <p class="mt-1 text-sm text-gris-texte">Tes réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.</p>
-                        <div class="mt-2 divide-y divide-bordure">
-                            @foreach ($this->questionsSante as $q)
-                                <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesSante" />
-                            @endforeach
-                        </div>
-
-                        <div class="mt-3 border-t border-bordure pt-4">
-                            <label class="flex items-start gap-3 text-sm text-encre">
-                                <input wire:model="attestationSante" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                                <span>{{ $pour ? "J'atteste avoir répondu avec exactitude pour {$pour}." : "J'atteste avoir répondu avec exactitude à toutes les questions." }}</span>
-                            </label>
-                            @error('attestationSante') <p class="rfl-erreur">{{ $message }}</p> @enderror
-                        </div>
+                        <p class="mt-1 text-sm text-gris-texte">Réponds par oui ou par non{{ $pour ? " pour {$pour}" : '' }}. Les réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.</p>
+                        <x-questionnaire-sante :questions="$this->questionsSante" :mineur="$this->participantMineur" :pour="$pour" />
                     </section>
                 @endif
             @endif

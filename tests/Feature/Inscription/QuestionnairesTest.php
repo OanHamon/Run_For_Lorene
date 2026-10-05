@@ -36,16 +36,19 @@ function auxDocuments()
         ->assertSet('etape', 'documents');
 }
 
-test('les questions sont en base : 10 de santé et les 6 affirmations de la décharge du Google Form', function () {
+test('les questions des Google Forms sont en base : 24 de santé par rubrique, 6 affirmations de décharge', function () {
     $questionnaires = app(Questionnaires::class);
+    $sante = $questionnaires->questions(QuestionSante::SANTE);
     $decharge = $questionnaires->questions(QuestionSante::DECHARGE);
 
-    expect($questionnaires->questions(QuestionSante::SANTE))->toHaveCount(10)
+    expect($sante)->toHaveCount(24)
+        ->and($sante->countBy('rubrique')->all())->toBe(['annee' => 12, 'semaines' => 6, 'aujourdhui' => 3, 'parents' => 3])
+        ->and($sante->first()->libelle)->toBe("Es-tu allé(e) à l'hôpital pendant toute une journée ou plusieurs jours ?")
         ->and($decharge)->toHaveCount(6)
         ->and($decharge->last()->libelle)->toBe("J'envoie le présent formulaire volontairement et sans contrainte.");
 
     auxDocuments()
-        ->assertDontSee(QuestionSante::where('type_questionnaire', 'sante')->first()->libelle)
+        ->assertDontSee($sante->first()->libelle)
         ->set('questionnaires', 'maintenant')
         ->assertSee('Décharge de responsabilité')
         ->assertSee('samedi 3 avril 2027')
@@ -56,7 +59,31 @@ test('les questions sont en base : 10 de santé et les 6 affirmations de la déc
         ->assertSee(today()->translatedFormat('j F Y'))
         ->assertSee("J'ai lu et j'approuve l'ensemble de mes réponses à ce questionnaire.", false)
         ->assertSee('Questionnaire de santé')
-        ->assertSee(QuestionSante::where('type_questionnaire', 'sante')->first()->libelle);
+        ->assertSee('Partie suivante')
+        ->assertSee("Depuis l'année dernière")
+        ->assertSee($sante->first()->libelle)
+        ->assertSee($sante->last()->libelle)
+        ->assertSee('Ta famille et ton suivi médical')
+        ->assertDontSee('Questions à faire remplir par tes parents')
+        ->assertSee('tu dois consulter un médecin')
+        ->assertSee("J'ai lu et j'approuve l'ensemble de mes réponses à ce questionnaire.");
+});
+
+test('pour un mineur, les questions de la famille sont à remplir par ses parents', function () {
+    // 15 ans le jour de l'événement (3 avril 2027).
+    Volt::test('inscription.tunnel')
+        ->call('choisirParticipant', 'nouveau')
+        ->set('prenom', 'Noé')
+        ->set('dateNaissance', '2011-06-01')
+        ->call('participantSuivant')
+        ->call('choisirCourse', test()->marche->id_course)
+        ->call('epreuveSuivant')
+        ->assertSet('etape', 'documents')
+        ->assertSet('participantMineur', true)
+        ->set('questionnaires', 'maintenant')
+        ->assertSee('Questions à remplir par les parents de Noé')
+        ->assertDontSee('Ta famille et ton suivi médical')
+        ->assertSee('Noé doit consulter un médecin');
 });
 
 test('la décharge incomplète bloque la suite, rien n\'est enregistré', function () {
@@ -127,7 +154,7 @@ test('les réponses sont chiffrées en base et liées à la question posée, pou
     expect($sante->attestation)->toBeTrue()
         ->and($sante->document->id_inscription)->toBe($inscription->id_inscription)
         ->and($sante->document->id_deposant)->toBe($this->user->id_user)
-        ->and($sante->reponses)->toHaveCount(10)
+        ->and($sante->reponses)->toHaveCount(24)
         ->and($questionnaires->reponses($inscription, QuestionSante::DECHARGE))->toBe(reponses('decharge', 'oui'))
         ->and($questionnaires->reponses($inscription, QuestionSante::SANTE))->toBe(reponses('sante'));
 
