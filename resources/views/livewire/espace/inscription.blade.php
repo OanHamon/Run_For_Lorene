@@ -727,25 +727,13 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                             </p>
 
                             @if ($this->santeARemplir)
-                                <form wire:submit="enregistrerSante" class="mt-3 rounded-lg border border-bordure px-4 py-2" novalidate>
-                                    <p class="pt-2 text-sm text-gris-texte">{{ $this->estMoi ? 'Réponds à chaque question.' : "Réponds à chaque question pour {$p->user->prenom}." }} Seules les personnes habilitées de l'association peuvent consulter les réponses.</p>
-                                    <div class="divide-y divide-bordure">
-                                        @foreach ($this->questionsSante as $q)
-                                            <x-question-oui-non :question="$q" :numero="$loop->iteration" modele="reponsesSante" />
-                                        @endforeach
-                                    </div>
-
-                                    <div class="border-t border-bordure py-3">
-                                        <label class="flex items-start gap-3 text-sm text-encre">
-                                            <input wire:model="attestationSante" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0">
-                                            <span>{{ $this->estMoi ? "J'atteste avoir répondu avec exactitude à toutes les questions." : "J'atteste avoir répondu avec exactitude pour {$p->user->prenom}." }}</span>
-                                        </label>
-                                        @error('attestationSante') <p class="rfl-erreur">{{ $message }}</p> @enderror
-                                    </div>
-
-                                    <div class="flex justify-end border-t border-bordure py-3">
-                                        <button type="submit" class="{{ $bouton }}" wire:loading.attr="disabled">Envoyer le questionnaire</button>
-                                    </div>
+                                <form wire:submit="enregistrerSante" class="mt-3 rounded-lg border border-bordure px-4 py-3" novalidate>
+                                    <p class="text-sm text-gris-texte">{{ $this->estMoi ? 'Réponds par oui ou par non.' : "Réponds par oui ou par non pour {$p->user->prenom}." }} Seules les personnes habilitées de l'association peuvent consulter les réponses.</p>
+                                    <x-questionnaire-sante :questions="$this->questionsSante" :mineur="$p->ageAu($i->evenement->date_evenement) < 18" :pour="$this->estMoi ? null : $p->user->prenom">
+                                        <x-slot:actions>
+                                            <button type="submit" class="{{ $bouton }}" wire:loading.attr="disabled">Envoyer le questionnaire</button>
+                                        </x-slot:actions>
+                                    </x-questionnaire-sante>
                                 </form>
                             @endif
                         </div>

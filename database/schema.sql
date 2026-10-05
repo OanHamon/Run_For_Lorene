@@ -379,6 +379,7 @@ CREATE TABLE `question_santes` (
     `id_question`           SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `type_questionnaire`    ENUM('sante','decharge') NOT NULL DEFAULT 'sante',
     `libelle`               VARCHAR(255) NOT NULL,
+    `rubrique`              VARCHAR(20) NULL COMMENT 'Section du questionnaire de santé (vide pour la décharge)',
     `ordre`                 SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     `version_questionnaire` SMALLINT UNSIGNED NOT NULL,
     `active`                TINYINT(1) NOT NULL DEFAULT 1,
