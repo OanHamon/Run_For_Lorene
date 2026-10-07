@@ -10,8 +10,10 @@ use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\MettreAJourStatut;
 use App\Services\Inscriptions\Questionnaires;
 use App\Services\Inscriptions\SupprimerInscription;
+use App\Support\Telephone;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -38,6 +40,9 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     public string $sexe = '';
 
     public string $telephone = '';
+
+    /** Email de contact d'un participant géré (le titulaire a son email de compte). */
+    public string $email = '';
 
     public string $adresse = '';
 
@@ -85,6 +90,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
         $this->dateNaissance = $p->date_naissance->format('Y-m-d');
         $this->sexe = (string) $p->sexe;
         $this->telephone = $this->telephoneLisible($p->user->telephone);
+        $this->email = (string) $p->email_contact;
         $this->adresse = (string) $p->adresse;
         $this->codePostal = (string) $p->code_postal;
         $this->ville = (string) $p->ville;
@@ -208,7 +214,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
 
     public function telephoneLisible(?string $tel): string
     {
-        return $tel ? trim(chunk_split($tel, 2, ' ')) : '';
+        return Telephone::lisible($tel);
     }
 
     // ------------------------------------------------------------------
@@ -232,11 +238,12 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     {
         abort_unless($this->modifiable, 403);
 
-        $this->telephone = $this->normaliserTelephone($this->telephone);
-        $this->urgenceTel = $this->normaliserTelephone($this->urgenceTel);
+        $this->telephone = Telephone::normaliser($this->telephone);
+        $this->urgenceTel = Telephone::normaliser($this->urgenceTel);
+        $this->email = Str::lower(trim($this->email));
         $this->codePostal = preg_replace('/\s+/', '', $this->codePostal);
 
-        $telephone = ['nullable', 'regex:/^0[1-9]\d{8}$/'];
+        $telephone = Telephone::REGLE;
 
         $this->validate([
             'prenom' => 'required|string|max:100',
@@ -244,14 +251,15 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
             'dateNaissance' => 'required|date_format:Y-m-d|before:today|after:1900-01-01',
             'sexe' => 'nullable|in:femme,homme,autre',
             'telephone' => $telephone,
+            'email' => 'nullable|email:rfc|max:254',
             'adresse' => 'nullable|string|max:255',
             'codePostal' => ['nullable', 'regex:/^\d{5}$/'],
             'ville' => 'nullable|string|max:100',
             'urgenceNom' => 'nullable|string|max:150|required_with:urgenceTel',
             'urgenceTel' => [...$telephone, 'required_with:urgenceNom'],
         ], [
-            'telephone.regex' => 'Numéro français attendu, par exemple 06 12 34 56 78.',
-            'urgenceTel.regex' => 'Numéro français attendu, par exemple 06 12 34 56 78.',
+            'telephone.regex' => Telephone::MESSAGE,
+            'urgenceTel.regex' => Telephone::MESSAGE,
             'codePostal.regex' => 'Le code postal contient 5 chiffres.',
             'urgenceNom.required_with' => 'Indique le nom de la personne à prévenir.',
             'urgenceTel.required_with' => 'Indique le numéro de la personne à prévenir.',
@@ -260,6 +268,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
             'prenom' => 'prénom',
             'dateNaissance' => 'date de naissance',
             'codePostal' => 'code postal',
+            'email' => 'adresse email',
         ]);
 
         $i = $this->inscription;
@@ -287,6 +296,8 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
             $participant->forceFill([
                 'date_naissance' => $this->dateNaissance,
                 'sexe' => $this->sexe ?: null,
+                // Le titulaire du compte a déjà son email de connexion.
+                'email_contact' => $participant->estGere() ? ($this->email ?: null) : $participant->email_contact,
                 'adresse' => trim($this->adresse) ?: null,
                 'code_postal' => $this->codePostal ?: null,
                 'ville' => trim($this->ville) ?: null,
@@ -410,12 +421,6 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
         return $this->redirectRoute('espace');
     }
 
-    private function normaliserTelephone(string $tel): string
-    {
-        $tel = preg_replace('/[\s.\-()]/', '', trim($tel));
-
-        return preg_replace('/^(\+|00)33/', '0', $tel);
-    }
 }; ?>
 
 @php
@@ -554,6 +559,8 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                     <div><dt class="{{ $dt }}">Date de naissance</dt><dd class="mt-0.5 text-encre">{{ $p->date_naissance->translatedFormat('j F Y') }}</dd></div>
                                     <div><dt class="{{ $dt }}">Sexe</dt><dd class="mt-0.5 {{ $p->sexe ? 'text-encre' : 'text-gris-texte' }}">{{ $sexes[$p->sexe] ?? 'Non renseigné' }}</dd></div>
                                     <div><dt class="{{ $dt }}">Téléphone</dt><dd class="mt-0.5 {{ $p->user->telephone ? 'text-encre' : 'text-gris-texte' }}">{{ $this->telephoneLisible($p->user->telephone) ?: 'Non renseigné' }}</dd></div>
+                                    @php($emailContact = $p->estGere() ? $p->email_contact : $p->user->email)
+                                    <div><dt class="{{ $dt }}">Email</dt><dd class="mt-0.5 break-all {{ $emailContact ? 'text-encre' : 'text-gris-texte' }}">{{ $emailContact ?: 'Non renseigné' }}</dd></div>
                                     @php($adresse = collect([$p->adresse, trim($p->code_postal.' '.$p->ville)])->filter()->join(', '))
                                     <div><dt class="{{ $dt }}">Adresse</dt><dd class="mt-0.5 {{ $adresse ? 'text-encre' : 'text-gris-texte' }}">{{ $adresse ?: 'Non renseignée' }}</dd></div>
                                     <div class="sm:col-span-2">
@@ -592,11 +599,18 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                             </select>
                                             @error('sexe') <p class="rfl-erreur">{{ $message }}</p> @enderror
                                         </div>
-                                        <div class="sm:col-span-2">
+                                        <div class="{{ $p->estGere() ? '' : 'sm:col-span-2' }}">
                                             <label for="telephone" class="{{ $label }}">Téléphone <span class="font-normal text-gris-texte">(facultatif)</span></label>
                                             <input wire:model="telephone" id="telephone" type="tel" inputmode="tel" autocomplete="{{ $this->estMoi ? 'tel' : 'off' }}" placeholder="06 12 34 56 78" class="{{ $champ }}">
                                             @error('telephone') <p class="rfl-erreur">{{ $message }}</p> @enderror
                                         </div>
+                                        @if ($p->estGere())
+                                            <div>
+                                                <label for="email" class="{{ $label }}">Email <span class="font-normal text-gris-texte">(facultatif)</span></label>
+                                                <input wire:model="email" id="email" type="email" inputmode="email" autocomplete="off" class="{{ $champ }}">
+                                                @error('email') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                                            </div>
+                                        @endif
                                         <div class="sm:col-span-2">
                                             <label for="adresse" class="{{ $label }}">Adresse <span class="font-normal text-gris-texte">(facultatif)</span></label>
                                             <input wire:model="adresse" id="adresse" type="text" autocomplete="{{ $this->estMoi ? 'street-address' : 'off' }}" class="{{ $champ }}">

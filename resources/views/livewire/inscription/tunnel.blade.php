@@ -13,6 +13,7 @@ use App\Services\Inscriptions\Eligibilite;
 use App\Services\Inscriptions\PasserCommande;
 use App\Services\Inscriptions\Questionnaires;
 use App\Services\Paiement\DemarrerPaiement;
+use App\Support\Telephone;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +68,11 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     public string $nom = '';
 
     public string $dateNaissance = '';
+
+    public string $telephone = '';
+
+    /** Email de contact d'un participant géré ; le titulaire garde son email de compte. */
+    public string $email = '';
 
     // Épreuve
     public ?int $courseId = null;
@@ -390,7 +396,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     private function allerParticipant(): void
     {
-        $this->reset('choix', 'prenom', 'nom', 'dateNaissance', 'courseId', ...self::CHAMPS_DOCUMENTS);
+        $this->reset('choix', 'prenom', 'nom', 'dateNaissance', 'telephone', 'email', 'courseId', ...self::CHAMPS_DOCUMENTS);
         $this->participantId = null;
         $this->inscriptionId = null;
         $this->aller('participant');
@@ -412,6 +418,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $this->prenom = $participant->user->prenom;
         $this->nom = $participant->user->nom;
         $this->dateNaissance = $participant->date_naissance->format('Y-m-d');
+        $this->telephone = Telephone::lisible($participant->user->telephone);
+        $this->email = (string) $participant->email_contact;
         $this->courseId = $inscription->tarif->id_course;
         $this->chargerConsentements($inscription);
     }
@@ -477,11 +485,15 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             $this->prenom = $user->prenom;
             $this->nom = $user->nom;
             $this->dateNaissance = $user->participant?->date_naissance?->format('Y-m-d') ?? '';
+            $this->telephone = Telephone::lisible($user->telephone);
+            $this->email = '';
         } elseif ($cle === 'nouveau') {
             // Le plus souvent un enfant : même nom de famille, à corriger au besoin.
             $this->prenom = '';
             $this->nom = $user->nom;
             $this->dateNaissance = '';
+            $this->telephone = '';
+            $this->email = '';
         } else {
             $p = $user->participantsGeres()->with('user')->find((int) $cle);
             if (! $p) {
@@ -492,6 +504,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             $this->prenom = $p->user->prenom;
             $this->nom = $p->user->nom;
             $this->dateNaissance = $p->date_naissance->format('Y-m-d');
+            $this->telephone = Telephone::lisible($p->user->telephone);
+            $this->email = (string) $p->email_contact;
         }
     }
 
@@ -499,26 +513,35 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {
         $user = Auth::user();
 
+        $this->telephone = Telephone::normaliser($this->telephone);
+        $this->email = $this->choix === 'moi' ? '' : Str::lower(trim($this->email));
+
         $this->validate([
             'choix' => 'required|string',
             'prenom' => 'required|string|max:100',
             'nom' => 'required|string|max:100',
             'dateNaissance' => 'required|date_format:Y-m-d|before:today|after:1900-01-01',
+            'telephone' => Telephone::REGLE,
+            'email' => 'nullable|email:rfc|max:254',
         ], [
             'choix.required' => 'Choisis qui tu inscris.',
             'dateNaissance.before' => 'La date de naissance doit être dans le passé.',
             'dateNaissance.after' => 'Vérifie la date de naissance.',
+            'telephone.regex' => Telephone::MESSAGE,
         ], [
             'dateNaissance' => 'date de naissance',
             'prenom' => 'prénom',
+            'email' => 'adresse email',
         ]);
 
         $prenom = trim($this->prenom);
         $nom = trim($this->nom);
+        $telephone = $this->telephone ?: null;
+        $email = $this->email ?: null;
 
-        $participant = DB::transaction(function () use ($user, $prenom, $nom) {
+        $participant = DB::transaction(function () use ($user, $prenom, $nom, $telephone, $email) {
             if ($this->choix === 'moi') {
-                $user->fill(['prenom' => $prenom, 'nom' => $nom])->save();
+                $user->fill(['prenom' => $prenom, 'nom' => $nom, 'telephone' => $telephone])->save();
 
                 $moi = Participant::firstOrNew(['id_user' => $user->id_user]);
                 $moi->date_naissance = $this->dateNaissance;
@@ -536,14 +559,19 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                     ->first();
 
                 if ($existant) {
+                    // Champs laissés vides : on garde ce qui était déjà connu.
+                    $existant->user->fill(['telephone' => $telephone ?? $existant->user->telephone])->save();
+                    $existant->fill(['email_contact' => $email ?? $existant->email_contact])->save();
+
                     return $existant;
                 }
 
-                $compte = User::create(['prenom' => $prenom, 'nom' => $nom]);
+                $compte = User::create(['prenom' => $prenom, 'nom' => $nom, 'telephone' => $telephone]);
 
                 return Participant::create([
                     'id_user' => $compte->id_user,
                     'date_naissance' => $this->dateNaissance,
+                    'email_contact' => $email,
                     'pays' => 'France',
                     'id_responsable' => $user->id_user,
                 ]);
@@ -552,14 +580,16 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             $gere = $user->participantsGeres()->find((int) $this->choix);
             abort_unless($gere, 403);
 
-            $gere->user->fill(['prenom' => $prenom, 'nom' => $nom])->save();
+            $gere->user->fill(['prenom' => $prenom, 'nom' => $nom, 'telephone' => $telephone])->save();
             $gere->date_naissance = $this->dateNaissance;
+            $gere->email_contact = $email;
             $gere->save();
 
             return $gere;
         });
 
         $participant->load('user');
+        $this->telephone = Telephone::lisible($telephone);
 
         if (app(Eligibilite::class)->dejaInscrit($participant, $this->evenement)) {
             $this->addError('choix', "{$participant->user->prenom} est déjà inscrit(e) à Run For Lorène. Retrouve son inscription dans ton espace.");
@@ -1018,6 +1048,24 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                     <input wire:model="dateNaissance" id="dateNaissance" type="date" required min="1900-01-01" max="{{ now()->subDay()->toDateString() }}" class="rfl-champ" aria-describedby="naissance-aide">
                     <p id="naissance-aide" class="mt-2 text-xs text-gris-texte">Les épreuves proposées dépendent de l'âge le jour de l'événement.</p>
                     @error('dateNaissance') <p class="rfl-erreur">{{ $message }}</p> @enderror
+
+                    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="{{ $choix === 'moi' ? 'sm:col-span-2' : '' }}">
+                            <label for="telephone" class="rfl-label">Téléphone <span class="font-normal text-gris-texte">(facultatif)</span></label>
+                            <input wire:model="telephone" id="telephone" type="tel" inputmode="tel" autocomplete="{{ $choix === 'moi' ? 'tel' : 'off' }}" placeholder="06 12 34 56 78" class="rfl-champ">
+                            @error('telephone') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                        </div>
+                        @if ($choix !== 'moi')
+                            <div>
+                                <label for="email" class="rfl-label">Email <span class="font-normal text-gris-texte">(facultatif)</span></label>
+                                <input wire:model="email" id="email" type="email" inputmode="email" autocomplete="off" class="rfl-champ">
+                                @error('email') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                            </div>
+                        @endif
+                    </div>
+                    @if ($choix === 'moi')
+                        <p class="mt-2 text-xs text-gris-texte">Tes emails arrivent sur {{ auth()->user()->email }}.</p>
+                    @endif
                 </div>
             @endif
 

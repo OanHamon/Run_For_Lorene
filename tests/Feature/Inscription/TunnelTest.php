@@ -98,6 +98,51 @@ test('un parent inscrit un enfant et lui-même, paie, et chacun reçoit un dossa
     $this->get('/espace')->assertOk()->assertSee('Lou')->assertSee('Validée');
 });
 
+test('téléphone et email facultatifs : enregistrés pour un enfant, téléphone seul pour soi', function () {
+    $this->actingAs($this->parent);
+    $this->parent->update(['email' => 'sam@example.org']);
+    $tunnel = Volt::test('inscription.tunnel');
+
+    // Facultatifs : on passe sans les remplir.
+    $tunnel->call('choisirParticipant', 'moi')
+        ->assertSee('Téléphone')
+        ->assertDontSee('id="email"', false)
+        ->assertSee('Tes emails arrivent sur sam@example.org')
+        ->set('dateNaissance', '1985-06-01')
+        ->set('telephone', '+33 6 12 34 56 78')
+        ->call('participantSuivant')
+        ->assertHasNoErrors()
+        ->assertSet('etape', 'epreuve');
+
+    expect($this->parent->fresh()->telephone)->toBe('0612345678');
+
+    // Enfant : formats vérifiés, puis enregistrés sur son profil (pas d'email de connexion).
+    $tunnel->call('ajouterParticipant')
+        ->call('choisirParticipant', 'nouveau')
+        ->set('prenom', 'Lou')
+        ->set('dateNaissance', '2015-01-01')
+        ->set('telephone', '12')
+        ->set('email', 'pas-un-email')
+        ->call('participantSuivant')
+        ->assertHasErrors(['telephone', 'email'])
+        ->set('telephone', '07 11 22 33 44')
+        ->set('email', ' Lou@Example.org ')
+        ->call('participantSuivant')
+        ->assertHasNoErrors()
+        ->assertSet('etape', 'epreuve');
+
+    $lou = Participant::where('id_responsable', $this->parent->id_user)->sole();
+    expect($lou->email_contact)->toBe('lou@example.org')
+        ->and($lou->user->telephone)->toBe('0711223344')
+        ->and($lou->user->email)->toBeNull();
+
+    // Reprise du participant géré : champs pré-remplis.
+    $tunnel->call('ajouterParticipant')
+        ->call('choisirParticipant', (string) $lou->id_user)
+        ->assertSet('telephone', '07 11 22 33 44')
+        ->assertSet('email', 'lou@example.org');
+});
+
 test("seules les épreuves ouvertes à l'âge le jour J sont proposées", function () {
     $this->actingAs($this->parent);
 

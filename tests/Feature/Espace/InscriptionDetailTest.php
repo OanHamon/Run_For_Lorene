@@ -91,17 +91,20 @@ test("le responsable modifie les informations de l'enfant, contact d'urgence com
         ->set('ville', 'Nantes')
         ->set('urgenceNom', 'Alex Leroy')
         ->set('urgenceTel', '+33 6 12 34 56 78')
+        ->set('email', 'Louise@Example.org')
         ->call('enregistrer')
         ->assertHasNoErrors()
         ->assertSet('edition', false)
-        ->assertSee('Louise');
+        ->assertSee('Louise')
+        ->assertSee('louise@example.org');
 
     $enfant->refresh();
     expect($enfant->participant->user->prenom)->toBe('Louise')
         ->and($enfant->participant->sexe)->toBe('femme')
         ->and($enfant->participant->code_postal)->toBe('44000')
         ->and($enfant->urgence_nom)->toBe('Alex Leroy')
-        ->and($enfant->urgence_tel)->toBe('0612345678');
+        ->and($enfant->urgence_tel)->toBe('0612345678')
+        ->and($enfant->participant->email_contact)->toBe('louise@example.org');
 });
 
 test('formats invalides et date de naissance incompatible avec l\'épreuve refusés', function () {

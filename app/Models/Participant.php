@@ -21,6 +21,7 @@ class Participant extends Model
         'id_user',
         'sexe',
         'date_naissance',
+        'email_contact',
         'adresse',
         'code_postal',
         'ville',

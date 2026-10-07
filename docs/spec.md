@@ -146,7 +146,7 @@ DON: id_don, montant_don, recu_fiscal_demande, anonyme
 
 ADMIN: niveau_acces
 BENEVOLE: poste, disponibilites
-PARTICIPANT: sexe, date_naissance, adresse, code_postal, ville, pays
+PARTICIPANT: sexe, date_naissance, email_contact, adresse, code_postal, ville, pays
 :
 :
 PAIEMENT: id_paiement, prestataire, reference, montant_paiement, frais, statut_paiement, date_paiement
@@ -166,7 +166,7 @@ REMBOURSEMENT: id_remboursement, montant_rembourse, motif, date_remboursement
 Héritages traduits en une table par entité, la table fille partageant la clé de la mère. Côté Laravel, les tables prennent le pluriel en snake\_case (convention Eloquent).
 
 - `user (#id_user, email, mot_de_passe, nom, prenom, telephone)`
-- `participant (#id_user*, sexe, date_naissance, adresse, code_postal, ville, pays, id_responsable*)`
+- `participant (#id_user*, sexe, date_naissance, email_contact, adresse, code_postal, ville, pays, id_responsable*)`
 - `admin (#id_user*, niveau_acces)`
 - `benevole (#id_user*, poste, disponibilites)`
 - `evenement (#id_evenement, nom, date_evenement, ouverture, fermeture, statut)`
@@ -225,7 +225,7 @@ Transitions (version texte du schéma) :
 
 ### Comptes et participants
 
-- **Un compte (USER avec email)** peut inscrire lui-même et d'autres personnes : enfants, petits-enfants. Ces participants gérés n'ont ni email ni mot de passe et sont rattachés via `id_responsable`.
+- **Un compte (USER avec email)** peut inscrire lui-même et d'autres personnes : enfants, petits-enfants. Ces participants gérés n'ont ni email de connexion ni mot de passe et sont rattachés via `id_responsable`. Ils peuvent avoir un téléphone (`user.telephone`) et un email de contact (`participant.email_contact`), tous deux facultatifs, qui ne permettent pas de se connecter.
 - **Mineur** : l'âge se calcule à la date de l'événement, pas à la date d'inscription.
 - **Unicité** : une seule inscription par participant et par événement, garantie en base par `UNIQUE(id_evenement, id_participant)`.
 
@@ -269,7 +269,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 02 | Choix de l'épreuve (étape 1/7) | Cartes d'épreuves sélectionnables avec tarif et badge de places | Filtrage par âge une fois le participant connu |
 | 03 | Identification (étape 2/7) | Email seul, puis mot de passe ou lien magique | Comme Google : l'email détermine connexion ou création |
 | 04 | Création du compte (étape 2/7) | Pastille de l'email saisi, prénom, nom, mot de passe | Vérification de l'email par lien |
-| 05 | Participant (étape 3/7) | « Pour qui ? » : moi-même, un participant déjà enregistré, ou un nouveau participant (enfant). Identité, date de naissance (calendrier), sexe, téléphone, adresse, contact d'urgence | Âge à la date de l'événement vérifié par rapport aux âges min et max de la course |
+| 05 | Participant (étape 3/7) | « Pour qui ? » : moi-même, un participant déjà enregistré, ou un nouveau participant (enfant). Identité, date de naissance (calendrier), téléphone (facultatif) ; email de contact (facultatif) pour un participant géré, le titulaire gardant son email de compte. Sexe, adresse et contact d'urgence se complètent dans l'espace | Âge à la date de l'événement vérifié par rapport aux âges min et max de la course |
 | 06 | Documents (étape 4/7), en volets successifs | 1. Décharge (6 affirmations à cocher, nom et date, approbation finale) ; 2. Questionnaire de santé, mineurs seulement (oui/non en 3 diapos + attestation) ; 3. Conditions : règlement (lien PDF), RGPD, droit à l'image | Chaque volet est enregistré à son « Continuer » et bloque la suite tant qu'il est incomplet ; pas de « plus tard » |
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
