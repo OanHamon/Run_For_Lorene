@@ -61,9 +61,9 @@ flowchart TB
     subgraph S4["Étape 4/7 · Documents et consentements (écran 06)"]
         direction LR
         E4["Tes documents<br/>« aucun certificat médical ni licence »"]:::ecran
-        D4[/"📝 ☑ Règlement* (lien PDF)<br/>📝 ☑ Données personnelles RGPD* (lien PDF)<br/>📝 ☐ Droit à l'image (facultatif)<br/>📝 ◉ Décharge + santé : maintenant ou plus tard*"/]:::saisie
+        D4[/"1. 📝 Décharge* : affirmations à cocher + approbation<br/>2. 📝 Questionnaire de santé* (mineurs seulement) : oui/non + attestation<br/>3. 📝 ☑ Règlement* · ☑ RGPD* · ☐ Droit à l'image"/]:::saisie
         V4{{"documents + consentements<br/>version du texte, date, IP, oui/non"}}:::serveur
-        P4[/"Maintenant : décharge (affirmations à cocher + approbation) + santé (oui/non + attestation)<br/>Plus tard : « pas de départ sans ces documents »"/]:::saisie
+        P4[/"Un volet par panneau, enregistré à chaque « Continuer »<br/>Pas de « plus tard » : tout est rempli avant de payer"/]:::saisie
         E4 --- D4 --- V4
         D4 -.- P4
     end

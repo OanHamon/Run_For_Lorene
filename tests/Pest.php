@@ -7,6 +7,7 @@ use App\Models\Participant;
 use App\Models\User;
 use App\Services\Inscriptions\Questionnaires;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportTesting\Testable;
 use Tests\TestCase;
 
 /*
@@ -69,19 +70,29 @@ function affirmations(): array
     return array_map(fn () => true, reponses('decharge'));
 }
 
-/** Étape Documents du tunnel complète : consentements, décharge et questionnaire de santé (pour ->set()). */
+/** Étape Documents du tunnel complète : décharge, questionnaire de santé et conditions (pour ->set()). */
 function documentsRemplis(): array
 {
     return [
         'accepteReglement' => true,
         'accepteDecharge' => true,
         'accepteRgpd' => true,
-        'questionnaires' => 'maintenant',
         'reponsesDecharge' => affirmations(),
         'reponsesSante' => reponses('sante'),
         'attestationSante' => true,
     ];
 }
+
+/** Remplit et valide chaque volet de l'étape Documents : décharge, santé (mineur), conditions. */
+Testable::macro('remplirDocuments', function () {
+    $this->set(documentsRemplis())->call('dechargeSuivant');
+
+    if ($this->get('volet') === 'sante') {
+        $this->call('santeSuivant');
+    }
+
+    return $this->call('conditionsSuivant');
+});
 
 /** Inscription déjà réglée et validée pour $user sur $course (données de contexte des tests). */
 function inscriptionPayee(User $user, Course $course, string $statut = Inscription::VALIDEE): Inscription

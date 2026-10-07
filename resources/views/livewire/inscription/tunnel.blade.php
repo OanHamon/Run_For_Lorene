@@ -28,6 +28,8 @@ use Livewire\Volt\Component;
  * Tunnel d'inscription (écrans 02 à 09), en panneaux sans rechargement.
  *
  * Ordre : Compte → Participant → Épreuve → Documents → Don → Récap → Paiement.
+ * L'étape Documents se fait en volets : décharge, questionnaire de santé (mineurs seulement),
+ * puis conditions (règlement, RGPD, droit à l'image). Tout est exigé avant de payer.
  * Le compte et la date de naissance sont connus avant de proposer les épreuves, pour ne
  * montrer que celles ouvertes à l'âge du participant (âge au jour de l'événement).
  *
@@ -49,7 +51,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     /** Champs de l'étape Documents, propres à chaque participant. */
     private const CHAMPS_DOCUMENTS = [
         'accepteReglement', 'accepteDecharge', 'accepteRgpd', 'accepteImage',
-        'reponsesDecharge', 'reponsesSante', 'attestationSante', 'questionnaires',
+        'reponsesDecharge', 'reponsesSante', 'attestationSante', 'volet',
     ];
 
     public string $etape = 'compte';
@@ -70,6 +72,10 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     public ?int $courseId = null;
 
     // Documents
+    /** Volet en cours de l'étape Documents : 'decharge', 'sante' ou 'conditions'. */
+    #[Locked]
+    public string $volet = 'decharge';
+
     public bool $accepteReglement = false;
 
     public bool $accepteDecharge = false;
@@ -85,9 +91,6 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     public array $reponsesSante = [];
 
     public bool $attestationSante = false;
-
-    /** Décharge et questionnaire de santé : 'maintenant' ou 'plus_tard' (depuis l'espace). */
-    public string $questionnaires = '';
 
     // Don
     public string $don = '';
@@ -142,12 +145,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             return;
         }
 
-        // Reprise : un brouillon sans ses consentements reprend aux documents, sinon récapitulatif.
-        $aCompleter = $this->panier->first(fn (Inscription $i) => ! $i->consentementsAcceptes());
+        // Reprise : un brouillon aux documents incomplets reprend au premier volet manquant, sinon récapitulatif.
+        $aCompleter = $this->panier->first(fn (Inscription $i) => $this->voletManquant($i));
 
         if ($aCompleter) {
             $this->chargerInscription($aCompleter);
             $this->etape = 'documents';
+            $this->volet = $this->voletManquant($aCompleter);
         } elseif ($this->panier->isNotEmpty()) {
             $this->etape = session()->has('tunnel.don') ? 'recap' : 'don';
         } else {
@@ -301,12 +305,11 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             && $this->participant->ageAu($this->evenement->date_evenement) < 18;
     }
 
-    /** L'épreuve choisie demande le questionnaire de santé. */
+    /** @return list<string> volets de l'étape Documents ; la santé seulement pour un mineur */
     #[Computed]
-    public function santeRequise(): bool
+    public function volets(): array
     {
-        return (bool) $this->panier->firstWhere('id_inscription', $this->inscriptionId)?->tarif->course->questionnaire_requis
-            && $this->questionsSante->isNotEmpty();
+        return $this->participantMineur ? ['decharge', 'sante', 'conditions'] : ['decharge', 'conditions'];
     }
 
     #[Computed]
@@ -327,8 +330,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 ? 'Déjà inscrit(e) à cet événement.'
                 : $eligibilite->erreur($i->participant, $i->tarif->course, $this->evenement);
 
-            if (! $erreur && ! $i->consentementsAcceptes()) {
-                $erreur = 'Consentements à compléter.';
+            if (! $erreur && $this->voletManquant($i)) {
+                $erreur = 'Documents à compléter.';
             }
 
             if ($erreur) {
@@ -369,12 +372,20 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {
         match ($this->etape) {
             'epreuve' => $this->aller('participant', 'arriere'),
-            'documents' => $this->aller('epreuve', 'arriere'),
-            'don' => $this->inscriptionId ? $this->aller('documents', 'arriere') : $this->aller('recap', 'arriere'),
+            'documents' => ($precedent = $this->volets[array_search($this->volet, $this->volets, true) - 1] ?? null)
+                ? $this->allerVolet($precedent, 'arriere')
+                : $this->aller('epreuve', 'arriere'),
+            'don' => $this->inscriptionId ? $this->allerVolet('conditions', 'arriere') : $this->aller('recap', 'arriere'),
             'recap' => $this->aller('don', 'arriere'),
             'participant' => $this->panier->isNotEmpty() ? $this->aller('recap', 'arriere') : $this->redirectRoute('home'),
             default => null,
         };
+    }
+
+    private function allerVolet(string $volet, string $sens = 'avant'): void
+    {
+        $this->volet = $volet;
+        $this->aller('documents', $sens);
     }
 
     private function allerParticipant(): void
@@ -418,8 +429,6 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $this->reponsesDecharge = array_map(fn ($r) => $r === 'oui', $questionnaires->reponses($inscription, QuestionSante::DECHARGE));
         $this->reponsesSante = $questionnaires->reponses($inscription, QuestionSante::SANTE);
         $this->attestationSante = (bool) $questionnaires->dernier($inscription, QuestionSante::SANTE)?->attestation;
-        // Déjà commencés : on les montre tels quels ; sinon la question « maintenant ou plus tard » est reposée.
-        $this->questionnaires = $this->reponsesDecharge || $this->reponsesSante ? 'maintenant' : '';
     }
 
     public function modifier(int $idInscription, string $etape): void
@@ -431,7 +440,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         }
 
         $this->chargerInscription($inscription);
-        $this->aller($etape, 'arriere');
+        $etape === 'documents' ? $this->allerVolet('decharge', 'arriere') : $this->aller($etape, 'arriere');
     }
 
     public function modifierDon(): void
@@ -648,83 +657,140 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $this->inscriptionId = $inscription->id_inscription;
         unset($this->panier, $this->totalPanier, $this->alertesPanier);
 
-        $this->aller('documents');
+        $this->allerVolet('decharge');
     }
 
     // ------------------------------------------------------------------
-    // Étape Documents et consentements (écran 06)
+    // Étape Documents (écran 06) : décharge, santé (mineurs), conditions
     // ------------------------------------------------------------------
 
-    public function documentsSuivant(): void
+    /** Premier volet encore à remplir pour cette inscription, ou null si tout est fait. */
+    private function voletManquant(Inscription $inscription): ?string
+    {
+        return match (true) {
+            $inscription->dechargeManquante() => 'decharge',
+            $inscription->questionnaireManquant() => 'sante',
+            ! $inscription->consentementsAcceptes() => 'conditions',
+            default => null,
+        };
+    }
+
+    private function inscriptionEnCours(): Inscription
     {
         $inscription = $this->inscriptionId ? $this->panier->firstWhere('id_inscription', $this->inscriptionId) : null;
         abort_unless($inscription, 403);
 
-        $ouiNon = 'required|in:'.implode(',', Questionnaires::REPONSES);
-        $regles = [
-            'accepteReglement' => 'accepted',
-            'accepteRgpd' => 'accepted',
-            'questionnaires' => 'required|in:maintenant,plus_tard',
-        ];
+        return $inscription;
+    }
 
-        // « Plus tard » : rien à valider ici, la décharge et la santé se rempliront dans l'espace.
-        $maintenant = $this->questionnaires === 'maintenant';
-        $remplirSante = $maintenant && $this->santeRequise;
+    /** Tous les textes légaux obligatoires sont publiés ; sinon erreur sur $champ. */
+    private function textesPublies(string $champ): bool
+    {
+        $textes = app(Consentements::class)->textes($this->evenement);
+        $manquants = collect(TexteLegal::OBLIGATOIRES)->reject(fn ($t) => $textes->has($t));
 
-        if ($maintenant) {
-            $regles['accepteDecharge'] = 'accepted';
-            foreach ($this->questionsDecharge as $q) {
-                $regles["reponsesDecharge.{$q->id_question}"] = 'accepted';
-            }
+        if ($manquants->isNotEmpty()) {
+            report(new RuntimeException('Textes légaux manquants : '.$manquants->implode(', ')));
+            $this->addError($champ, "Un document légal n'est pas encore publié. Réessaie plus tard ou contacte l'association.");
+
+            return false;
         }
 
-        if ($remplirSante) {
-            foreach ($this->questionsSante as $q) {
-                $regles["reponsesSante.{$q->id_question}"] = $ouiNon;
-            }
-            $regles['attestationSante'] = 'accepted';
+        return true;
+    }
+
+    /** Volet qui suit $fait dans l'étape Documents, puis le don (ou le récapitulatif s'il est déjà choisi). */
+    private function voletSuivant(string $fait): void
+    {
+        unset($this->panier, $this->alertesPanier);
+
+        $suivant = $this->volets[array_search($fait, $this->volets, true) + 1] ?? null;
+
+        if ($suivant) {
+            $this->allerVolet($suivant);
+        } elseif ($manquant = $this->voletManquant($this->inscriptionEnCours())) {
+            // Volet sauté (reprise, changement d'âge) : on y retourne avant de quitter l'étape.
+            $this->allerVolet($manquant, 'arriere');
+        } else {
+            $this->aller(session()->has('tunnel.don') ? 'recap' : 'don');
+        }
+    }
+
+    public function dechargeSuivant(): void
+    {
+        $inscription = $this->inscriptionEnCours();
+
+        $regles = ['accepteDecharge' => 'accepted'];
+        foreach ($this->questionsDecharge as $q) {
+            $regles["reponsesDecharge.{$q->id_question}"] = 'accepted';
         }
 
         $this->validate($regles, [
-            'accepteReglement.accepted' => 'Il faut accepter le règlement pour continuer.',
-            'accepteRgpd.accepted' => 'Il faut accepter le traitement des données pour continuer.',
-            'questionnaires.required' => 'Choisis de remplir la décharge et le questionnaire maintenant ou plus tard.',
-            'questionnaires.in' => 'Choisis de remplir la décharge et le questionnaire maintenant ou plus tard.',
-            'accepteDecharge.accepted' => "Coche « J'ai lu et j'approuve » pour valider la décharge, ou choisis « Plus tard ».",
+            'accepteDecharge.accepted' => "Coche « J'ai lu et j'approuve » pour valider la décharge.",
             'reponsesDecharge.*.accepted' => Questionnaires::AFFIRMATION_REQUISE,
-            'reponsesSante.*.required' => 'Réponds par oui ou par non.',
-            'reponsesSante.*.in' => 'Réponds par oui ou par non.',
-            'attestationSante.accepted' => "Coche l'attestation, ou choisis « Plus tard ».",
         ]);
 
-        $consentements = app(Consentements::class);
-        $textes = $consentements->textes($this->evenement);
+        if (! $this->textesPublies('accepteDecharge')) {
+            return;
+        }
 
-        $manquants = collect(TexteLegal::OBLIGATOIRES)->reject(fn ($t) => $textes->has($t));
-        if ($manquants->isNotEmpty()) {
-            report(new RuntimeException('Textes légaux manquants : '.$manquants->implode(', ')));
-            $this->addError('accepteReglement', "Un document légal n'est pas encore publié. Réessaie plus tard ou contacte l'association.");
+        app(Questionnaires::class)->remplirDecharge($inscription, $this->reponsesDecharge, Auth::id(), request()->ip());
+
+        $this->voletSuivant('decharge');
+    }
+
+    public function santeSuivant(): void
+    {
+        $inscription = $this->inscriptionEnCours();
+
+        if (! $this->participantMineur) {
+            $this->voletSuivant('sante');
 
             return;
         }
 
-        DB::transaction(function () use ($inscription, $consentements, $maintenant, $remplirSante) {
-            $questionnaires = app(Questionnaires::class);
+        $ouiNon = 'required|in:'.implode(',', Questionnaires::REPONSES);
+        $regles = ['attestationSante' => 'accepted'];
+        foreach ($this->questionsSante as $q) {
+            $regles["reponsesSante.{$q->id_question}"] = $ouiNon;
+        }
 
-            if ($maintenant) {
-                $questionnaires->remplirDecharge($inscription, $this->reponsesDecharge, Auth::id(), request()->ip());
-            }
+        $this->validate($regles, [
+            'reponsesSante.*.required' => 'Réponds par oui ou par non.',
+            'reponsesSante.*.in' => 'Réponds par oui ou par non.',
+            'attestationSante.accepted' => "Coche l'attestation pour continuer.",
+        ]);
 
-            if ($remplirSante) {
-                $questionnaires->enregistrer($inscription, QuestionSante::SANTE, $this->reponsesSante, $this->attestationSante, Auth::id());
-            }
+        try {
+            app(Questionnaires::class)->enregistrer($inscription, QuestionSante::SANTE, $this->reponsesSante, $this->attestationSante, Auth::id());
+        } catch (ValidationException $e) {
+            $this->addError('attestationSante', $e->validator->errors()->first());
 
-            $consentements->enregistrer($inscription, $this->accepteImage, Auth::id(), request()->ip());
-        });
+            return;
+        }
 
-        unset($this->panier, $this->alertesPanier);
+        $this->voletSuivant('sante');
+    }
 
-        $this->aller(session()->has('tunnel.don') ? 'recap' : 'don');
+    public function conditionsSuivant(): void
+    {
+        $inscription = $this->inscriptionEnCours();
+
+        $this->validate([
+            'accepteReglement' => 'accepted',
+            'accepteRgpd' => 'accepted',
+        ], [
+            'accepteReglement.accepted' => 'Il faut accepter le règlement pour continuer.',
+            'accepteRgpd.accepted' => 'Il faut accepter le traitement des données pour continuer.',
+        ]);
+
+        if (! $this->textesPublies('accepteReglement')) {
+            return;
+        }
+
+        app(Consentements::class)->enregistrer($inscription, $this->accepteImage, Auth::id(), request()->ip());
+
+        $this->voletSuivant('conditions');
     }
 
     // ------------------------------------------------------------------
@@ -1006,96 +1072,100 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         </div>
     @endif
 
-    {{-- Documents et consentements (écran 06) --}}
+    {{-- Documents (écran 06), en volets : décharge, questionnaire de santé (mineurs), conditions --}}
     @if ($etape === 'documents' && $this->participant)
         @php($pour = $this->estMoi ? null : $this->participant->user->prenom)
-        <h1 class="font-display text-2xl font-bold text-encre">{{ $pour ? "Les documents de {$pour}" : 'Tes documents' }}</h1>
-        @php($documents = $this->santeRequise ? 'la décharge et le questionnaire de santé' : 'la décharge')
-        <p class="mt-1 mb-6 text-sm text-gris-texte">
-            Quelques cases à cocher, puis {{ $documents }}.
-            @if ($pour) En tant que responsable, tu réponds pour {{ $pour }}. @endif
-        </p>
+        @php($rang = array_search($volet, $this->volets, true))
+        @php($nbVolets = count($this->volets))
 
-        <div class="space-y-4">
-            <div>
-                <label class="flex items-start gap-3 text-sm text-encre">
-                    <input wire:model.live="accepteReglement" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                    <span>J'ai lu et j'accepte le <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="rfl-lien underline">règlement de l'événement</a> <span class="text-gris-texte">(obligatoire)</span></span>
-                </label>
-                @error('accepteReglement') <p class="rfl-erreur">{{ $message }}</p> @enderror
-            </div>
-
-            <div>
-                <label class="flex items-start gap-3 text-sm text-encre">
-                    <input wire:model.live="accepteRgpd" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                    <span>J'accepte le <a href="{{ route('textes.show', 'rgpd') }}" target="_blank" rel="noopener" class="rfl-lien underline">traitement des données personnelles</a> pour l'organisation de l'événement <span class="text-gris-texte">(obligatoire)</span></span>
-                </label>
-                @error('accepteRgpd') <p class="rfl-erreur">{{ $message }}</p> @enderror
-            </div>
-
-            <div>
-                <label class="flex items-start gap-3 text-sm text-encre">
-                    <input wire:model="accepteImage" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
-                    <span>J'autorise l'utilisation de {{ $pour ? "l'image de {$pour}" : 'mon image' }} sur les photos et vidéos de l'événement <span class="text-gris-texte">(facultatif)</span></span>
-                </label>
+        <div class="mb-4 flex items-center gap-3" aria-live="polite">
+            <p class="shrink-0 text-xs font-medium text-gris-texte">{{ $pour ? "Les documents de {$pour}" : 'Tes documents' }} &middot; {{ $rang + 1 }} sur {{ $nbVolets }}</p>
+            <div class="flex flex-1 gap-1.5" aria-hidden="true">
+                @for ($n = 0; $n < $nbVolets; $n++)
+                    <span class="h-1.5 flex-1 rounded-full {{ $rang >= $n ? 'bg-canard' : 'bg-bordure' }}"></span>
+                @endfor
             </div>
         </div>
 
-        <p class="mt-6 rounded-xl bg-aqua-clair px-4 py-3 text-sm text-canard">Aucun certificat médical ni licence : Run For Lorène est un événement non compétitif.</p>
-
-        {{-- Décharge et questionnaire de santé : maintenant ou plus tard --}}
-        <section class="mt-8 border-t border-bordure pt-6" aria-labelledby="titre-questionnaires">
-            <h2 id="titre-questionnaires" class="font-display text-lg font-bold text-encre">{{ ucfirst($documents) }}</h2>
+        @if ($volet === 'decharge')
+            <h1 class="font-display text-2xl font-bold text-encre">Décharge de responsabilité</h1>
             <p class="mt-1 text-sm text-gris-texte">
-                Obligatoire{{ $this->santeRequise ? 's' : '' }} pour prendre le départ. Tu peux {{ $this->santeRequise ? 'les' : 'la' }} remplir maintenant ou plus tard depuis ton espace.
+                {{ $pour ? "En tant que responsable, tu remplis la décharge pour {$pour}. " : '' }}Toutes les cases sont obligatoires.
             </p>
 
-            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-labelledby="titre-questionnaires">
-                @foreach (['maintenant' => ['Maintenant', 'Je remplis tout de suite.'], 'plus_tard' => ['Plus tard', 'Depuis mon espace, après le paiement.']] as $valeur => [$titre, $detail])
-                    <button type="button" role="radio" aria-checked="{{ $questionnaires === $valeur ? 'true' : 'false' }}"
-                        wire:click="$set('questionnaires', '{{ $valeur }}')"
-                        class="rounded-xl border-2 px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-canard {{ $questionnaires === $valeur ? 'border-canard bg-aqua-clair' : 'border-bordure hover:border-canard/50' }}">
-                        <span class="block font-medium text-encre">{{ $titre }}</span>
-                        <span class="block text-sm text-gris-texte">{{ $detail }}</span>
-                    </button>
-                @endforeach
+            <x-questionnaire-decharge class="mt-6" :questions="$this->questionsDecharge" :evenement="$this->evenement" :signataire="auth()->user()->nom.' '.auth()->user()->prenom" />
+
+            @if ($errors->has('reponsesDecharge.*'))
+                <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des cases à cocher : elles sont signalées plus haut.</p>
+            @endif
+
+            <div class="mt-8 flex items-center justify-between">
+                <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
+                <button type="button" wire:click="dechargeSuivant" wire:loading.attr="disabled" class="rfl-btn">Continuer</button>
             </div>
-            @error('questionnaires') <p class="rfl-erreur">{{ $message }}</p> @enderror
-
-            @if ($questionnaires === 'plus_tard')
-                <div class="mt-4 rounded-xl border-2 border-moutarde bg-moutarde/15 px-4 py-3 text-sm text-encre" role="note">
-                    <p class="font-display font-bold">Sans {{ $documents }}, {{ $pour ? "{$pour} ne pourra pas" : 'tu ne pourras pas' }} prendre le départ.</p>
-                    <p class="mt-1">L'inscription restera « dossier incomplet », sans dossard, jusqu'à ce qu'{{ $this->santeRequise ? 'ils soient remplis' : 'elle soit remplie' }} depuis ton espace, avant le {{ $this->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.</p>
-                </div>
-            @endif
-
-            @if ($questionnaires === 'maintenant')
-                {{-- Décharge de responsabilité --}}
-                <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-decharge">
-                    <h3 id="titre-decharge" class="font-display font-bold text-encre">Décharge de responsabilité</h3>
-                    <p class="mt-1 text-sm text-gris-texte">{{ $pour ? "En tant que responsable, tu remplis la décharge pour {$pour}. " : '' }}Toutes les cases sont obligatoires.</p>
-                    <x-questionnaire-decharge class="mt-4" :questions="$this->questionsDecharge" :evenement="$this->evenement" :signataire="auth()->user()->nom.' '.auth()->user()->prenom" />
-                </section>
-
-                {{-- Questionnaire de santé --}}
-                @if ($this->santeRequise)
-                    <section class="mt-4 rounded-2xl border border-bordure p-4 sm:p-5" aria-labelledby="titre-sante">
-                        <h3 id="titre-sante" class="font-display font-bold text-encre">Questionnaire de santé</h3>
-                        <p class="mt-1 text-sm text-gris-texte">Réponds par oui ou par non{{ $pour ? " pour {$pour}" : '' }}. Les réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.</p>
-                        <x-questionnaire-sante :questions="$this->questionsSante" :mineur="$this->participantMineur" :pour="$pour" />
-                    </section>
-                @endif
-            @endif
-        </section>
-
-        @if ($errors->hasAny(['reponsesDecharge.*', 'reponsesSante.*']))
-            <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses ou des cases à cocher : elles sont signalées plus haut.</p>
         @endif
 
-        <div class="mt-8 flex items-center justify-between">
-            <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
-            <button type="button" wire:click="documentsSuivant" @disabled(! ($accepteReglement && $accepteRgpd && $questionnaires)) wire:loading.attr="disabled" class="rfl-btn">Continuer</button>
-        </div>
+        @if ($volet === 'sante')
+            <h1 class="font-display text-2xl font-bold text-encre">Questionnaire de santé</h1>
+            <p class="mt-1 text-sm text-gris-texte">
+                {{ $pour ? "{$pour} sera mineur(e) le jour de la course : ce questionnaire est obligatoire. Réponds par oui ou par non pour {$pour}." : 'Tu seras mineur(e) le jour de la course : ce questionnaire est obligatoire. Réponds par oui ou par non.' }}
+                Les réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.
+            </p>
+
+            <x-questionnaire-sante :questions="$this->questionsSante" :mineur="true" :pour="$pour">
+                <x-slot:actions>
+                    <button type="button" wire:click="santeSuivant" wire:loading.attr="disabled" class="rfl-btn">Continuer</button>
+                </x-slot:actions>
+            </x-questionnaire-sante>
+
+            @if ($errors->has('reponsesSante.*'))
+                <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
+            @endif
+
+            <div class="mt-8">
+                <button type="button" wire:click="retour" class="rfl-lien">Retour à la décharge</button>
+            </div>
+        @endif
+
+        @if ($volet === 'conditions')
+            <h1 class="font-display text-2xl font-bold text-encre">Conditions</h1>
+            <p class="mt-1 mb-6 text-sm text-gris-texte">
+                Dernière étape avant le don.
+                @if ($pour) En tant que responsable, tu acceptes pour {{ $pour }}. @endif
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="flex items-start gap-3 text-sm text-encre">
+                        <input wire:model.live="accepteReglement" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                        <span>J'ai lu et j'accepte le <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="rfl-lien underline">règlement de l'événement</a> <span class="text-gris-texte">(obligatoire)</span></span>
+                    </label>
+                    @error('accepteReglement') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="flex items-start gap-3 text-sm text-encre">
+                        <input wire:model.live="accepteRgpd" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                        <span>J'accepte le <a href="{{ route('textes.show', 'rgpd') }}" target="_blank" rel="noopener" class="rfl-lien underline">traitement des données personnelles</a> pour l'organisation de l'événement <span class="text-gris-texte">(obligatoire)</span></span>
+                    </label>
+                    @error('accepteRgpd') <p class="rfl-erreur">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="flex items-start gap-3 text-sm text-encre">
+                        <input wire:model="accepteImage" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                        <span>J'autorise l'utilisation de {{ $pour ? "l'image de {$pour}" : 'mon image' }} sur les photos et vidéos de l'événement <span class="text-gris-texte">(facultatif)</span></span>
+                    </label>
+                </div>
+            </div>
+
+            <p class="mt-6 rounded-xl bg-aqua-clair px-4 py-3 text-sm text-canard">Aucun certificat médical ni licence : Run For Lorène est un événement non compétitif.</p>
+
+            <div class="mt-8 flex items-center justify-between">
+                <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
+                <button type="button" wire:click="conditionsSuivant" @disabled(! ($accepteReglement && $accepteRgpd)) wire:loading.attr="disabled" class="rfl-btn">Continuer</button>
+            </div>
+        @endif
     @endif
 
     {{-- Don (écran 07) --}}
@@ -1158,16 +1228,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                         </div>
                         <p class="shrink-0 font-display font-bold text-encre">{{ $this->euros((float) ($this->tarifActuel($i)?->montant ?? $i->tarif->montant)) }}</p>
                     </div>
-                    <p class="mt-2 text-sm text-gris-texte">
-                        {{ $i->consentementsAcceptes() ? 'Consentements acceptés' : 'Consentements à compléter' }}
-                        @if (! $i->documentsManquants())
-                            &middot; {{ $i->tarif->course->questionnaire_requis ? 'décharge et questionnaire de santé remplis' : 'décharge remplie' }}
-                        @endif
-                    </p>
-                    @if ($manquants = $i->documentsManquants())
-                        <p class="mt-2 rounded-lg bg-moutarde/15 px-3 py-2 text-sm text-encre">
-                            <span class="font-medium">Pas de départ sans {{ implode(' et ', $manquants) }}</span> : à remplir depuis ton espace après le paiement.
-                        </p>
+                    @if ($i->consentementsComplets() && ! $i->questionnaireManquant())
+                        <p class="mt-2 text-sm text-gris-texte">{{ $i->santeRequise() ? 'Décharge, questionnaire de santé et conditions remplis' : 'Décharge et conditions remplies' }}</p>
                     @endif
                     @isset($this->alertesPanier[$i->id_inscription])
                         <p class="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ $this->alertesPanier[$i->id_inscription] }}</p>

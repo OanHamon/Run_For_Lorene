@@ -20,18 +20,10 @@ class Course extends Model
         'age_min',
         'age_max',
         'quota',
-        'questionnaire_requis',
         'dossard_debut',
         'dossard_fin',
         'id_evenement',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'questionnaire_requis' => 'boolean',
-        ];
-    }
 
     public function evenement(): BelongsTo
     {

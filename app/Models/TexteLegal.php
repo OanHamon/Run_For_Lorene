@@ -15,7 +15,7 @@ class TexteLegal extends Model
 
     public const OBLIGATOIRES = ['reglement', 'decharge', 'rgpd'];
 
-    /** Acceptés dans le tunnel avant de payer ; la décharge, elle, peut être remplie plus tard. */
+    /** Acceptés au volet « Conditions » du tunnel ; la décharge l'est à son propre volet. */
     public const AVANT_PAIEMENT = ['reglement', 'rgpd'];
 
     public const FACULTATIFS = ['droit_image'];

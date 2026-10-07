@@ -97,7 +97,7 @@ class Inscription extends Model
 
     /**
      * Décharge pas encore faite : texte non accepté, ou questionnaire publié mais pas rempli.
-     * Peut être complétée après le paiement ; sans elle, pas de départ.
+     * Exigée dans le tunnel avant de payer ; sans elle, pas de départ.
      */
     public function dechargeManquante(): bool
     {
@@ -134,14 +134,16 @@ class Inscription extends Model
             ->all();
     }
 
-    /** Questionnaire de santé exigé par la course et pas encore rempli. */
+    /** Le questionnaire de santé n'est demandé qu'aux participants mineurs le jour de l'événement. */
+    public function santeRequise(): bool
+    {
+        return $this->participant->ageAu($this->evenement->date_evenement) < 18;
+    }
+
+    /** Questionnaire de santé demandé (participant mineur) et pas encore rempli. */
     public function questionnaireManquant(): bool
     {
-        if (! $this->tarif->course->questionnaire_requis) {
-            return false;
-        }
-
-        return ! $this->aRempli(QuestionSante::SANTE);
+        return $this->santeRequise() && ! $this->aRempli(QuestionSante::SANTE);
     }
 
     private function aRempli(string $type): bool

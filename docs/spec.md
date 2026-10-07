@@ -99,7 +99,7 @@ DECLINER, 1N OPTION_EVENEMENT, 11 DECLINAISON
 QUESTIONNAIRE_SANTE: attestation
 CONSENTEMENT: accepte, ip
 :
-COURSE: id_course, nom_course, distance, heure_depart, age_min_course, age_max_course, quota, questionnaire_requis, dossard_debut, dossard_fin
+COURSE: id_course, nom_course, distance, heure_depart, age_min_course, age_max_course, quota, dossard_debut, dossard_fin
 DEFINIR, 1N COURSE, 11 TARIF
 TARIF: id_tarif, libelle_tarif, montant_tarif, valide_du, valide_au, age_min_tarif, age_max_tarif
 DECLINAISON: id_declinaison, libelle_declinaison, stock
@@ -170,7 +170,7 @@ Héritages traduits en une table par entité, la table fille partageant la clé 
 - `admin (#id_user*, niveau_acces)`
 - `benevole (#id_user*, poste, disponibilites)`
 - `evenement (#id_evenement, nom, date_evenement, ouverture, fermeture, statut)`
-- `course (#id_course, nom, distance, heure_depart, age_min, age_max, quota, questionnaire_requis, dossard_debut, dossard_fin, id_evenement*)`
+- `course (#id_course, nom, distance, heure_depart, age_min, age_max, quota, dossard_debut, dossard_fin, id_evenement*)`
 - `tarif (#id_tarif, libelle, montant, valide_du, valide_au, age_min, age_max, id_course*)`
 - `option_evenement (#id_option, libelle, prix, id_evenement*)`
 - `declinaison (#id_declinaison, libelle, stock, id_option*)`
@@ -207,7 +207,7 @@ Héritages traduits en une table par entité, la table fille partageant la clé 
 
 ## Règles métier et statuts
 
-Une inscription n'est validée qu'avec un paiement réussi (ou une gratuité admin), les consentements obligatoires, la décharge et le questionnaire de santé. La décharge et le questionnaire peuvent être remplis après le paiement, mais sans eux le participant ne prend pas le départ.
+Une inscription n'est validée qu'avec un paiement réussi (ou une gratuité admin), les consentements obligatoires, la décharge et, pour un participant mineur, le questionnaire de santé. Tous sont remplis dans le tunnel, avant le paiement (pas de « plus tard »).
 
 &#91;embedded content: cycle de vie d'une inscription · 5 états\]
 
@@ -217,7 +217,7 @@ Transitions (version texte du schéma) :
 
 - Brouillon → En attente de paiement : récapitulatif confirmé.
 - En attente de paiement → Validée : paiement réussi, consentements, décharge et questionnaire complets.
-- En attente de paiement → Dossier incomplet : paiement réussi mais décharge ou questionnaire de santé manquant.
+- En attente de paiement → Dossier incomplet : paiement réussi mais décharge ou questionnaire de santé manquant (cas résiduel : le tunnel les exige avant de payer, par exemple nouvelle version de la décharge publiée entre-temps).
 - Dossier incomplet → Validée : décharge et questionnaire complétés depuis l'espace (et vérifiés si besoin).
 - Brouillon → Validée ou Dossier incomplet : inscription gratuite créée par un admin, sans paiement.
 - En attente de paiement → Annulée : abandon définitif ou annulation par un admin.
@@ -234,10 +234,10 @@ Transitions (version texte du schéma) :
 | Document | Qui | Quand il est exigé |
 | --- | --- | --- |
 | Acceptation du règlement (consentement) | Tous | Toujours, avant paiement |
-| Décharge de responsabilité (affirmations du Google Form à cocher + approbation finale, qui vaut consentement au texte) | Tous | Toujours ; dans le tunnel ou plus tard depuis l'espace, obligatoire pour prendre le départ |
+| Décharge de responsabilité (affirmations du Google Form à cocher + approbation finale, qui vaut consentement au texte) | Tous | Toujours ; dans le tunnel, avant le paiement |
 | RGPD (consentement) | Tous | Toujours, avant paiement |
 | Droit à l'image (consentement) | Tous | Facultatif, oui ou non enregistré |
-| Questionnaire de santé (24 questions oui/non du Google Form, en 4 rubriques sur 3 diapos, avertissement « consulte un médecin si un OUI » + attestation finale) | Tous | Si `questionnaire_requis` sur la course ; peut être complété après paiement |
+| Questionnaire de santé (24 questions oui/non du Google Form, en 4 rubriques sur 3 diapos, avertissement « consulte un médecin si un OUI » + attestation finale) | Mineurs (âge le jour de l'événement) | Toujours pour un mineur, quelle que soit la course ; dans le tunnel, avant le paiement. Rien pour un adulte |
 
 Pas d'autorisation parentale pour les mineurs : décision de l'association.
 
@@ -270,7 +270,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 03 | Identification (étape 2/7) | Email seul, puis mot de passe ou lien magique | Comme Google : l'email détermine connexion ou création |
 | 04 | Création du compte (étape 2/7) | Pastille de l'email saisi, prénom, nom, mot de passe | Vérification de l'email par lien |
 | 05 | Participant (étape 3/7) | « Pour qui ? » : moi-même, un participant déjà enregistré, ou un nouveau participant (enfant). Identité, date de naissance (calendrier), sexe, téléphone, adresse, contact d'urgence | Âge à la date de l'événement vérifié par rapport aux âges min et max de la course |
-| 06 | Documents et consentements (étape 4/7) | Cases règlement (lien PDF), RGPD, droit à l'image ; choix « maintenant » ou « plus tard » pour la décharge (6 affirmations à cocher, nom et date, approbation finale) et le questionnaire de santé (oui/non + attestation) | Règlement, RGPD et le choix bloquent la suite ; « plus tard » affiche qu'il n'y a pas de départ sans ces documents |
+| 06 | Documents (étape 4/7), en volets successifs | 1. Décharge (6 affirmations à cocher, nom et date, approbation finale) ; 2. Questionnaire de santé, mineurs seulement (oui/non en 3 diapos + attestation) ; 3. Conditions : règlement (lien PDF), RGPD, droit à l'image | Chaque volet est enregistré à son « Continuer » et bloque la suite tant qu'il est incomplet ; pas de « plus tard » |
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
 | 09 | Paiement (étape 7/7) | Redirection vers Stripe Checkout (carte, Apple Pay) | Place réservée pendant le paiement |
@@ -365,7 +365,7 @@ Ces sujets sont volontairement reportés ; aucun ne bloque la V1.
 
 - [ ] Invitations et liens personnalisés pour partenaires, écoles et groupes, avec suivi dédié. Trois cas : partenaires gratuits, tiers payeur global, élèves payant individuellement. Prévoir une table « invitation » reliée à l'inscription.
 - [ ] Éditeur des questions de santé dans l'admin, si non fait en V1 (option).
-- [ ] Types de documents exigés paramétrables par course, à la place du booléen `questionnaire_requis`.
+- [ ] Types de documents exigés paramétrables par course (le booléen `questionnaire_requis` a été supprimé : le questionnaire de santé dépend uniquement de l'âge).
 - [ ] Gestion des bénévoles : poste par événement, disponibilités dans une table dédiée.
 
 **À vérifier avec l'association**

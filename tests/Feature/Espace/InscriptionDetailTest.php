@@ -33,8 +33,7 @@ function panier(array $personnes, Course $course, bool $commander = true)
             ->call('participantSuivant')
             ->call('choisirCourse', $course->id_course)
             ->call('epreuveSuivant')
-            ->set(documentsRemplis())
-            ->call('documentsSuivant');
+            ->remplirDocuments();
     }
 
     $tunnel->call('choisirDon', 10)->call('donSuivant');
@@ -71,7 +70,7 @@ test('la timeline reflète l\'avancement', function () {
 
     $page = Volt::test('espace.inscription', ['inscription' => $inscription]);
     expect($page->instance()->etapes)->toBe([
-        'infos' => 'fait', 'decharge' => 'fait', 'sante' => 'fait', 'paiement' => 'en_cours',
+        'infos' => 'fait', 'decharge' => 'fait', 'sante' => 'non_requis', 'paiement' => 'en_cours',
     ]);
 
     app(EnregistrerPaiement::class)->reussi(Paiement::sole()->reference, 22.0);

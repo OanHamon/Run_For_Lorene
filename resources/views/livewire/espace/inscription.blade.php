@@ -162,7 +162,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     public function santeARemplir(): bool
     {
         return $this->modifiable
-            && $this->inscription->tarif->course->questionnaire_requis
+            && $this->inscription->santeRequise()
             && $this->questionnaireSante === null
             && $this->questionsSante->isNotEmpty();
     }
@@ -181,7 +181,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
         $paye = in_array($i->statut, [Inscription::VALIDEE, Inscription::DOSSIER_INCOMPLET], true);
 
         $sante = match (true) {
-            ! $i->tarif->course->questionnaire_requis => 'non_requis',
+            ! $i->santeRequise() => 'non_requis',
             $i->questionnaireManquant() => $paye ? 'a_faire' : 'en_cours',
             default => 'fait',
         };
@@ -703,7 +703,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                             </div>
                             <p class="mt-2 text-sm text-gris-texte">
                                 @switch($etapes['sante'])
-                                    @case('non_requis') Aucun questionnaire n'est demandé pour {{ $course->nom }}. @break
+                                    @case('non_requis') Le questionnaire de santé n'est demandé qu'aux participants mineurs. @break
                                     @case('fait') Questionnaire rempli le {{ $this->questionnaireSante?->document->date_depot->translatedFormat('j F Y') }}. Les réponses sont confidentielles. @break
                                     @default
                                         À remplir avant le {{ $i->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.

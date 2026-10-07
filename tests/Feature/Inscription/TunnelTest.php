@@ -34,8 +34,7 @@ function inscrire($tunnel, string $choix, string $prenom, string $naissance, int
         ->call('epreuveSuivant')
         ->assertHasNoErrors()
         ->assertSet('etape', 'documents')
-        ->set(documentsRemplis())
-        ->call('documentsSuivant')
+        ->remplirDocuments()
         ->assertHasNoErrors();
 
     return $tunnel;
@@ -142,12 +141,15 @@ test('les consentements obligatoires bloquent la suite, le droit à l\'image est
         ->call('participantSuivant')
         ->call('choisirCourse', ($this->course)('Marche 5 km')->id_course)
         ->call('epreuveSuivant')
-        ->set('accepteReglement', true)
-        ->call('documentsSuivant')
-        ->assertHasErrors(['accepteRgpd', 'questionnaires'])
-        ->assertSet('etape', 'documents');
+        ->set(documentsRemplis())
+        ->call('dechargeSuivant')
+        ->assertSet('volet', 'conditions')
+        ->set(['accepteReglement' => true, 'accepteRgpd' => false])
+        ->call('conditionsSuivant')
+        ->assertHasErrors(['accepteRgpd'])
+        ->assertSet('volet', 'conditions');
 
-    $tunnel->set(documentsRemplis())->set('accepteImage', false)->call('documentsSuivant')->assertSet('etape', 'don');
+    $tunnel->set(['accepteRgpd' => true, 'accepteImage' => false])->call('conditionsSuivant')->assertSet('etape', 'don');
 
     $inscription = Inscription::sole();
     expect($inscription->consentementsComplets())->toBeTrue()
@@ -196,6 +198,7 @@ test('le brouillon est repris là où on s\'était arrêté', function () {
     // Nouvelle visite : on revient aux documents du même participant, épreuve conservée.
     Volt::test('inscription.tunnel')
         ->assertSet('etape', 'documents')
+        ->assertSet('volet', 'decharge')
         ->assertSet('participantId', $this->parent->id_user)
         ->assertSet('courseId', ($this->course)('Marche 5 km')->id_course);
 });

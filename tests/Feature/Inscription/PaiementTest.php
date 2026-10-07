@@ -34,8 +34,7 @@ function commandeEnAttente(User $user, Course $course): array
         ->call('participantSuivant')
         ->call('choisirCourse', $course->id_course)
         ->call('epreuveSuivant')
-        ->set(documentsRemplis())
-        ->call('documentsSuivant')
+        ->remplirDocuments()
         ->call('donPasser')
         ->call('payer')
         ->assertHasNoErrors();
@@ -205,8 +204,7 @@ test('deux participants du panier sur la dernière place : la commande est refus
             ->call('participantSuivant')
             ->call('choisirCourse', $this->marche->id_course)
             ->call('epreuveSuivant')
-            ->set(documentsRemplis())
-            ->call('documentsSuivant');
+            ->remplirDocuments();
     }
 
     $tunnel->call('donPasser')->call('payer')->assertHasErrors('commande');
