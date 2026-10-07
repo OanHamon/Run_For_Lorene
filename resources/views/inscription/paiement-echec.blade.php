@@ -13,12 +13,10 @@
         @endif
 
         <p class="mt-3 text-sm text-gris-texte">
-            Pas d'inquiétude : rien n'a été débité et ta commande est gardée, en attente de paiement.
-            Tu peux réessayer maintenant ou payer plus tard depuis ton espace.
+            Pas d'inquiétude : rien n'a été débité et ta commande est gardée telle quelle, tu n'as rien à ressaisir.
         </p>
 
-        <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <a href="{{ route('espace') }}" class="rfl-lien">Payer plus tard</a>
+        <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             @if ($commande->statut === \App\Models\Commande::EN_COURS)
                 <form method="POST" action="{{ route('inscription.payer', $commande) }}">
                     @csrf
@@ -32,6 +30,8 @@
                 @csrf
                 <button type="submit" class="text-sm rfl-lien">Modifier ma commande (épreuve, participants, don)</button>
             </form>
+        @else
+            <a href="{{ route('espace') }}" class="rfl-lien">Aller à mon espace</a>
         @endif
     </div>
 </x-tunnel-shell>

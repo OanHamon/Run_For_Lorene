@@ -177,9 +177,9 @@ flowchart LR
     PAY -->|"paiement accepté"| WH{{"Webhook<br/>checkout.session.completed"}}:::serveur
     WH --> CONF(["10 · Confirmation"]):::fin
     PAY -->|"carte refusée · abandon · session expirée"| ECH["09b · Le paiement n'a pas abouti"]:::ecran
-    ECH --> ECH1[/"Choix :<br/>Réessayer · X €<br/>Payer plus tard<br/>Modifier ma commande"/]:::saisie
+    ECH --> ECH1[/"Choix :<br/>Réessayer · X €<br/>Modifier ma commande"/]:::saisie
     ECH1 -->|"Réessayer"| PAY
-    ECH1 -->|"Payer plus tard"| ESP(["Espace : alerte « paiement en attente »"]):::fin
+    ECH -.->|"parcours interrompu"| ESP(["Commande gardée : espace (alerte « paiement en attente ») ou retour sur /inscription"]):::fin
     ECH1 -->|"Modifier"| AB{{"Commande abandonnée<br/>inscriptions → BROUILLON<br/>don repris"}}:::serveur --> R
 
     RET["Retour sur /inscription<br/>avec une commande en attente"]:::ecran --> ATT["Un paiement t'attend<br/>inscriptions + don + total"]:::ecran
@@ -233,7 +233,7 @@ stateDiagram-v2
     brouillon --> en_attente_paiement : récapitulatif confirmé<br/>(commande créée, montant figé)
     brouillon --> [*] : « Retirer » au récap<br/>ou suppression depuis l'espace
     en_attente_paiement --> brouillon : « Modifier ma commande »<br/>(commande abandonnée)
-    en_attente_paiement --> en_attente_paiement : paiement échoué / abandonné<br/>(réessayer ou payer plus tard)
+    en_attente_paiement --> en_attente_paiement : paiement échoué / abandonné<br/>(réessayer, ou reprise depuis l'espace si interrompu)
     en_attente_paiement --> validee : paiement réussi (webhook)<br/>+ consentements + questionnaire
     en_attente_paiement --> dossier_incomplet : paiement réussi<br/>mais décharge ou questionnaire manquant
     en_attente_paiement --> annulee : abandon définitif / admin

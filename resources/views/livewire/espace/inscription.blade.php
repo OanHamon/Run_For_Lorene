@@ -467,7 +467,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                 {{ $this->estMoi ? 'Tu ne pourras pas' : "{$p->user->prenom} ne pourra pas" }} prendre le départ sans {{ implode(' et ', $manquants) }}.
             </p>
             <p class="mt-1 text-sm text-encre">
-                À remplir ci-dessous avant le {{ $i->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.
+                À remplir ci-dessous.
                 @if ($i->statut === Inscription::DOSSIER_INCOMPLET) L'inscription sera validée et le dossard attribué dès que tout sera rempli. @endif
             </p>
         </div>
@@ -706,7 +706,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                     @case('non_requis') Le questionnaire de santé n'est demandé qu'aux participants mineurs. @break
                                     @case('fait') Questionnaire rempli le {{ $this->questionnaireSante?->document->date_depot->translatedFormat('j F Y') }}. Les réponses sont confidentielles. @break
                                     @default
-                                        À remplir avant le {{ $i->evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') }}.
+                                        À remplir ci-dessous.
                                         @if ($i->statut === Inscription::DOSSIER_INCOMPLET) L'inscription sera validée dès qu'il sera rempli. @endif
                                 @endswitch
                             </p>

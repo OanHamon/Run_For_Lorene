@@ -57,7 +57,7 @@
 
             @if ($incompletes->isNotEmpty())
                 <div class="mt-6 rounded-xl border-2 border-moutarde bg-moutarde/15 px-4 py-3 text-sm text-encre" role="alert">
-                    <p class="font-bold">Pas de départ sans ces documents, à remplir depuis ton espace{{ $evenement ? ' avant le '.$evenement->date_evenement->copy()->subDays(15)->translatedFormat('j F Y') : '' }} :</p>
+                    <p class="font-bold">Pas de départ sans ces documents, à remplir dès maintenant depuis ton espace :</p>
                     <ul class="mt-1 list-disc pl-5">
                         @foreach ($incompletes as $i)
                             <li>{{ $i->participant->user->prenom }} : {{ implode(' et ', $i->documentsManquants()) }}</li>

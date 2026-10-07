@@ -274,7 +274,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
 | 09 | Paiement (étape 7/7) | Redirection vers Stripe Checkout (carte, Apple Pay) | Place réservée pendant le paiement |
-| 09b | Paiement non abouti | Message rassurant, boutons « Réessayer » et « Payer plus tard » | L'inscription reste « en attente de paiement » |
+| 09b | Paiement non abouti | Message rassurant (commande gardée, rien à ressaisir), bouton « Réessayer », lien « Modifier ma commande » ; aucune invitation à payer plus tard | L'inscription reste « en attente de paiement » ; si le parcours est interrompu, l'espace et le tunnel proposent de payer la commande gardée |
 | 10 | Confirmation | Récapitulatif, rappel des documents manquants avec date limite, bouton vers l'espace | Email de confirmation envoyé en parallèle |
 | 11 | Espace participant | Menu latéral (tableau de bord, inscriptions, documents, dons, profil, participants gérés) ; alerte « action requise », 4 indicateurs (épreuve, statut, paiement, J-x), suivi en étapes, billet QR, tableaux documents et dons | Billet téléchargeable seulement si « validée » ; t-shirt modifiable jusqu'à une date limite |
 
