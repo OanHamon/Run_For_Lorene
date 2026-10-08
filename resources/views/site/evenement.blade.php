@@ -7,8 +7,8 @@
 
     <header class="border-b border-bordure">
         <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-            <a href="{{ route('home') }}" class="font-display text-xl font-bold text-encre">
-                Run <span class="italic text-moutarde">for Lorène</span>
+            <a href="{{ route('home') }}">
+                <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-14 w-auto">
             </a>
 
             <nav class="hidden items-center gap-8 text-sm font-medium text-encre md:flex">
@@ -153,6 +153,7 @@
                 Photo / visuel de la cause
             </div>
             <div>
+                <img src="/images/logo-effervescence-jeunes.png" alt="Effervescence Jeunes" class="mb-6 h-20 w-auto">
                 <p class="mb-2 text-sm font-semibold tracking-wide text-moutarde uppercase">La cause</p>
                 <h2 class="font-display text-3xl font-bold text-encre">Pourquoi on court</h2>
                 <p class="mt-4 text-gris-texte">Qui était Lorène, pourquoi la santé mentale des jeunes, à quoi sert l'argent collecté : le mot de l'association vient ici.</p>
@@ -202,6 +203,9 @@
                 <a href="#" class="hover:text-white">CGV</a>
                 <a href="#" class="hover:text-white">Confidentialité</a>
                 <a href="#" class="hover:text-white">Cookies</a>
+                <a href="https://effervescence-jeunes.fr/" class="ml-auto" title="Effervescence Jeunes">
+                    <img src="/images/pastille-ej.png" alt="Effervescence Jeunes" class="h-10 w-10">
+                </a>
             </div>
         </div>
     </footer>

@@ -14,9 +14,8 @@
     <div class="pointer-events-none fixed -top-24 -right-24 h-80 w-80 rounded-full bg-aqua-clair"></div>
 
     <div class="relative flex min-h-screen flex-col items-center px-4 py-6 sm:py-8">
-        <a href="{{ route('home') }}" class="mb-6 flex w-full max-w-[460px] items-center gap-2">
-            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-canard text-sm font-display font-bold text-white">R</span>
-            <span class="font-display text-lg font-bold text-encre">Run For Lorène</span>
+        <a href="{{ route('home') }}" class="mb-6 flex w-full max-w-[460px] items-center">
+            <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-16 w-auto">
         </a>
 
         <div class="w-full max-w-[460px] rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(22,64,59,0.06),0_8px_24px_rgba(22,64,59,0.08)] sm:p-8">

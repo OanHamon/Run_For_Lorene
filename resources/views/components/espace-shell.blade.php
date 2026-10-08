@@ -9,7 +9,7 @@
 <body class="bg-creme font-sans text-encre antialiased">
     {{-- Barre mobile --}}
     <div class="flex items-center justify-between border-b border-bordure bg-white px-4 py-3 lg:hidden">
-        <a href="{{ route('espace') }}" class="font-display text-lg font-bold text-encre">Run for lorène</a>
+        <a href="{{ route('espace') }}"><img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-10 w-auto"></a>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="text-sm rfl-lien">Se déconnecter</button>
@@ -18,8 +18,8 @@
 
     <div class="mx-auto flex max-w-7xl">
         <aside class="hidden w-64 shrink-0 border-r border-bordure px-6 py-8 lg:block">
-            <a href="{{ route('home') }}" class="font-display text-lg font-bold text-encre">
-                Run for lorène
+            <a href="{{ route('home') }}" class="inline-block">
+                <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-20 w-auto">
             </a>
 
             <div class="mt-8 flex items-center gap-3">
