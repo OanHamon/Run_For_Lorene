@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -74,6 +75,40 @@ class Inscription extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class, 'id_inscription', 'id_inscription');
+    }
+
+    /** Options choisies (taille de t-shirt…), avec leur prix historisé. */
+    public function declinaisons(): HasMany
+    {
+        return $this->hasMany(InscriptionDeclinaison::class, 'id_inscription', 'id_inscription');
+    }
+
+    /** Participants mineurs le jour de l'événement (moins de 18 ans à cette date). */
+    public function scopeMineurs(Builder $query, Evenement $evenement): void
+    {
+        $query->whereHas('participant', fn ($q) => $q->whereDate('date_naissance', '>', $evenement->date_evenement->copy()->subYears(18)));
+    }
+
+    /** Même règle que documentsManquants() : décharge absente, ou questionnaire de santé absent pour un mineur. */
+    public function scopeAvecDocumentsManquants(Builder $query, Evenement $evenement): void
+    {
+        $questionsDecharge = QuestionSante::where('type_questionnaire', QuestionSante::DECHARGE)->where('active', true)->exists();
+
+        $query->where(function ($q) use ($evenement, $questionsDecharge) {
+            $q->whereDoesntHave('documents.consentement', fn ($c) => $c->where('accepte', true)
+                ->whereHas('texteLegal', fn ($t) => $t->where('type_texte', 'decharge')))
+                ->when($questionsDecharge, fn ($q2) => $q2->orWhereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::DECHARGE)))
+                ->orWhere(fn ($mineur) => $mineur->mineurs($evenement)
+                    ->whereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::SANTE)));
+        });
+    }
+
+    /** Titulaire du compte qui suit l'inscription : le payeur, sinon le responsable ou le participant lui-même. */
+    public function titulaire(): ?User
+    {
+        return $this->commande?->user
+            ?? $this->participant->responsable
+            ?? ($this->participant->user->email ? $this->participant->user : null);
     }
 
     public function libelleStatut(): string

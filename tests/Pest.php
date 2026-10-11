@@ -94,6 +94,21 @@ Testable::macro('remplirDocuments', function () {
     return $this->call('conditionsSuivant');
 });
 
+/** Remplit tous les documents d'une inscription : règlement, RGPD, décharge, et santé pour un mineur. */
+function documentsComplets(Inscription $inscription): Inscription
+{
+    $deposant = $inscription->participant->id_responsable ?? $inscription->id_participant;
+
+    app(\App\Services\Inscriptions\Consentements::class)->enregistrer($inscription, true, $deposant, '127.0.0.1');
+    app(Questionnaires::class)->remplirDecharge($inscription, affirmations(), $deposant, '127.0.0.1');
+
+    if ($inscription->santeRequise()) {
+        app(Questionnaires::class)->enregistrer($inscription, 'sante', reponses('sante'), true, $deposant);
+    }
+
+    return $inscription->fresh();
+}
+
 /** Compte admin vérifié, au niveau d'accès donné (1 lecture, 2 gestion, 3 super admin). */
 function admin(int $niveau = 3): User
 {

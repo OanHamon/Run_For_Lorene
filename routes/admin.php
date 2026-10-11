@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\EvenementController;
+use App\Http\Controllers\Admin\InscriptionController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\TableauController;
@@ -17,6 +18,19 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', TableauController::class)->name('tableau');
 Route::get('journal', JournalController::class)->name('journal');
+
+// Suivi des inscriptions : consultation et exports pour tous les admins, actions au niveau 2.
+Route::get('inscriptions', [InscriptionController::class, 'index'])->name('inscriptions.index');
+Route::get('inscriptions/export', [InscriptionController::class, 'export'])->name('inscriptions.export');
+Route::get('inscriptions/dossards', [InscriptionController::class, 'exportDossards'])->name('inscriptions.dossards');
+Route::get('inscriptions/{inscription}', [InscriptionController::class, 'show'])->whereNumber('inscription')->name('inscriptions.show');
+
+Route::middleware('admin:2')->group(function () {
+    Route::put('inscriptions/{inscription}/dossard', [InscriptionController::class, 'dossard'])->name('inscriptions.dossard');
+    Route::post('inscriptions/{inscription}/dossard', [InscriptionController::class, 'attribuerDossard'])->name('inscriptions.attribuer-dossard');
+    Route::post('inscriptions/{inscription}/annuler', [InscriptionController::class, 'annuler'])->name('inscriptions.annuler');
+    Route::post('inscriptions/{inscription}/relancer', [InscriptionController::class, 'relancer'])->name('inscriptions.relancer');
+});
 
 // Paramétrage des événements (lot 2) : consultation pour tous les admins…
 Route::get('evenements', [EvenementController::class, 'index'])->name('evenements.index');

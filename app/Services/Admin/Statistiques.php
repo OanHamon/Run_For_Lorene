@@ -66,7 +66,12 @@ class Statistiques
         ];
     }
 
-    /** @return Collection<int, object{option: string, taille: string, vendus: int, stock: ?int}> */
+    /**
+     * Options vendues par taille. Le stock est la quantité mise en vente (null = illimité) :
+     * le restant s'en déduit, les ventes ne le décrémentent pas.
+     *
+     * @return Collection<int, object{option: string, taille: string, vendus: int, stock: ?int, restant: ?int}>
+     */
     public function tshirts(Evenement $evenement): Collection
     {
         $vendus = InscriptionDeclinaison::query()
@@ -81,6 +86,7 @@ class Statistiques
                 'taille' => $d->libelle,
                 'vendus' => (int) ($vendus[$d->id_declinaison] ?? 0),
                 'stock' => $d->stock,
+                'restant' => $d->stock === null ? null : max($d->stock - (int) ($vendus[$d->id_declinaison] ?? 0), 0),
             ]));
     }
 

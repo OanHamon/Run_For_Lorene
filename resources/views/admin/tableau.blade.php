@@ -131,7 +131,7 @@
                             <tr>
                                 <td>{{ $t->option }} {{ $t->taille }}</td>
                                 <td class="text-right font-bold" data-test="tshirt-{{ $t->taille }}">{{ $t->vendus }}</td>
-                                <td class="text-right {{ $t->stock === 0 ? 'font-bold text-vert' : '' }}">{{ $t->stock === null ? 'illimité' : ($t->stock === 0 ? 'épuisé' : $t->stock) }}</td>
+                                <td class="text-right {{ $t->restant === 0 ? 'font-bold text-vert' : '' }}">{{ $t->restant === null ? 'illimité' : ($t->restant === 0 ? 'épuisé' : "{$t->restant} / {$t->stock}") }}</td>
                             </tr>
                         @empty
                             <tr><td colspan="3" class="text-center text-gris-texte">Aucune option.</td></tr>
