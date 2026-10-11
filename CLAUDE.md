@@ -60,7 +60,15 @@ Esprit : « élan collectif ». Positif sans naïveté, humain, clair, accessibl
 
 - Proportions : le vert profond structure, le vert doux apporte la profondeur, la moutarde reste un accent.
 - La moutarde n'est pas lisible en texte sur fond blanc (contraste AA non atteint) : la réserver aux fonds, pastilles, soulignements, ou au texte sur fond vert profond / sombre.
-- Les tokens Tailwind sont dans `resources/css/app.css` (`@theme`) ; toujours passer par eux, jamais de hex en dur dans les vues.
+- Tokens Tailwind dans `resources/css/app.css` (`@theme`), aux noms de la charte : `vert`, `vert-doux`, `moutarde`, `vert-sombre`, `vert-clair`, plus trois dérivés : `gris-texte` (texte secondaire), `fond` (fond de page), `bordure` (traits). Toujours passer par eux, jamais de hex en dur dans les vues.
+- Titres en `text-vert`, texte courant en `text-vert-sombre`. Chiffre clé ou date en moutarde : uniquement sur fond `bg-vert` (voir le dossard dans l'espace, la date du héro).
+
+### Composants
+
+- Classes partagées (`app.css`) : `rfl-btn` (pilule vert), `rfl-btn-secondaire`, `rfl-btn-moutarde` (action principale de la page événement uniquement), `rfl-lien`, `rfl-ruban` (bandeau de titre de la charte : pilule vert doux, texte blanc), `rfl-surligne` (mot dans un aplat), `rfl-champ`, `rfl-label`, `rfl-alerte*`.
+- Formes de la charte en composants Blade (`resources/views/components/charte/`) : `<x-charte.colline>` (bas de section ondulé), `<x-charte.cercle>` (disque + arc décalé), `<x-charte.tache>` (tache de fond).
+- Rayons : 28 px pour les grands panneaux, `rounded-3xl` pour les cartes, `rounded-2xl` pour les blocs internes, pilules pour boutons et badges. Jamais d'angle vif.
+- Pas de libellés en capitales espacées, pas d'ombres portées : des contours `ring-bordure`.
 
 ### Typographies
 
@@ -78,6 +86,8 @@ Copies web dans `public/images/`, à utiliser telles quelles :
 | `logo-run-for-lorene.svg` | Logo Run for Lorène (vectoriel, issu du `.ai`) | En-têtes du site, du tunnel et de l'espace participant |
 | `logo-effervescence-jeunes.png` | Logo Effervescence Jeunes complet | Mise en avant de l'association organisatrice, sur fond clair |
 | `pastille-ej.png` | Déclinaison ronde « ej » | Petits formats, signature en pied de page, fond foncé |
+| `etoile-filante.png` | Symbole de l'étoile filante, extrait du logo Effervescence | En petit, pour l'élan : héro, confirmation d'inscription. Jamais en simple décoration ni multipliée |
+| `pictos/*.png` | Pictos officiels de la galerie p. 11 (santé mentale, solidarité, collectif, protection, écoute, événement, espoir, soleil, croissance, don, transmission) | Un picto par idée, avec un libellé à côté |
 
 Favicons (`public/favicon.ico`, `favicon-32.png`, `apple-touch-icon.png`) générés à partir de la pastille « ej ».
 

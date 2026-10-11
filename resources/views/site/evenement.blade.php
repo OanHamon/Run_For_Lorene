@@ -3,100 +3,117 @@
 <head>
     @include('partials.head', ['title' => 'Run For Lorène · RFL3'])
 </head>
-<body class="bg-white font-sans text-encre antialiased">
+<body class="bg-white font-sans text-vert-sombre antialiased">
 
-    <header class="border-b border-bordure">
-        <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-            <a href="{{ route('home') }}">
-                <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-14 w-auto">
+    <header class="bg-white">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
+            <a href="{{ route('home') }}" class="shrink-0 p-1">
+                <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène, retour à l'accueil" class="h-16 w-auto">
             </a>
 
-            <nav class="hidden items-center gap-8 text-sm font-medium text-encre md:flex">
-                <a href="#evenement" class="hover:text-canard">L'événement</a>
-                <a href="#epreuves" class="hover:text-canard">Les épreuves</a>
-                <a href="#cause" class="hover:text-canard">La cause</a>
-                <a href="#reglement" class="hover:text-canard">Règlement</a>
-                <a href="#contact" class="hover:text-canard">Contact</a>
+            <nav class="hidden items-center gap-7 font-display text-vert lg:flex" aria-label="Sections de la page">
+                <a href="#epreuves" class="hover:text-vert">Les épreuves</a>
+                <a href="#cause" class="hover:text-vert">La cause</a>
+                <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="hover:text-vert">Règlement</a>
+                <a href="#contact" class="hover:text-vert">Contact</a>
             </nav>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-4">
                 @auth
-                    <a href="{{ route('espace') }}" class="rounded-lg bg-canard px-4 py-2 text-sm font-medium text-white hover:bg-profond">Mon espace</a>
+                    <a href="{{ route('espace') }}" class="rfl-btn px-5 py-2.5">Mon espace</a>
                 @else
-                    <a href="{{ route('login') }}" class="text-sm font-medium text-encre hover:text-canard">Se connecter</a>
-                    <a href="{{ route('inscription.tunnel') }}" class="rounded-lg bg-canard px-4 py-2 text-sm font-medium text-white hover:bg-profond">S'inscrire</a>
+                    <a href="{{ route('login') }}" class="hidden font-display text-vert hover:text-vert sm:inline">Se connecter</a>
+                    <a href="{{ route('inscription.tunnel') }}" class="rfl-btn px-5 py-2.5">S'inscrire</a>
                 @endauth
             </div>
         </div>
     </header>
 
-    <section id="evenement" class="relative overflow-hidden bg-gradient-to-br from-canard to-profond text-white">
-        <div class="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:items-center">
+    {{-- Héro : aplat vert profond, la date en moutarde comme dans le bloc événement des signatures de la charte. --}}
+    <section id="evenement" class="relative overflow-hidden bg-vert text-white">
+        <div class="mx-auto grid max-w-6xl gap-12 px-5 pt-14 pb-24 sm:px-8 md:grid-cols-[1.15fr_1fr] md:items-center md:pt-20 md:pb-32">
             <div>
-                <p class="mb-4 text-sm font-semibold tracking-wide text-moutarde uppercase">RFL3 &middot; Samedi 3 avril 2027 &middot; Nantes</p>
-                <h1 class="font-display text-4xl leading-tight font-bold sm:text-5xl">Ensemble pour la santé mentale des jeunes.</h1>
-                <p class="mt-5 max-w-md text-white/85">Courses et marche ouvertes à toutes et tous, sans chrono. Un événement organisé par Effervescence Jeunes.</p>
-
-                <div class="mt-8 flex flex-wrap gap-3">
-                    <a href="{{ route('inscription.tunnel') }}" class="rounded-lg bg-moutarde px-6 py-3 font-medium text-encre hover:brightness-95">S'inscrire</a>
-                    <a href="#cause" class="rounded-lg border border-white/50 px-6 py-3 font-medium text-white hover:bg-white/10">Faire un don</a>
+                <div class="flex items-end gap-4">
+                    <p class="font-display leading-none">
+                        <span class="block text-7xl text-moutarde sm:text-8xl">03</span>
+                    </p>
+                    <p class="pb-1.5 font-display leading-tight">
+                        <span class="block text-2xl text-moutarde">avril</span>
+                        <span class="block tracking-[0.3em] text-white/90">2027</span>
+                    </p>
+                    <p class="mb-1.5 ml-2 border-l-2 border-vert-doux pl-4 leading-snug text-white/90">
+                        Samedi à Nantes<br>3<sup>e</sup> édition
+                    </p>
                 </div>
 
-                <a href="{{ route('espace') }}" class="mt-6 inline-block text-sm text-white/80 hover:text-white">Déjà inscrit ? Accéder à mon espace →</a>
+                <h1 class="mt-8 font-display text-4xl leading-[1.15] sm:text-5xl">Ensemble pour la santé mentale des jeunes</h1>
+                <p class="mt-6 max-w-md text-lg leading-relaxed text-white/90">Courses et marche ouvertes à toutes et tous, sans chrono. Un événement organisé par Effervescence Jeunes.</p>
+
+                <div class="mt-9 flex flex-wrap items-center gap-3">
+                    <a href="{{ route('inscription.tunnel') }}" class="rfl-btn-moutarde text-lg">Je m'inscris</a>
+                    <a href="#cause" class="inline-flex items-center rounded-full border-2 border-white/70 px-7 py-3 font-display text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Faire un don</a>
+                </div>
+
+                <p class="mt-7 text-white/85">Déjà inscrit ? <a href="{{ route('espace') }}" class="font-bold text-white underline decoration-moutarde decoration-2 underline-offset-4">Retrouve ton espace</a></p>
             </div>
 
-            <div class="flex aspect-video items-center justify-center rounded-lg bg-white/10 text-white/60">
-                Photo de l'édition précédente
+            {{-- Le logo couleur ne se pose pas sur du vert : il vit dans le disque blanc, comme dans les diaporamas de la charte. --}}
+            <div class="relative mx-auto w-full max-w-[250px] sm:max-w-[340px] md:max-w-[400px]">
+                <img src="/images/etoile-filante.png" alt="" class="pointer-events-none absolute -top-8 -left-12 w-36 sm:-top-10 sm:-left-16 sm:w-56" aria-hidden="true">
+                <x-charte.cercle arc="border-vert-doux">
+                    <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="w-[68%]">
+                </x-charte.cercle>
             </div>
         </div>
 
-        <div class="h-1.5 w-full bg-gradient-to-r from-aqua to-moutarde"></div>
+        <x-charte.colline class="absolute inset-x-0 -bottom-px h-12 text-white sm:h-20" />
     </section>
 
-    <section class="border-b border-bordure bg-white">
-        <div class="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 md:grid-cols-4">
-            <div>
-                <p class="text-xs font-semibold tracking-wide text-gris-texte uppercase">Date</p>
-                <p class="mt-1 font-display font-bold text-encre">Samedi 3 avril 2027</p>
+    {{-- L'essentiel en quatre repères, chacun avec son picto de la charte. --}}
+    <section class="bg-white" aria-label="L'essentiel">
+        <dl class="mx-auto grid max-w-6xl grid-cols-1 gap-x-8 gap-y-7 px-5 pt-4 pb-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+            <div class="flex items-center gap-4">
+                <img src="/images/pictos/soleil.png" alt="" class="h-14 w-14 shrink-0">
+                <div><dt class="text-gris-texte">Quand</dt><dd class="font-display text-lg text-vert">Samedi 3 avril 2027</dd></div>
             </div>
-            <div>
-                <p class="text-xs font-semibold tracking-wide text-gris-texte uppercase">Lieu</p>
-                <p class="mt-1 font-display font-bold text-encre">Nantes</p>
+            <div class="flex items-center gap-4">
+                <img src="/images/pictos/evenement.png" alt="" class="h-14 w-14 shrink-0">
+                <div><dt class="text-gris-texte">Où</dt><dd class="font-display text-lg text-vert">Nantes</dd></div>
             </div>
-            <div>
-                <p class="text-xs font-semibold tracking-wide text-gris-texte uppercase">Formats</p>
-                <p class="mt-1 font-display font-bold text-encre">4 épreuves, sans chrono</p>
+            <div class="flex items-center gap-4">
+                <img src="/images/pictos/collectif.png" alt="" class="h-14 w-14 shrink-0">
+                <div><dt class="text-gris-texte">Format</dt><dd class="font-display text-lg text-vert">4 épreuves, sans chrono</dd></div>
             </div>
-            <div>
-                <p class="text-xs font-semibold tracking-wide text-gris-texte uppercase">L'an dernier</p>
-                <p class="mt-1 font-display font-bold text-encre">23 000 € collectés</p>
+            <div class="flex items-center gap-4">
+                <img src="/images/pictos/don.png" alt="" class="h-14 w-14 shrink-0">
+                <div><dt class="text-gris-texte">L'an dernier</dt><dd class="font-display text-lg text-vert">23 000 € collectés</dd></div>
             </div>
-        </div>
+        </dl>
     </section>
 
-    <section id="epreuves" class="bg-creme py-16">
-        <div class="mx-auto max-w-6xl px-4 sm:px-6">
-            <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <section id="epreuves" class="bg-fond py-16 sm:py-20">
+        <div class="mx-auto max-w-6xl px-5 sm:px-8">
+            <div class="mb-8 flex flex-wrap items-end justify-between gap-5">
                 <div>
-                    <p class="mb-1 text-sm font-semibold tracking-wide text-moutarde uppercase">Les épreuves</p>
-                    <h2 class="font-display text-3xl font-bold text-encre">Choisis ton format</h2>
+                    <h2 class="rfl-ruban text-2xl">Les épreuves</h2>
+                    <p class="mt-4 text-lg text-vert-sombre">Choisis ton format : chacun avance à son rythme.</p>
                 </div>
-                <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="rounded-lg border border-bordure bg-white px-4 py-2 text-sm font-medium text-encre hover:border-canard">Télécharger le règlement (PDF)</a>
+                <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="rfl-btn-secondaire px-5 py-2.5">Lire le règlement (PDF)</a>
             </div>
 
-            <div class="overflow-x-auto rounded-lg border border-bordure bg-white">
-                <table class="w-full min-w-[640px] text-left text-sm">
-                    <thead class="border-b border-bordure bg-creme/60 text-xs font-semibold tracking-wide text-gris-texte uppercase">
+            <div class="rounded-[28px] bg-white px-2 py-2 ring-1 ring-bordure">
+                <table class="w-full text-left max-md:block">
+                    <thead class="text-sm text-gris-texte max-md:hidden">
                         <tr>
-                            <th class="px-6 py-3">Épreuve</th>
-                            <th class="px-6 py-3">Départ</th>
-                            <th class="px-6 py-3">Public</th>
-                            <th class="px-6 py-3">Tarif</th>
-                            <th class="px-6 py-3">Places</th>
-                            <th class="px-6 py-3"></th>
+                            <th class="px-6 pt-4 pb-3 font-normal">Épreuve</th>
+                            <th class="px-6 pt-4 pb-3 font-normal">Départ</th>
+                            <th class="px-6 pt-4 pb-3 font-normal">Public</th>
+                            <th class="px-6 pt-4 pb-3 font-normal">Tarif</th>
+                            <th class="px-6 pt-4 pb-3 font-normal">Places</th>
+                            <th class="px-6 pt-4 pb-3"><span class="sr-only">Action</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-bordure">
+                    <tbody class="divide-y divide-bordure md:border-t md:border-bordure max-md:block">
                         @forelse ($courses as $course)
                             @php
                                 $restantes = $course->placesRestantes();
@@ -109,102 +126,122 @@
                                     default => 'Tout public',
                                 };
                             @endphp
-                            <tr @class(['opacity-50' => $complet])>
-                                <td class="px-6 py-4">
-                                    <p class="font-display font-bold text-encre">{{ $course->nom }}</p>
+                            <tr @class(['opacity-50' => $complet, 'max-md:grid max-md:grid-cols-2 max-md:gap-x-4 max-md:gap-y-1 max-md:px-4 max-md:py-5'])>
+                                <td class="px-6 py-4 max-md:col-span-2 max-md:p-0">
+                                    <p class="font-display text-lg text-vert">{{ $course->nom }}</p>
                                     @if ($course->distance)<p class="text-gris-texte">{{ rtrim(rtrim(number_format((float) $course->distance, 2, ',', ''), '0'), ',') }} km</p>@endif
                                 </td>
-                                <td class="px-6 py-4 text-encre">{{ \Illuminate\Support\Carbon::parse($course->heure_depart)->format('G\hi') }}</td>
-                                <td class="px-6 py-4 text-encre">{{ $public }}</td>
-                                <td class="px-6 py-4 font-medium {{ $complet ? 'text-encre' : 'text-canard' }}">{{ $prix !== null ? number_format((float) $prix, fmod((float) $prix, 1.0) == 0.0 ? 0 : 2, ',', ' ').' €' : '–' }}</td>
-                                <td class="px-6 py-4 text-encre">
+                                <td class="px-6 py-4 text-vert-sombre max-md:p-0"><span class="text-gris-texte md:hidden">Départ </span>{{ \Illuminate\Support\Carbon::parse($course->heure_depart)->format('G\hi') }}</td>
+                                <td class="px-6 py-4 text-vert-sombre max-md:p-0">{{ $public }}</td>
+                                <td class="px-6 py-4 font-bold max-md:p-0 {{ $complet ? 'text-vert-sombre' : 'text-vert' }}">{{ $prix !== null ? number_format((float) $prix, fmod((float) $prix, 1.0) == 0.0 ? 0 : 2, ',', ' ').' €' : '–' }}</td>
+                                <td class="px-6 py-4 text-vert-sombre max-md:p-0">
                                     @if ($complet)
                                         Complet
                                     @elseif ($restantes === null)
                                         Sans limite
                                     @elseif ($restantes <= 10 || $restantes / max($course->quota, 1) < 0.2)
-                                        <span class="font-medium text-encre">Plus que {{ $restantes }} {{ $restantes > 1 ? 'places' : 'place' }} !</span>
+                                        <span class="rfl-surligne bg-moutarde/25 font-bold text-vert-sombre">Plus que {{ $restantes }} {{ $restantes > 1 ? 'places' : 'place' }} !</span>
                                     @else
                                         {{ $restantes }} places
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                                <td class="px-6 py-4 text-right max-md:col-span-2 max-md:p-0 max-md:pt-3 max-md:text-left">
                                     @if ($complet)
-                                        <span class="inline-block cursor-not-allowed rounded-lg bg-bordure px-4 py-2 text-sm font-medium text-gris-texte">Complet</span>
+                                        <span class="inline-block rounded-full bg-bordure px-5 py-2 font-display text-sm text-gris-texte">Complet</span>
                                     @elseif ($ouvert)
-                                        <a href="{{ route('inscription.tunnel') }}" class="rounded-lg bg-canard px-4 py-2 text-sm font-medium text-white hover:bg-profond">Choisir</a>
+                                        <a href="{{ route('inscription.tunnel') }}" class="rfl-btn px-5 py-2 text-sm">Choisir</a>
                                     @endif
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-6 py-8 text-center text-gris-texte">Les épreuves seront bientôt annoncées.</td></tr>
+                            <tr class="max-md:block"><td colspan="6" class="max-md:block px-6 py-10 text-center text-gris-texte">Les épreuves seront bientôt annoncées.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
 
-            <p class="mt-4 text-sm text-gris-texte">L'âge pris en compte est celui du participant le jour de l'événement.</p>
+            <p class="mt-5 text-gris-texte">L'âge pris en compte est celui du participant le jour de l'événement.</p>
         </div>
     </section>
 
-    <section id="cause" class="bg-white py-16">
-        <div class="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 md:grid-cols-2 md:items-center">
-            <div class="flex aspect-[4/3] items-center justify-center rounded-lg bg-aqua-clair text-canard/70">
-                Photo / visuel de la cause
+    <section id="cause" class="bg-white py-16 sm:py-24">
+        <div class="mx-auto grid max-w-6xl gap-14 px-5 sm:px-8 md:grid-cols-2 md:items-center">
+            <div class="mx-auto w-full max-w-[260px] sm:max-w-[380px]">
+                <x-charte.cercle disque="bg-vert-clair" arc="border-moutarde">
+                    <span class="px-10 text-center text-vert">Photo de l'édition précédente</span>
+                </x-charte.cercle>
             </div>
+
             <div>
-                <img src="/images/logo-effervescence-jeunes.png" alt="Effervescence Jeunes" class="mb-6 h-20 w-auto">
-                <p class="mb-2 text-sm font-semibold tracking-wide text-moutarde uppercase">La cause</p>
-                <h2 class="font-display text-3xl font-bold text-encre">Pourquoi on court</h2>
-                <p class="mt-4 text-gris-texte">Qui était Lorène, pourquoi la santé mentale des jeunes, à quoi sert l'argent collecté : le mot de l'association vient ici.</p>
-                <div class="mt-6 flex flex-wrap items-center gap-4">
-                    <a href="#" class="rounded-lg bg-canard px-6 py-3 font-medium text-white hover:bg-profond">Faire un don</a>
-                    <a href="https://effervescence-jeunes.fr/" class="text-sm font-medium text-canard hover:underline">Découvrir Effervescence Jeunes</a>
+                <h2 class="rfl-ruban text-2xl">Pourquoi on court</h2>
+                <p class="mt-6 text-lg leading-relaxed text-vert-sombre">Effervescence Jeunes est une association engagée pour la santé mentale des jeunes. Elle sensibilise, prévient et agit concrètement en créant du lien, de l'écoute et de l'engagement.</p>
+
+                <ul class="mt-8 grid gap-5 sm:grid-cols-3">
+                    <li class="flex items-center gap-3 sm:flex-col sm:items-start">
+                        <img src="/images/pictos/ecoute.png" alt="" class="h-12 w-12">
+                        <span class="font-display text-vert">Sensibiliser</span>
+                    </li>
+                    <li class="flex items-center gap-3 sm:flex-col sm:items-start">
+                        <img src="/images/pictos/protection.png" alt="" class="h-12 w-12">
+                        <span class="font-display text-vert">Prévenir</span>
+                    </li>
+                    <li class="flex items-center gap-3 sm:flex-col sm:items-start">
+                        <img src="/images/pictos/solidarite.png" alt="" class="h-12 w-12">
+                        <span class="font-display text-vert">Créer du lien</span>
+                    </li>
+                </ul>
+
+                <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+                    <a href="#" class="rfl-btn">Faire un don</a>
+                    <a href="https://effervescence-jeunes.fr/" class="rfl-lien">Découvrir l'association</a>
                 </div>
+
+                <img src="/images/logo-effervescence-jeunes.png" alt="Effervescence Jeunes" class="mt-12 h-20 w-auto">
             </div>
         </div>
     </section>
 
-    <footer id="contact" class="bg-profond text-white/80">
-        <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-            <div class="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+    <footer id="contact" class="relative bg-vert-sombre text-white/85">
+        <x-charte.colline class="absolute inset-x-0 bottom-full h-10 text-vert-sombre sm:h-16" />
+
+        <div class="mx-auto max-w-6xl px-5 pt-12 pb-10 sm:px-8">
+            <div class="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
                 <div>
-                    <p class="font-display text-lg font-bold text-white">Run <span class="italic text-moutarde">for Lorène</span></p>
-                    <p class="mt-2 text-sm">Un événement Effervescence Jeunes. Ensemble pour la santé mentale des jeunes.</p>
+                    <p class="font-display text-2xl text-white">Run for Lorène</p>
+                    <p class="mt-3 max-w-xs leading-relaxed">Un événement Effervescence Jeunes, ensemble pour la santé mentale des jeunes.</p>
                 </div>
                 <div>
-                    <p class="mb-3 text-xs font-semibold tracking-wide text-moutarde uppercase">Événement</p>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="#epreuves" class="hover:text-white">Les épreuves</a></li>
-                        <li id="reglement"><a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="hover:text-white">Règlement</a></li>
-                        <li><a href="#" class="hover:text-white">FAQ</a></li>
+                    <p class="mb-3 font-display text-moutarde">L'événement</p>
+                    <ul class="space-y-2">
+                        <li><a href="#epreuves" class="hover:text-white hover:underline">Les épreuves</a></li>
+                        <li id="reglement"><a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="hover:text-white hover:underline">Règlement</a></li>
+                        <li><a href="#" class="hover:text-white hover:underline">Questions fréquentes</a></li>
                     </ul>
                 </div>
                 <div>
-                    <p class="mb-3 text-xs font-semibold tracking-wide text-moutarde uppercase">Participant</p>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="{{ route('espace') }}" class="hover:text-white">Mon espace</a></li>
-                        <li><a href="#cause" class="hover:text-white">Faire un don</a></li>
-                        <li><a href="#contact" class="hover:text-white">Contact</a></li>
+                    <p class="mb-3 font-display text-moutarde">Participant</p>
+                    <ul class="space-y-2">
+                        <li><a href="{{ route('espace') }}" class="hover:text-white hover:underline">Mon espace</a></li>
+                        <li><a href="#cause" class="hover:text-white hover:underline">Faire un don</a></li>
                     </ul>
                 </div>
                 <div>
-                    <p class="mb-3 text-xs font-semibold tracking-wide text-moutarde uppercase">Contact</p>
-                    <ul class="space-y-2 text-sm">
-                        <li>contact@effervescence-jeunes.fr</li>
-                        <li>effervescence-jeunes.fr</li>
+                    <p class="mb-3 font-display text-moutarde">Nous écrire</p>
+                    <ul class="space-y-2">
+                        <li><a href="mailto:contact@effervescence-jeunes.fr" class="hover:text-white hover:underline">contact@effervescence-jeunes.fr</a></li>
+                        <li><a href="https://effervescence-jeunes.fr/" class="hover:text-white hover:underline">effervescence-jeunes.fr</a></li>
                     </ul>
                 </div>
             </div>
 
-            <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-6 text-xs text-white/60">
+            <div class="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/15 pt-6 text-sm text-white/70">
                 <span>N° RNA W442030950</span>
                 <a href="#" class="hover:text-white">Mentions légales</a>
                 <a href="#" class="hover:text-white">CGV</a>
                 <a href="#" class="hover:text-white">Confidentialité</a>
                 <a href="#" class="hover:text-white">Cookies</a>
-                <a href="https://effervescence-jeunes.fr/" class="ml-auto" title="Effervescence Jeunes">
-                    <img src="/images/pastille-ej.png" alt="Effervescence Jeunes" class="h-10 w-10">
+                <a href="https://effervescence-jeunes.fr/" class="ml-auto p-1" title="Effervescence Jeunes">
+                    <img src="/images/pastille-ej.png" alt="Effervescence Jeunes" class="h-12 w-12">
                 </a>
             </div>
         </div>

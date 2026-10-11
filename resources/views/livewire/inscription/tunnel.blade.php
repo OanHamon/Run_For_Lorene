@@ -931,7 +931,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         <div class="mb-6">
             <p class="mb-2 text-sm text-gris-texte">Étape {{ $numero }} sur 7 &middot; {{ $libelle }}</p>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-bordure" role="progressbar" aria-valuemin="1" aria-valuemax="7" aria-valuenow="{{ $numero }}" aria-label="Progression de l'inscription">
-                <div class="h-full rounded-full bg-canard transition-all duration-300" style="width: {{ round($numero / 7 * 100) }}%"></div>
+                <div class="h-full rounded-full bg-vert transition-all duration-300" style="width: {{ round($numero / 7 * 100) }}%"></div>
             </div>
         </div>
     @endif
@@ -940,7 +940,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     {{-- Inscriptions fermées --}}
     @if ($etape === 'ferme')
-        <h1 class="font-display text-2xl font-bold text-encre">Inscriptions fermées</h1>
+        <h1 class="font-display text-2xl text-vert">Inscriptions fermées</h1>
         @if (! $this->evenement)
             <p class="mt-3 text-sm text-gris-texte">Aucun événement n'est ouvert aux inscriptions pour le moment.</p>
         @elseif (now()->lt($this->evenement->ouverture))
@@ -964,27 +964,27 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {{-- Paiement en attente --}}
     @if ($etape === 'attente' && $this->commandeEnAttente)
         @php($commande = $this->commandeEnAttente)
-        <h1 class="font-display text-2xl font-bold text-encre">Un paiement t'attend</h1>
+        <h1 class="font-display text-2xl text-vert">Un paiement t'attend</h1>
         <p class="mt-1 mb-6 text-sm text-gris-texte">Ta commande est prête, il ne reste plus qu'à la régler. Tu peux aussi la modifier avant de payer.</p>
 
-        <ul class="divide-y divide-bordure rounded-xl border border-bordure">
+        <ul class="divide-y divide-bordure rounded-2xl border border-bordure">
             @foreach ($commande->inscriptions as $i)
                 <li class="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                    <span><span class="font-medium text-encre">{{ $i->participant->user->prenom }} {{ $i->participant->user->nom }}</span><br><span class="text-gris-texte">{{ $i->tarif->course->nom }}</span></span>
-                    <span class="font-medium text-encre">{{ $this->euros((float) $i->prix_paye) }}</span>
+                    <span><span class="font-bold text-vert-sombre">{{ $i->participant->user->prenom }} {{ $i->participant->user->nom }}</span><br><span class="text-gris-texte">{{ $i->tarif->course->nom }}</span></span>
+                    <span class="font-bold text-vert-sombre">{{ $this->euros((float) $i->prix_paye) }}</span>
                 </li>
             @endforeach
             @if ($commande->don)
                 <li class="flex items-center justify-between px-4 py-3 text-sm">
-                    <span class="text-encre">Don</span>
-                    <span class="font-medium text-encre">{{ $this->euros((float) $commande->don->montant) }}</span>
+                    <span class="text-vert-sombre">Don</span>
+                    <span class="font-bold text-vert-sombre">{{ $this->euros((float) $commande->don->montant) }}</span>
                 </li>
             @endif
         </ul>
 
         <div class="mt-4 flex items-center justify-between border-t border-bordure pt-4">
-            <p class="font-display text-lg font-bold text-encre">Total</p>
-            <p class="font-display text-lg font-bold text-encre">{{ $this->euros((float) $commande->montant_total) }}</p>
+            <p class="font-display text-lg text-vert">Total</p>
+            <p class="font-display text-lg text-vert">{{ $this->euros((float) $commande->montant_total) }}</p>
         </div>
 
         <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1002,7 +1002,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {{-- Participant (écran 05) --}}
     @if ($etape === 'participant')
         <form wire:submit="participantSuivant" novalidate>
-            <h1 class="font-display text-2xl font-bold text-encre">Pour qui ?</h1>
+            <h1 class="font-display text-2xl text-vert">Pour qui ?</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">Tu peux inscrire plusieurs personnes dans la même commande : toi, tes enfants, un proche…</p>
 
             <fieldset>
@@ -1013,15 +1013,15 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                             wire:click="choisirParticipant('{{ $option->cle }}')"
                             @disabled($option->inscrit)
                             aria-pressed="{{ $choix === $option->cle ? 'true' : 'false' }}"
-                            class="flex w-full items-center justify-between gap-3 rounded-xl border-2 px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-canard {{ $option->inscrit ? 'cursor-not-allowed border-bordure opacity-50' : ($choix === $option->cle ? 'border-canard bg-aqua-clair' : 'border-bordure hover:border-canard/50') }}">
+                            class="flex w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-vert {{ $option->inscrit ? 'cursor-not-allowed border-bordure opacity-50' : ($choix === $option->cle ? 'border-vert bg-vert-clair' : 'border-bordure hover:border-vert/50') }}">
                             <span>
-                                <span class="block font-medium text-encre">{{ $option->libelle }}</span>
+                                <span class="block font-bold text-vert-sombre">{{ $option->libelle }}</span>
                                 <span class="block text-sm text-gris-texte">{{ $option->detail }}</span>
                             </span>
                             @if ($option->inscrit)
-                                <span class="shrink-0 rounded-full bg-aqua-clair px-3 py-1 text-xs font-medium text-canard">Déjà inscrit(e)</span>
+                                <span class="shrink-0 rounded-full bg-vert-clair px-3 py-1 text-xs font-bold text-vert">Déjà inscrit(e)</span>
                             @elseif ($option->dansPanier)
-                                <span class="shrink-0 rounded-full bg-moutarde/20 px-3 py-1 text-xs font-medium text-encre">Dans ta commande</span>
+                                <span class="shrink-0 rounded-full bg-moutarde/20 px-3 py-1 text-xs font-bold text-vert-sombre">Dans ta commande</span>
                             @endif
                         </button>
                     @endforeach
@@ -1078,13 +1078,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     {{-- Épreuve (écran 02) --}}
     @if ($etape === 'epreuve' && $this->participant)
-        <h1 class="font-display text-2xl font-bold text-encre">{{ $this->estMoi ? 'Choisis ton épreuve' : 'Quelle épreuve pour '.$this->participant->user->prenom.' ?' }}</h1>
+        <h1 class="font-display text-2xl text-vert">{{ $this->estMoi ? 'Choisis ton épreuve' : 'Quelle épreuve pour '.$this->participant->user->prenom.' ?' }}</h1>
         <p class="mt-1 mb-6 text-sm text-gris-texte">{{ $this->evenement->nom }} &middot; {{ $this->evenement->date_evenement->translatedFormat('l j F Y') }}</p>
 
-        @error('courseId') <p class="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+        @error('courseId') <p class="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
 
         @if ($this->courses->isEmpty())
-            <p class="rounded-xl bg-moutarde/15 px-4 py-3 text-sm text-encre">Aucune épreuve n'est ouverte à l'âge de {{ $this->estMoi ? 'ce participant' : $this->participant->user->prenom }} ({{ $this->participant->ageAu($this->evenement->date_evenement) }} ans le jour J). Vérifie la date de naissance.</p>
+            <p class="rounded-2xl bg-moutarde/15 px-4 py-3 text-sm text-vert-sombre">Aucune épreuve n'est ouverte à l'âge de {{ $this->estMoi ? 'ce participant' : $this->participant->user->prenom }} ({{ $this->participant->ageAu($this->evenement->date_evenement) }} ans le jour J). Vérifie la date de naissance.</p>
         @else
             <div class="space-y-3" role="radiogroup" aria-label="Épreuves">
                 @foreach ($this->courses as $course)
@@ -1094,19 +1094,19 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                         aria-checked="{{ $courseId === $course->id ? 'true' : 'false' }}"
                         wire:click="choisirCourse({{ $course->id }})"
                         @disabled($indisponible)
-                        class="w-full rounded-2xl border-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-canard {{ $indisponible ? 'cursor-not-allowed border-bordure opacity-50' : ($courseId === $course->id ? 'border-canard bg-aqua-clair' : 'border-bordure hover:border-canard/50') }}">
+                        class="w-full rounded-2xl border-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-vert {{ $indisponible ? 'cursor-not-allowed border-bordure opacity-50' : ($courseId === $course->id ? 'border-vert bg-vert-clair' : 'border-bordure hover:border-vert/50') }}">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="font-display font-bold text-encre">{{ $course->nom }}</p>
+                                <p class="font-display text-vert">{{ $course->nom }}</p>
                                 <p class="text-sm text-gris-texte">
                                     Départ {{ $course->depart }}@if ($course->distance) &middot; {{ $course->distance }}@endif
                                     &middot; {{ $course->prix === null ? 'Tarif indisponible' : $this->euros($course->prix) }}
                                 </p>
                             </div>
                             @if ($course->complet)
-                                <span class="shrink-0 rounded-full bg-bordure px-3 py-1 text-sm font-medium text-gris-texte">Complet</span>
+                                <span class="shrink-0 rounded-full bg-bordure px-3 py-1 text-sm font-bold text-gris-texte">Complet</span>
                             @elseif ($course->peuDePlaces)
-                                <span class="shrink-0 rounded-full bg-moutarde/20 px-3 py-1 text-sm font-medium text-encre">Plus que {{ $course->restantes }} {{ $course->restantes > 1 ? 'places' : 'place' }}</span>
+                                <span class="shrink-0 rounded-full bg-moutarde/20 px-3 py-1 text-sm font-bold text-vert-sombre">Plus que {{ $course->restantes }} {{ $course->restantes > 1 ? 'places' : 'place' }}</span>
                             @endif
                         </div>
                     </button>
@@ -1127,16 +1127,16 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         @php($nbVolets = count($this->volets))
 
         <div class="mb-4 flex items-center gap-3" aria-live="polite">
-            <p class="shrink-0 text-xs font-medium text-gris-texte">{{ $pour ? "Les documents de {$pour}" : 'Tes documents' }} &middot; {{ $rang + 1 }} sur {{ $nbVolets }}</p>
+            <p class="shrink-0 text-xs font-bold text-gris-texte">{{ $pour ? "Les documents de {$pour}" : 'Tes documents' }} &middot; {{ $rang + 1 }} sur {{ $nbVolets }}</p>
             <div class="flex flex-1 gap-1.5" aria-hidden="true">
                 @for ($n = 0; $n < $nbVolets; $n++)
-                    <span class="h-1.5 flex-1 rounded-full {{ $rang >= $n ? 'bg-canard' : 'bg-bordure' }}"></span>
+                    <span class="h-1.5 flex-1 rounded-full {{ $rang >= $n ? 'bg-vert' : 'bg-bordure' }}"></span>
                 @endfor
             </div>
         </div>
 
         @if ($volet === 'decharge')
-            <h1 class="font-display text-2xl font-bold text-encre">Décharge de responsabilité</h1>
+            <h1 class="font-display text-2xl text-vert">Décharge de responsabilité</h1>
             <p class="mt-1 text-sm text-gris-texte">
                 {{ $pour ? "En tant que responsable, tu remplis la décharge pour {$pour}. " : '' }}Toutes les cases sont obligatoires.
             </p>
@@ -1144,7 +1144,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             <x-questionnaire-decharge class="mt-6" :questions="$this->questionsDecharge" :evenement="$this->evenement" :signataire="auth()->user()->nom.' '.auth()->user()->prenom" />
 
             @if ($errors->has('reponsesDecharge.*'))
-                <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des cases à cocher : elles sont signalées plus haut.</p>
+                <p class="mt-6 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des cases à cocher : elles sont signalées plus haut.</p>
             @endif
 
             <div class="mt-8 flex items-center justify-between">
@@ -1154,7 +1154,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         @endif
 
         @if ($volet === 'sante')
-            <h1 class="font-display text-2xl font-bold text-encre">Questionnaire de santé</h1>
+            <h1 class="font-display text-2xl text-vert">Questionnaire de santé</h1>
             <p class="mt-1 text-sm text-gris-texte">
                 {{ $pour ? "{$pour} sera mineur(e) le jour de la course : ce questionnaire est obligatoire. Réponds par oui ou par non pour {$pour}." : 'Tu seras mineur(e) le jour de la course : ce questionnaire est obligatoire. Réponds par oui ou par non.' }}
                 Les réponses sont confidentielles : seules les personnes habilitées de l'association peuvent les consulter.
@@ -1167,7 +1167,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             </x-questionnaire-sante>
 
             @if ($errors->has('reponsesSante.*'))
-                <p class="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
+                <p class="mt-6 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
             @endif
 
             <div class="mt-8">
@@ -1176,7 +1176,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         @endif
 
         @if ($volet === 'conditions')
-            <h1 class="font-display text-2xl font-bold text-encre">Conditions</h1>
+            <h1 class="font-display text-2xl text-vert">Conditions</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">
                 Dernière étape avant le don.
                 @if ($pour) En tant que responsable, tu acceptes pour {{ $pour }}. @endif
@@ -1184,30 +1184,30 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
             <div class="space-y-4">
                 <div>
-                    <label class="flex items-start gap-3 text-sm text-encre">
-                        <input wire:model.live="accepteReglement" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                    <label class="flex items-start gap-3 text-sm text-vert-sombre">
+                        <input wire:model.live="accepteReglement" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                         <span>J'ai lu et j'accepte le <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="rfl-lien underline">règlement de l'événement</a> <span class="text-gris-texte">(obligatoire)</span></span>
                     </label>
                     @error('accepteReglement') <p class="rfl-erreur">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
-                    <label class="flex items-start gap-3 text-sm text-encre">
-                        <input wire:model.live="accepteRgpd" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                    <label class="flex items-start gap-3 text-sm text-vert-sombre">
+                        <input wire:model.live="accepteRgpd" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                         <span>J'accepte le <a href="{{ route('textes.show', 'rgpd') }}" target="_blank" rel="noopener" class="rfl-lien underline">traitement des données personnelles</a> pour l'organisation de l'événement <span class="text-gris-texte">(obligatoire)</span></span>
                     </label>
                     @error('accepteRgpd') <p class="rfl-erreur">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
-                    <label class="flex items-start gap-3 text-sm text-encre">
-                        <input wire:model="accepteImage" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                    <label class="flex items-start gap-3 text-sm text-vert-sombre">
+                        <input wire:model="accepteImage" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                         <span>J'autorise l'utilisation de {{ $pour ? "l'image de {$pour}" : 'mon image' }} sur les photos et vidéos de l'événement <span class="text-gris-texte">(facultatif)</span></span>
                     </label>
                 </div>
             </div>
 
-            <p class="mt-6 rounded-xl bg-aqua-clair px-4 py-3 text-sm text-canard">Aucun certificat médical ni licence : Run For Lorène est un événement non compétitif.</p>
+            <p class="mt-6 rounded-2xl bg-vert-clair px-4 py-3 text-sm text-vert">Aucun certificat médical ni licence : Run For Lorène est un événement non compétitif.</p>
 
             <div class="mt-8 flex items-center justify-between">
                 <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
@@ -1219,12 +1219,12 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {{-- Don (écran 07) --}}
     @if ($etape === 'don')
         <form wire:submit="donSuivant" novalidate>
-            <h1 class="font-display text-2xl font-bold text-encre">Un coup de pouce en plus ?</h1>
+            <h1 class="font-display text-2xl text-vert">Un coup de pouce en plus ?</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">Facultatif. Chaque euro va à la cause de Run For Lorène : la santé mentale des jeunes.</p>
 
             <div class="flex flex-wrap gap-2">
                 @foreach ([5, 10, 20, 50] as $montant)
-                    <button type="button" wire:click="choisirDon({{ $montant }})" aria-pressed="{{ $don === (string) $montant ? 'true' : 'false' }}" class="rounded-full border px-5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-canard {{ $don === (string) $montant ? 'border-canard bg-aqua-clair text-canard' : 'border-bordure text-encre hover:border-canard/50' }}">
+                    <button type="button" wire:click="choisirDon({{ $montant }})" aria-pressed="{{ $don === (string) $montant ? 'true' : 'false' }}" class="rounded-full border px-5 py-2 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-vert {{ $don === (string) $montant ? 'border-vert bg-vert-clair text-vert' : 'border-bordure text-vert-sombre hover:border-vert/50' }}">
                         {{ $montant }} €
                     </button>
                 @endforeach
@@ -1236,12 +1236,12 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
             @if ($this->montantDon() > 0)
                 <div class="mt-4 space-y-3">
-                    <label class="flex items-start gap-3 text-sm text-encre">
-                        <input wire:model="recuFiscal" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                    <label class="flex items-start gap-3 text-sm text-vert-sombre">
+                        <input wire:model="recuFiscal" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                         <span>Je souhaite un reçu fiscal <span class="text-gris-texte">(réduction d'impôt de 66 % du don)</span></span>
                     </label>
-                    <label class="flex items-start gap-3 text-sm text-encre">
-                        <input wire:model="anonyme" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                    <label class="flex items-start gap-3 text-sm text-vert-sombre">
+                        <input wire:model="anonyme" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                         <span>Rester anonyme dans les remerciements publics</span>
                     </label>
                 </div>
@@ -1259,34 +1259,34 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     {{-- Récapitulatif (écran 08) --}}
     @if ($etape === 'recap')
-        <h1 class="font-display text-2xl font-bold text-encre">On vérifie ensemble ?</h1>
+        <h1 class="font-display text-2xl text-vert">On vérifie ensemble ?</h1>
 
         @if (session('erreur'))
-            <p class="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ session('erreur') }}</p>
+            <p class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ session('erreur') }}</p>
         @endif
-        @error('commande') <p class="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+        @error('commande') <p class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
 
         <div class="mt-4 divide-y divide-bordure">
             @foreach ($this->panier as $i)
                 <div class="py-4" wire:key="ligne-{{ $i->id_inscription }}">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="font-display font-bold text-encre">{{ $i->participant->user->prenom }} {{ $i->participant->user->nom }}</p>
+                            <p class="font-display text-vert">{{ $i->participant->user->prenom }} {{ $i->participant->user->nom }}</p>
                             <p class="text-sm text-gris-texte">{{ $i->tarif->course->nom }} &middot; {{ $i->participant->ageAu($this->evenement->date_evenement) }} ans le jour J</p>
                         </div>
-                        <p class="shrink-0 font-display font-bold text-encre">{{ $this->euros((float) ($this->tarifActuel($i)?->montant ?? $i->tarif->montant)) }}</p>
+                        <p class="shrink-0 font-display text-vert">{{ $this->euros((float) ($this->tarifActuel($i)?->montant ?? $i->tarif->montant)) }}</p>
                     </div>
                     @if ($i->consentementsComplets() && ! $i->questionnaireManquant())
                         <p class="mt-2 text-sm text-gris-texte">{{ $i->santeRequise() ? 'Décharge, questionnaire de santé et conditions remplis' : 'Décharge et conditions remplies' }}</p>
                     @endif
                     @isset($this->alertesPanier[$i->id_inscription])
-                        <p class="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ $this->alertesPanier[$i->id_inscription] }}</p>
+                        <p class="mt-2 rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ $this->alertesPanier[$i->id_inscription] }}</p>
                     @endisset
                     <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         <button type="button" wire:click="modifier({{ $i->id_inscription }}, 'participant')" class="rfl-lien">Participant</button>
                         <button type="button" wire:click="modifier({{ $i->id_inscription }}, 'epreuve')" class="rfl-lien">Épreuve</button>
                         <button type="button" wire:click="modifier({{ $i->id_inscription }}, 'documents')" class="rfl-lien">Documents</button>
-                        <button type="button" wire:click="retirer({{ $i->id_inscription }})" wire:confirm="Retirer {{ $i->participant->user->prenom }} de la commande ?" class="font-medium text-rose-700 hover:underline">Retirer</button>
+                        <button type="button" wire:click="retirer({{ $i->id_inscription }})" wire:confirm="Retirer {{ $i->participant->user->prenom }} de la commande ?" class="font-bold text-rose-700 hover:underline">Retirer</button>
                     </div>
                 </div>
             @endforeach
@@ -1294,18 +1294,18 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             <div class="flex items-start justify-between gap-3 py-4">
                 <div>
                     <p class="text-sm text-gris-texte">Don</p>
-                    <p class="font-display font-bold text-encre">{{ $this->montantDon() > 0 ? $this->euros($this->montantDon()) : 'Pas de don' }}</p>
+                    <p class="font-display text-vert">{{ $this->montantDon() > 0 ? $this->euros($this->montantDon()) : 'Pas de don' }}</p>
                     @if ($this->montantDon() > 0 && $recuFiscal) <p class="text-sm text-gris-texte">Reçu fiscal demandé</p> @endif
                 </div>
                 <button type="button" wire:click="modifierDon" class="text-sm rfl-lien">Modifier</button>
             </div>
         </div>
 
-        <button type="button" wire:click="ajouterParticipant" class="mt-2 w-full rounded-xl border-2 border-dashed border-bordure px-4 py-3 text-sm font-medium text-canard hover:border-canard/50">+ Inscrire une autre personne</button>
+        <button type="button" wire:click="ajouterParticipant" class="mt-2 w-full rounded-2xl border-2 border-dashed border-bordure px-4 py-3 text-sm font-bold text-vert hover:border-vert/50">+ Inscrire une autre personne</button>
 
         <div class="mt-6 flex items-center justify-between border-t border-bordure pt-4">
-            <p class="font-display text-lg font-bold text-encre">Total</p>
-            <p class="font-display text-lg font-bold text-encre">{{ $this->euros($this->totalPanier) }}</p>
+            <p class="font-display text-lg text-vert">Total</p>
+            <p class="font-display text-lg text-vert">{{ $this->euros($this->totalPanier) }}</p>
         </div>
 
         <div class="mt-8 flex items-center justify-between">

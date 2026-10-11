@@ -337,7 +337,7 @@ new class extends Component {
 <div x-data="{ voir: false }">
     @if ($mode === 'email')
         <form wire:submit="continuerEmail" novalidate>
-            <h1 class="font-display text-2xl font-bold text-encre">Connecte-toi</h1>
+            <h1 class="font-display text-2xl text-vert">Connecte-toi</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">Avec ton adresse email. Pas encore de compte ? On le crée à l'étape suivante.</p>
 
             <label for="email" class="rfl-label">Adresse email</label>
@@ -351,8 +351,8 @@ new class extends Component {
         </form>
     @else
         <div class="rfl-pastille mb-6">
-            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-aqua-clair text-sm font-medium text-canard">{{ Str::upper(Str::substr($email, 0, 1)) }}</span>
-            <span class="truncate text-sm text-encre">{{ $email }}</span>
+            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-vert-clair text-sm font-bold text-vert">{{ Str::upper(Str::substr($email, 0, 1)) }}</span>
+            <span class="truncate text-sm text-vert-sombre">{{ $email }}</span>
             @unless (auth()->check())
                 <button type="button" wire:click="changerEmail" class="ml-1 shrink-0 text-sm rfl-lien">Modifier</button>
             @endunless
@@ -361,7 +361,7 @@ new class extends Component {
 
     @if ($mode === 'password')
         <form wire:submit="seConnecter" novalidate>
-            <h1 class="font-display text-2xl font-bold text-encre">Content de te revoir</h1>
+            <h1 class="font-display text-2xl text-vert">Content de te revoir</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">Saisis ton mot de passe pour continuer.</p>
 
             <label for="password" class="rfl-label">Mot de passe</label>
@@ -382,7 +382,7 @@ new class extends Component {
 
     @if ($mode === 'creation')
         <form wire:submit="creerCompte" novalidate>
-            <h1 class="font-display text-2xl font-bold text-encre">Bienvenue !</h1>
+            <h1 class="font-display text-2xl text-vert">Bienvenue !</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">Crée ton compte en quelques secondes. Il te servira à suivre ton inscription.</p>
 
             <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -418,11 +418,11 @@ new class extends Component {
 
     @if ($mode === 'code')
         <form wire:submit="validerCode" novalidate>
-            <h1 class="font-display text-2xl font-bold text-encre">Vérifie tes emails</h1>
+            <h1 class="font-display text-2xl text-vert">Vérifie tes emails</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">On t'a envoyé un code à 6 chiffres. Il est valable {{ \App\Services\Auth\CodeEmail::VALIDITE_MINUTES }} minutes. Pense à regarder dans les spams.</p>
 
             @if ($info)
-                <p class="mb-4 rounded-xl bg-aqua-clair px-4 py-3 text-sm text-canard" role="status">{{ $info }}</p>
+                <p class="mb-4 rounded-2xl bg-vert-clair px-4 py-3 text-sm text-vert" role="status">{{ $info }}</p>
             @endif
 
             <label for="code" class="rfl-label">Code reçu par email</label>

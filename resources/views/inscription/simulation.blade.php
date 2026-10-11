@@ -1,9 +1,9 @@
 <x-tunnel-shell :title="'Paiement (simulation) · Run For Lorène'" :step="7" :total-steps="7" label="Paiement">
-    <p class="mb-4 rounded-xl bg-moutarde/15 px-4 py-3 text-sm text-encre">
+    <p class="mb-4 rounded-2xl bg-moutarde/15 px-4 py-3 text-sm text-vert-sombre">
         <strong>Mode simulation.</strong> Aucune clé Stripe n'est configurée : cette page remplace Stripe Checkout pour tester le parcours. Elle n'existe pas en production.
     </p>
 
-    <h1 class="font-display text-2xl font-bold text-encre">Paiement de {{ number_format((float) $paiement->montant, 2, ',', ' ') }} €</h1>
+    <h1 class="font-display text-2xl text-vert">Paiement de {{ number_format((float) $paiement->montant, 2, ',', ' ') }} €</h1>
     <p class="mt-1 mb-6 text-sm text-gris-texte">Commande n° {{ $paiement->commande->id_commande }} · référence {{ $paiement->reference }}</p>
 
     <div class="space-y-3">

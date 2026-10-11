@@ -9,19 +9,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+    /* Charte Effervescence Jeunes (Pop Com, 26/02/2026) : Varela Round pour les titres, Calibri pour le texte. */
+    --font-sans: Calibri, 'Carlito', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Varela Round', ui-rounded, ui-sans-serif, system-ui, sans-serif;
 
-    /* Run For Lorène — direction artistique */
-    --color-canard: #00695F;
-    --color-profond: #0B4F48;
-    --color-moutarde: #D6AD2B;
-    --color-aqua: #5DBBAA;
-    --color-aqua-clair: #E3F3EF;
-    --color-creme: #F5F3EC;
-    --color-encre: #16403B;
-    --color-gris-texte: #5B6B67;
-    --color-bordure: #E1DED3;
+    /* Les cinq couleurs de la charte, sans autre teinte. */
+    --color-vert: #006B61;        /* vert profond : ancrage, titres, boutons */
+    --color-vert-doux: #5FBAAE;   /* lien, écoute : aplats secondaires, pictos, encadrés */
+    --color-moutarde: #D9B21E;    /* énergie : dates, chiffres clés, en touche */
+    --color-vert-sombre: #23463F; /* contraste : texte courant, fonds très foncés */
+    --color-vert-clair: #BEECE6;  /* contraste : fonds clairs, états actifs */
+
+    /* Dérivés des couleurs de la charte (texte secondaire, fonds et traits). */
+    --color-gris-texte: #4F6A64;
+    --color-fond: #F1FAF8;
+    --color-bordure: #D2E8E3;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -52,7 +54,7 @@
     /* Cases à cocher et boutons radio aux couleurs de la DA (au lieu du bleu du navigateur). */
     input[type='checkbox'],
     input[type='radio'] {
-        accent-color: var(--color-canard);
+        accent-color: var(--color-vert);
     }
 
 
@@ -88,43 +90,72 @@ select:focus[data-flux-control] {
     display: none !important;
 }
 
-/* Run For Lorène — éléments de formulaire partagés (tunnel, connexion, espace) */
+/* Run For Lorène : composants partagés, d'après la charte Effervescence Jeunes
+   (formes arrondies, angles doux, espace, la moutarde en touche seulement). */
+@layer base {
+    html {
+        /* Calibri a un œil plus petit qu'une linéale classique : on remonte la taille de base. */
+        font-size: 106.25%;
+        font-synthesis-weight: none;
+    }
+
+    h1, h2, h3 {
+        text-wrap: balance;
+    }
+}
+
 @layer components {
     .rfl-label {
-        @apply mb-2 block text-sm font-medium text-encre;
+        @apply mb-2 block text-sm font-bold text-vert-sombre;
     }
 
     .rfl-champ {
-        @apply h-[52px] w-full rounded-xl border border-bordure bg-white px-4 text-encre placeholder:text-gris-texte/60 focus:border-canard focus:ring-2 focus:ring-canard/20 focus:outline-none;
+        @apply h-[52px] w-full rounded-2xl border border-vert-doux/60 bg-white px-4 text-vert-sombre placeholder:text-gris-texte/70 focus:border-vert focus:ring-2 focus:ring-vert/20 focus:outline-none;
     }
 
+    /* Boutons en pilule, texte en Varela Round comme les bandeaux de la charte. */
     .rfl-btn {
-        @apply inline-flex items-center justify-center gap-2 rounded-full bg-canard px-6 py-3.5 font-medium text-white transition-colors hover:bg-profond focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-canard disabled:cursor-not-allowed disabled:opacity-40;
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-vert px-7 py-3.5 font-display text-white transition-colors hover:bg-vert-sombre focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vert disabled:cursor-not-allowed disabled:opacity-40;
     }
 
     .rfl-btn-secondaire {
-        @apply inline-flex items-center justify-center gap-2 rounded-full border border-bordure bg-white px-6 py-3.5 font-medium text-encre transition-colors hover:border-canard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-canard disabled:cursor-not-allowed disabled:opacity-40;
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-vert-doux bg-white px-7 py-3 font-display text-vert-sombre transition-colors hover:border-vert hover:bg-fond focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vert disabled:cursor-not-allowed disabled:opacity-40;
+    }
+
+    /* Bouton d'énergie : réservé à l'action principale de la page événement. */
+    .rfl-btn-moutarde {
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-moutarde px-7 py-3.5 font-display text-vert-sombre transition-[filter] hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white;
     }
 
     .rfl-lien {
-        @apply font-medium text-canard hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-canard;
+        @apply font-bold text-vert underline decoration-vert-doux decoration-2 underline-offset-4 hover:decoration-vert focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vert;
     }
 
     .rfl-erreur {
         @apply mt-2 text-sm text-rose-700;
     }
 
+    /* Bandeau de titre de la charte : pilule vert doux, texte blanc en Varela Round. */
+    .rfl-ruban {
+        @apply inline-block rounded-full bg-vert-doux px-6 py-2 font-display text-white;
+    }
+
+    /* Mot mis en valeur dans un aplat, comme « ENGAGÉE » ou « isolement » dans les visuels de la charte. */
+    .rfl-surligne {
+        @apply inline-block rounded-md px-2 py-0.5;
+    }
+
     /* Bandeaux : fond teinté, bord de la même teinte à peine plus soutenu. */
     .rfl-alerte {
-        @apply rounded-lg border border-moutarde/20 bg-moutarde/10 px-5 py-4;
+        @apply rounded-2xl border border-moutarde/30 bg-moutarde/10 px-5 py-4;
     }
 
     .rfl-alerte-erreur {
-        @apply rounded-lg border border-rose-200/70 bg-rose-50 px-5 py-4 text-sm text-rose-800;
+        @apply rounded-2xl border border-rose-200/70 bg-rose-50 px-5 py-4 text-sm text-rose-800;
     }
 
     .rfl-alerte-info {
-        @apply rounded-lg border border-canard/15 bg-aqua-clair px-5 py-4;
+        @apply rounded-2xl border border-vert-doux/40 bg-fond px-5 py-4;
     }
 
     .rfl-pastille {

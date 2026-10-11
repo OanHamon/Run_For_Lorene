@@ -2,7 +2,7 @@
 
 {{-- Puce de la timeline d'une inscription : fait, en cours, à faire ou non requis. --}}
 @if ($etat === 'fait')
-    <span class="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-canard" aria-hidden="true">
+    <span class="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-vert" aria-hidden="true">
         <svg class="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </span>
 @elseif ($etat === 'non_requis')

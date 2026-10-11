@@ -63,10 +63,10 @@
 
     @if ($total > 1)
         <div class="mt-3 flex items-center gap-3" aria-live="polite">
-            <p class="shrink-0 text-xs font-medium text-gris-texte">Partie <span x-text="diapo + 1">1</span> sur {{ $total }}</p>
+            <p class="shrink-0 text-xs font-bold text-gris-texte">Partie <span x-text="diapo + 1">1</span> sur {{ $total }}</p>
             <div class="flex flex-1 gap-1.5" aria-hidden="true">
                 @for ($i = 0; $i < $total; $i++)
-                    <span class="h-1.5 flex-1 rounded-full transition-colors" :class="diapo >= {{ $i }} ? 'bg-canard' : 'bg-bordure'"></span>
+                    <span class="h-1.5 flex-1 rounded-full transition-colors" :class="diapo >= {{ $i }} ? 'bg-vert' : 'bg-bordure'"></span>
                 @endfor
             </div>
         </div>
@@ -76,7 +76,7 @@
         <div x-ref="diapo{{ $index }}" x-show="diapo === {{ $index }}" @if ($index > 0) x-cloak @endif wire:key="sante-diapo-{{ $index }}">
             @foreach ($rubriques as $rubrique)
                 @if ($titre($rubrique))
-                    <h4 class="mt-4 font-display text-sm font-bold text-canard">{{ $titre($rubrique) }}</h4>
+                    <h4 class="mt-4 font-display text-sm text-vert">{{ $titre($rubrique) }}</h4>
                 @endif
                 @if ($rubrique === 'parents' && $mineur && ! $pour)
                     <p class="mt-1 text-sm text-gris-texte">Demande à tes parents de répondre à ces questions.</p>
@@ -89,7 +89,7 @@
             @endforeach
 
             @if ($loop->last)
-                <div class="mt-4 rounded-xl border-2 border-moutarde bg-moutarde/15 px-4 py-3 text-sm text-encre" role="note">
+                <div class="mt-4 rounded-2xl border-2 border-moutarde bg-moutarde/15 px-4 py-3 text-sm text-vert-sombre" role="note">
                     @if ($pour)
                         Si tu as répondu OUI à une ou plusieurs questions, {{ $pour }} doit consulter un médecin pour qu'il l'examine et voie si {{ $pour }} peut faire le Run For Lorène. Au moment de la visite, donne-lui ce questionnaire rempli.
                     @else
@@ -98,8 +98,8 @@
                 </div>
 
                 <div class="mt-4 border-t border-bordure pt-4">
-                    <label class="flex items-start gap-3 text-sm text-encre">
-                        <input wire:model="{{ $attestation }}" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-canard focus:ring-canard">
+                    <label class="flex items-start gap-3 text-sm text-vert-sombre">
+                        <input wire:model="{{ $attestation }}" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                         <span>{{ $pour ? "J'ai lu et j'approuve l'ensemble des réponses données pour {$pour} à ce questionnaire." : "J'ai lu et j'approuve l'ensemble de mes réponses à ce questionnaire." }}</span>
                     </label>
                     @error($attestation) <p class="rfl-erreur">{{ $message }}</p> @enderror
