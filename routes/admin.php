@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\InscriptionController;
 use App\Http\Controllers\Admin\InscriptionGratuiteController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\OptionController;
+use App\Http\Controllers\Admin\QuestionnaireController;
 use App\Http\Controllers\Admin\TableauController;
 use App\Http\Controllers\Admin\TarifController;
 use App\Http\Controllers\Admin\TexteLegalController;
@@ -27,6 +28,11 @@ Route::get('inscriptions/dossards', [InscriptionController::class, 'exportDossar
 Route::get('inscriptions/{inscription}', [InscriptionController::class, 'show'])->whereNumber('inscription')->name('inscriptions.show');
 
 Route::middleware('admin:2')->group(function () {
+    // Questionnaires de santé : réponses visibles des seuls niveaux habilités.
+    Route::get('questionnaires', [QuestionnaireController::class, 'index'])->name('questionnaires.index');
+    Route::get('questionnaires/{document}', [QuestionnaireController::class, 'show'])->name('questionnaires.show');
+    Route::post('questionnaires/{document}/verifier', [QuestionnaireController::class, 'verifier'])->name('questionnaires.verifier');
+
     Route::get('inscriptions/gratuite', [InscriptionGratuiteController::class, 'create'])->name('inscriptions.create');
     Route::post('inscriptions/gratuite', [InscriptionGratuiteController::class, 'store'])->name('inscriptions.store');
     Route::put('inscriptions/{inscription}/dossard', [InscriptionController::class, 'dossard'])->name('inscriptions.dossard');

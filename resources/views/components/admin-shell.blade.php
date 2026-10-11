@@ -2,17 +2,17 @@
 
 @php
     $user = auth()->user();
-    // Rubriques du back-office (spec) : affichées dès que la route existe.
+    // Rubriques du back-office (spec), avec le niveau d'accès qui les ouvre.
     $rubriques = collect([
-        ['admin.tableau', 'admin.tableau', 'Tableau de bord'],
-        ['admin.inscriptions.index', 'admin.inscriptions.*', 'Inscriptions'],
-        ['admin.questionnaires.index', 'admin.questionnaires.*', 'Questionnaires'],
-        ['admin.commandes.index', 'admin.commandes.*', 'Commandes et paiements'],
-        ['admin.dons.index', 'admin.dons.*', 'Dons'],
-        ['admin.evenements.index', 'admin.evenements.*', 'Événements'],
-        ['admin.utilisateurs.index', 'admin.utilisateurs.*', 'Utilisateurs'],
-        ['admin.journal', 'admin.journal', 'Journal'],
-    ])->filter(fn ($r) => Route::has($r[0]));
+        ['admin.tableau', 'admin.tableau', 'Tableau de bord', 1],
+        ['admin.inscriptions.index', 'admin.inscriptions.*', 'Inscriptions', 1],
+        ['admin.questionnaires.index', 'admin.questionnaires.*', 'Questionnaires de santé', 2],
+        ['admin.commandes.index', 'admin.commandes.*', 'Commandes et paiements', 1],
+        ['admin.dons.index', 'admin.dons.*', 'Dons', 1],
+        ['admin.evenements.index', 'admin.evenements.*', 'Événements', 1],
+        ['admin.utilisateurs.index', 'admin.utilisateurs.*', 'Utilisateurs', 3],
+        ['admin.journal', 'admin.journal', 'Journal', 1],
+    ])->filter(fn ($r) => Route::has($r[0]) && $user->peutAdmin($r[3]));
 @endphp
 <!DOCTYPE html>
 <html lang="fr">

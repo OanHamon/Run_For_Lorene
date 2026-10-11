@@ -106,9 +106,8 @@ class Inscription extends Model
     /** Titulaire du compte qui suit l'inscription : le payeur, sinon le responsable ou le participant lui-même. */
     public function titulaire(): ?User
     {
-        return $this->commande?->user
-            ?? $this->participant->responsable
-            ?? ($this->participant->user->email ? $this->participant->user : null);
+        return collect([$this->commande?->user, $this->participant->responsable, $this->participant->user])
+            ->first(fn (?User $user) => $user?->email !== null);
     }
 
     public function libelleStatut(): string
