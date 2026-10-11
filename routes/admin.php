@@ -1,7 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\EvenementController;
 use App\Http\Controllers\Admin\JournalController;
+use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\TableauController;
+use App\Http\Controllers\Admin\TarifController;
+use App\Http\Controllers\Admin\TexteLegalController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -12,3 +17,38 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', TableauController::class)->name('tableau');
 Route::get('journal', JournalController::class)->name('journal');
+
+// Paramétrage des événements (lot 2) : consultation pour tous les admins…
+Route::get('evenements', [EvenementController::class, 'index'])->name('evenements.index');
+Route::get('evenements/{evenement}', [EvenementController::class, 'show'])->whereNumber('evenement')->name('evenements.show');
+Route::get('courses/{course}', [CourseController::class, 'edit'])->name('courses.edit');
+Route::get('tarifs/{tarif}', [TarifController::class, 'edit'])->name('tarifs.edit');
+Route::get('options/{option}', [OptionController::class, 'edit'])->name('options.edit');
+Route::get('textes/{texte}', [TexteLegalController::class, 'show'])->name('textes.show');
+
+// … modification réservée aux super admins.
+Route::middleware('admin:3')->group(function () {
+    Route::get('evenements/nouveau', [EvenementController::class, 'create'])->name('evenements.create');
+    Route::post('evenements', [EvenementController::class, 'store'])->name('evenements.store');
+    Route::put('evenements/{evenement}', [EvenementController::class, 'update'])->name('evenements.update');
+    Route::post('evenements/{evenement}/dupliquer', [EvenementController::class, 'dupliquer'])->name('evenements.dupliquer');
+
+    Route::get('evenements/{evenement}/courses/nouvelle', [CourseController::class, 'create'])->name('courses.create');
+    Route::post('evenements/{evenement}/courses', [CourseController::class, 'store'])->name('courses.store');
+    Route::put('courses/{course}', [CourseController::class, 'update'])->name('courses.update');
+    Route::delete('courses/{course}', [CourseController::class, 'destroy'])->name('courses.destroy');
+
+    Route::post('courses/{course}/tarifs', [TarifController::class, 'store'])->name('tarifs.store');
+    Route::put('tarifs/{tarif}', [TarifController::class, 'update'])->name('tarifs.update');
+    Route::delete('tarifs/{tarif}', [TarifController::class, 'destroy'])->name('tarifs.destroy');
+
+    Route::get('evenements/{evenement}/options/nouvelle', [OptionController::class, 'create'])->name('options.create');
+    Route::post('evenements/{evenement}/options', [OptionController::class, 'store'])->name('options.store');
+    Route::put('options/{option}', [OptionController::class, 'update'])->name('options.update');
+    Route::delete('options/{option}', [OptionController::class, 'destroy'])->name('options.destroy');
+    Route::post('options/{option}/declinaisons', [OptionController::class, 'ajouterDeclinaison'])->name('declinaisons.store');
+    Route::put('declinaisons/{declinaison}', [OptionController::class, 'modifierDeclinaison'])->name('declinaisons.update');
+    Route::delete('declinaisons/{declinaison}', [OptionController::class, 'supprimerDeclinaison'])->name('declinaisons.destroy');
+
+    Route::post('evenements/{evenement}/textes', [TexteLegalController::class, 'store'])->name('textes.store');
+});

@@ -36,4 +36,9 @@ class Tarif extends Model
     {
         return $this->belongsTo(Course::class, 'id_course', 'id_course');
     }
+
+    public function inscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Inscription::class, 'id_tarif', 'id_tarif');
+    }
 }

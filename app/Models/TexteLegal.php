@@ -35,6 +35,12 @@ class TexteLegal extends Model
         ];
     }
 
+    /** Emplacement du PDF d'une version, sur le disque privé. */
+    public static function chemin(Evenement $evenement, string $type, int $version): string
+    {
+        return "textes-legaux/evenement-{$evenement->id_evenement}/{$type}-v{$version}.pdf";
+    }
+
     public function evenement(): BelongsTo
     {
         return $this->belongsTo(Evenement::class, 'id_evenement', 'id_evenement');
