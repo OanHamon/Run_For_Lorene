@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\EvenementController;
 use App\Http\Controllers\Admin\InscriptionController;
+use App\Http\Controllers\Admin\InscriptionGratuiteController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\TableauController;
@@ -26,6 +27,8 @@ Route::get('inscriptions/dossards', [InscriptionController::class, 'exportDossar
 Route::get('inscriptions/{inscription}', [InscriptionController::class, 'show'])->whereNumber('inscription')->name('inscriptions.show');
 
 Route::middleware('admin:2')->group(function () {
+    Route::get('inscriptions/gratuite', [InscriptionGratuiteController::class, 'create'])->name('inscriptions.create');
+    Route::post('inscriptions/gratuite', [InscriptionGratuiteController::class, 'store'])->name('inscriptions.store');
     Route::put('inscriptions/{inscription}/dossard', [InscriptionController::class, 'dossard'])->name('inscriptions.dossard');
     Route::post('inscriptions/{inscription}/dossard', [InscriptionController::class, 'attribuerDossard'])->name('inscriptions.attribuer-dossard');
     Route::post('inscriptions/{inscription}/annuler', [InscriptionController::class, 'annuler'])->name('inscriptions.annuler');

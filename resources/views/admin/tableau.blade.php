@@ -42,7 +42,7 @@
                 [Inscription::VALIDEE, 'Validées', 'inscriptions avec dossard'],
                 [Inscription::DOSSIER_INCOMPLET, 'Dossiers incomplets', 'payées, documents manquants'],
                 [Inscription::EN_ATTENTE_PAIEMENT, 'En attente de paiement', 'commandes non réglées'],
-                [Inscription::ANNULEE, 'Annulées', 'par un admin ou abandonnées'],
+                [Inscription::ANNULEE, 'Annulées', 'par un admin'],
             ] as [$statut, $libelle, $aide])
                 @php($lien = $lienInscriptions(['statut' => $statut]))
                 <a @if ($lien) href="{{ $lien }}" @endif class="rfl-carte block p-4 {{ $lien ? 'hover:bg-fond/60' : '' }}">
