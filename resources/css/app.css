@@ -161,6 +161,40 @@ select:focus[data-flux-control] {
     .rfl-pastille {
         @apply inline-flex max-w-full items-center gap-2 rounded-full border border-bordure py-1.5 pr-4 pl-1.5;
     }
+
+    /* Espaces connectés et back-office : carte blanche cerclée, tableaux sobres, badges en pilule. */
+    .rfl-carte {
+        @apply rounded-3xl border border-bordure bg-white;
+    }
+
+    .rfl-tableau {
+        @apply w-full text-left text-sm;
+    }
+
+    .rfl-tableau thead {
+        @apply border-y border-bordure bg-fond/60 text-gris-texte;
+    }
+
+    .rfl-tableau th {
+        @apply px-4 py-3 font-normal first:pl-6 last:pr-6;
+    }
+
+    .rfl-tableau td {
+        @apply px-4 py-3 align-top first:pl-6 last:pr-6;
+    }
+
+    .rfl-tableau tbody tr + tr {
+        @apply border-t border-bordure;
+    }
+
+    .rfl-badge {
+        @apply inline-block rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap;
+    }
+
+    /* Champ compact (filtres, formulaires du back-office). */
+    .rfl-champ-compact {
+        @apply h-11 w-full rounded-2xl border border-vert-doux/60 bg-white px-3 text-sm text-vert-sombre focus:border-vert focus:ring-2 focus:ring-vert/20 focus:outline-none;
+    }
 }
 
 /* Tunnel : « Continuer » fait glisser le panneau suivant vers la gauche, « Retour » le ramène. */

@@ -94,6 +94,15 @@ Testable::macro('remplirDocuments', function () {
     return $this->call('conditionsSuivant');
 });
 
+/** Compte admin vérifié, au niveau d'accès donné (1 lecture, 2 gestion, 3 super admin). */
+function admin(int $niveau = 3): User
+{
+    $user = User::factory()->create();
+    $user->admin()->create(['niveau_acces' => $niveau]);
+
+    return $user->fresh();
+}
+
 /** Inscription déjà réglée et validée pour $user sur $course (données de contexte des tests). */
 function inscriptionPayee(User $user, Course $course, string $statut = Inscription::VALIDEE): Inscription
 {

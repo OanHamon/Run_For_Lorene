@@ -15,6 +15,19 @@ class Admin extends Model
 
     public $timestamps = false;
 
+    /** Niveaux d'accès (spec) : chacun inclut les droits des niveaux inférieurs. */
+    public const LECTURE = 1;
+
+    public const GESTION = 2;
+
+    public const SUPER = 3;
+
+    public const LIBELLES = [
+        self::LECTURE => 'Lecture seule',
+        self::GESTION => 'Inscriptions et documents',
+        self::SUPER => 'Super admin',
+    ];
+
     protected $fillable = [
         'id_user',
         'niveau_acces',

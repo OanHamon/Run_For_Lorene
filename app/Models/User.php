@@ -135,6 +135,17 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Admin::class, 'id_user', 'id_user');
     }
 
+    /** Niveau d'accès admin (1 lecture seule, 2 inscriptions et documents, 3 super admin) ; 0 si pas admin. */
+    public function niveauAdmin(): int
+    {
+        return (int) $this->admin?->niveau_acces;
+    }
+
+    public function peutAdmin(int $niveau = Admin::LECTURE): bool
+    {
+        return $this->niveauAdmin() >= $niveau;
+    }
+
     public function benevole(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Benevole::class, 'id_user', 'id_user');

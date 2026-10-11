@@ -10,6 +10,9 @@
     {{-- Barre mobile --}}
     <div class="flex items-center justify-between rounded-b-[28px] bg-white px-5 py-3 ring-1 ring-bordure lg:hidden">
         <a href="{{ route('espace') }}"><img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-10 w-auto"></a>
+        @if ($user->peutAdmin())
+            <a href="{{ route('admin.tableau') }}" class="text-sm rfl-lien">Administration</a>
+        @endif
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="text-sm rfl-lien">Se déconnecter</button>
@@ -42,7 +45,10 @@
                 <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="block rounded-full px-4 py-2 text-vert-sombre hover:bg-fond">Règlement (PDF)</a>
             </nav>
 
-            <div class="mt-10 border-t border-bordure pt-6 text-sm">
+            <div class="mt-10 space-y-1 border-t border-bordure pt-6 text-sm">
+                @if ($user->peutAdmin())
+                    <a href="{{ route('admin.tableau') }}" class="block rounded-full px-4 py-2 text-vert-sombre hover:bg-fond">Administration</a>
+                @endif
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="block w-full rounded-full px-4 py-2 text-left text-vert-sombre hover:bg-fond">Se déconnecter</button>
