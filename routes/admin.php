@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\QuestionnaireController;
 use App\Http\Controllers\Admin\TableauController;
 use App\Http\Controllers\Admin\TarifController;
 use App\Http\Controllers\Admin\TexteLegalController;
+use App\Http\Controllers\Admin\UtilisateurController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -84,4 +85,9 @@ Route::middleware('admin:3')->group(function () {
     Route::delete('declinaisons/{declinaison}', [OptionController::class, 'supprimerDeclinaison'])->name('declinaisons.destroy');
 
     Route::post('evenements/{evenement}/textes', [TexteLegalController::class, 'store'])->name('textes.store');
+
+    Route::get('utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
+    Route::get('utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->name('utilisateurs.show');
+    Route::put('utilisateurs/{utilisateur}/niveau', [UtilisateurController::class, 'niveau'])->name('utilisateurs.niveau');
+    Route::post('utilisateurs/{utilisateur}/reinitialiser', [UtilisateurController::class, 'reinitialiser'])->name('utilisateurs.reinitialiser');
 });

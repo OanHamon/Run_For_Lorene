@@ -18,6 +18,8 @@
                                     <a href="{{ route('admin.inscriptions.show', $ligne->cible_id) }}" class="rfl-lien">Inscription n° {{ $ligne->cible_id }}</a>
                                 @elseif ($ligne->cible_type === 'commande')
                                     <a href="{{ route('admin.commandes.show', $ligne->cible_id) }}" class="rfl-lien">Commande n° {{ $ligne->cible_id }}</a>
+                                @elseif ($ligne->cible_type === 'user' && auth()->user()->peutAdmin(3))
+                                    <a href="{{ route('admin.utilisateurs.show', $ligne->cible_id) }}" class="rfl-lien">Compte n° {{ $ligne->cible_id }}</a>
                                 @elseif ($ligne->cible_type)
                                     {{ ucfirst(str_replace('_', ' ', $ligne->cible_type)) }} n° {{ $ligne->cible_id }}
                                 @endif
