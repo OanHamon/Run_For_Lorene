@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CommandeController;
 use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\DonController;
 use App\Http\Controllers\Admin\EvenementController;
 use App\Http\Controllers\Admin\InscriptionController;
 use App\Http\Controllers\Admin\InscriptionGratuiteController;
@@ -46,6 +47,9 @@ Route::middleware('admin:2')->group(function () {
 Route::get('commandes', [CommandeController::class, 'index'])->name('commandes.index');
 Route::get('commandes/{commande}', [CommandeController::class, 'show'])->name('commandes.show');
 Route::post('paiements/{paiement}/rembourser', [CommandeController::class, 'rembourser'])->middleware('admin:3')->name('paiements.rembourser');
+
+Route::get('dons', [DonController::class, 'index'])->name('dons.index');
+Route::get('dons/export', [DonController::class, 'export'])->name('dons.export');
 
 // Paramétrage des événements (lot 2) : consultation pour tous les admins…
 Route::get('evenements', [EvenementController::class, 'index'])->name('evenements.index');
