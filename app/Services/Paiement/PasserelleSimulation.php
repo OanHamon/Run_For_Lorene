@@ -24,4 +24,9 @@ class PasserelleSimulation implements Passerelle
     {
         return $paiement->statut !== Paiement::REUSSI;
     }
+
+    public function rembourser(Paiement $paiement, float $montant, ?string $motif): string
+    {
+        return 'sim_re_'.Str::lower(Str::random(24));
+    }
 }

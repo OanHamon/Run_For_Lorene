@@ -14,6 +14,8 @@ class Remboursement extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'reference',
+        'id_admin',
         'montant',
         'motif',
         'date_remboursement',
@@ -31,5 +33,10 @@ class Remboursement extends Model
     public function paiement(): BelongsTo
     {
         return $this->belongsTo(Paiement::class, 'id_paiement', 'id_paiement');
+    }
+
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_admin', 'id_user');
     }
 }

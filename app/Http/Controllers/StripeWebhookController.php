@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Paiement\EnregistrerPaiement;
 use App\Services\Paiement\PasserelleStripe;
+use App\Services\Paiement\Rembourser;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -50,6 +51,10 @@ class StripeWebhookController extends Controller
             case 'checkout.session.expired':
             case 'checkout.session.async_payment_failed':
                 $enregistrer->echoue($session->id);
+                break;
+
+            case 'charge.refunded':
+                app(Rembourser::class)->depuisStripe($event->data->object, app(PasserelleStripe::class));
                 break;
         }
 

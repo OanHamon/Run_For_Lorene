@@ -50,7 +50,7 @@ class Statistiques
 
         $dons = (float) self::dons($evenement)->sum('montant');
 
-        $commandes = $this->commandes($evenement)->pluck('id_commande');
+        $commandes = self::commandes($evenement)->pluck('id_commande');
 
         $rembourse = (float) Remboursement::whereHas('paiement', fn ($q) => $q->whereIn('id_commande', $commandes))->sum('montant');
 
@@ -175,7 +175,7 @@ class Statistiques
     }
 
     /** Commandes liées à l'événement (par leurs inscriptions ou leur don). */
-    private function commandes(Evenement $evenement): Builder
+    public static function commandes(Evenement $evenement): Builder
     {
         return Commande::query()->where(function ($q) use ($evenement) {
             $q->whereHas('inscriptions', fn ($i) => $i->where('id_evenement', $evenement->id_evenement))

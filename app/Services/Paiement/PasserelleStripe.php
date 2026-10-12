@@ -83,6 +83,63 @@ class PasserelleStripe implements Passerelle
         }
     }
 
+    /**
+     * Remboursement via l'API Stripe, sur le PaymentIntent de la session Checkout. L'id du
+     * paiement part en métadonnée : le webhook charge.refunded retrouvera la ligne.
+     */
+    public function rembourser(Paiement $paiement, float $montant, ?string $motif): string
+    {
+        try {
+            $intent = $this->paymentIntent($paiement);
+
+            $refund = $this->stripe->refunds->create([
+                'payment_intent' => $intent,
+                'amount' => (int) round($montant * 100),
+                'reason' => 'requested_by_customer',
+                'metadata' => array_filter([
+                    'id_paiement' => $paiement->id_paiement,
+                    'motif' => $motif ? mb_substr($motif, 0, 500) : null,
+                ]),
+            ]);
+        } catch (ApiErrorException $e) {
+            Log::error("Stripe : remboursement refusé pour {$paiement->reference} : {$e->getMessage()}");
+
+            throw new \RuntimeException("Stripe a refusé le remboursement : {$e->getMessage()}", previous: $e);
+        }
+
+        return $refund->id;
+    }
+
+    /** PaymentIntent (pi_…) d'une session Checkout payée. */
+    public function paymentIntent(Paiement $paiement): string
+    {
+        $session = $this->stripe->checkout->sessions->retrieve($paiement->reference);
+
+        if (! $session->payment_intent) {
+            throw new \RuntimeException("La session {$paiement->reference} n'a pas de paiement associé.");
+        }
+
+        return is_string($session->payment_intent) ? $session->payment_intent : $session->payment_intent->id;
+    }
+
+    /** Session Checkout (cs_…) d'un PaymentIntent, pour un remboursement fait depuis le tableau de bord Stripe. */
+    public function sessionDuPaiement(string $paymentIntentId): ?string
+    {
+        try {
+            return $this->stripe->checkout->sessions->all(['payment_intent' => $paymentIntentId, 'limit' => 1])->data[0]->id ?? null;
+        } catch (ApiErrorException $e) {
+            Log::warning("Stripe : session introuvable pour {$paymentIntentId} : {$e->getMessage()}");
+
+            return null;
+        }
+    }
+
+    /** @return list<object{id: string, amount: int, status: string, created: int, metadata: object}> remboursements d'un paiement Stripe */
+    public function remboursementsDe(string $chargeId): array
+    {
+        return $this->stripe->refunds->all(['charge' => $chargeId, 'limit' => 100])->data;
+    }
+
     /** Frais Stripe d'un paiement réussi, en euros (null si indisponibles). */
     public function frais(string $paymentIntentId): ?float
     {

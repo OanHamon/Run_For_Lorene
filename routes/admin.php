@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CommandeController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\EvenementController;
 use App\Http\Controllers\Admin\InscriptionController;
@@ -40,6 +41,11 @@ Route::middleware('admin:2')->group(function () {
     Route::post('inscriptions/{inscription}/annuler', [InscriptionController::class, 'annuler'])->name('inscriptions.annuler');
     Route::post('inscriptions/{inscription}/relancer', [InscriptionController::class, 'relancer'])->name('inscriptions.relancer');
 });
+
+// Commandes et paiements : consultation pour tous, remboursements au niveau 3.
+Route::get('commandes', [CommandeController::class, 'index'])->name('commandes.index');
+Route::get('commandes/{commande}', [CommandeController::class, 'show'])->name('commandes.show');
+Route::post('paiements/{paiement}/rembourser', [CommandeController::class, 'rembourser'])->middleware('admin:3')->name('paiements.rembourser');
 
 // Paramétrage des événements (lot 2) : consultation pour tous les admins…
 Route::get('evenements', [EvenementController::class, 'index'])->name('evenements.index');

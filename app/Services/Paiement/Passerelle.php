@@ -19,4 +19,13 @@ interface Passerelle
      * surtout pas détacher les inscriptions de la commande).
      */
     public function annuler(Paiement $paiement): bool;
+
+    /**
+     * Rembourse tout ou partie d'un paiement réussi.
+     *
+     * @return string référence du remboursement chez le prestataire
+     *
+     * @throws \RuntimeException si le prestataire refuse
+     */
+    public function rembourser(Paiement $paiement, float $montant, ?string $motif): string;
 }

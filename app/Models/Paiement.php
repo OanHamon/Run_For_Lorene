@@ -44,4 +44,14 @@ class Paiement extends Model
     {
         return $this->hasMany(Remboursement::class, 'id_paiement', 'id_paiement');
     }
+
+    /** Montant encore remboursable : encaissé moins déjà remboursé. */
+    public function remboursable(): float
+    {
+        if ($this->statut !== self::REUSSI) {
+            return 0.0;
+        }
+
+        return round((float) $this->montant - (float) $this->remboursements()->sum('montant'), 2);
+    }
 }
