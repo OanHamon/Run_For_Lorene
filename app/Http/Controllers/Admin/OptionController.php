@@ -10,6 +10,7 @@ use App\Models\OptionEvenement;
 use App\Services\Admin\Journal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -17,8 +18,18 @@ use Illuminate\View\View;
  * Options d'un événement (le t-shirt) et leurs déclinaisons (une par taille, avec son stock ;
  * stock vide = illimité, 0 = taille épuisée, grisée dans le tunnel).
  */
-class OptionController extends Controller
+class OptionController extends Controller implements HasMiddleware
 {
+    /** Écrans masqués tant que les options sont désactivées (config rfl.options). */
+    public static function middleware(): array
+    {
+        return [function ($request, $next) {
+            abort_unless(config('rfl.options'), 404);
+
+            return $next($request);
+        }];
+    }
+
     public function __construct(private Journal $journal) {}
 
     public function create(Evenement $evenement): View

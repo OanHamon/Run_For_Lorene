@@ -33,7 +33,7 @@
                             </td>
                             <td class="text-right">{{ Format::euros($i->prix_paye) }}</td>
                         </tr>
-                        @foreach ($i->declinaisons as $d)
+                        @foreach (config('rfl.options') ? $i->declinaisons : [] as $d)
                             <tr>
                                 <td class="pl-10 text-gris-texte">{{ $d->declinaison->optionEvenement->libelle }} {{ $d->declinaison->libelle }} × {{ $d->quantite }}</td>
                                 <td class="text-right text-gris-texte">{{ Format::euros($d->prix_unitaire * $d->quantite) }}</td>

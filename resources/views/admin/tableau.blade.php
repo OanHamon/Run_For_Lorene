@@ -3,6 +3,7 @@
     use App\Support\Format;
 
     $lienInscriptions = fn (array $filtres = []) => Route::has('admin.inscriptions.index') ? route('admin.inscriptions.index', $filtres) : null;
+    $avecOptions = config('rfl.options');
     $alertesDossards = $courses->filter(fn ($c) => $c->dossards['sans_dossard'] > 0 || ($c->dossards['libres'] !== null && $c->dossards['libres'] === 0));
 @endphp
 <x-admin-shell title="Tableau de bord">
@@ -63,8 +64,8 @@
                     Frais Stripe : {{ Format::euros($recettes['frais']) }}
                 </p>
             </div>
-            <div class="rfl-carte grid grid-cols-3 gap-4 p-6 lg:col-span-2">
-                @foreach (['inscriptions' => 'Inscriptions', 'options' => 'Options', 'dons' => 'Dons'] as $cle => $libelle)
+            <div class="rfl-carte grid {{ $avecOptions ? 'grid-cols-3' : 'grid-cols-2' }} gap-4 p-6 lg:col-span-2">
+                @foreach (array_filter(['inscriptions' => 'Inscriptions', 'options' => $avecOptions ? 'Options' : null, 'dons' => 'Dons']) as $cle => $libelle)
                     <div>
                         <p class="text-sm text-gris-texte">{{ $libelle }}</p>
                         <p class="mt-1 font-display text-xl text-vert" data-test="recettes-{{ $cle }}">{{ Format::euros($recettes[$cle]) }}</p>
@@ -73,9 +74,9 @@
             </div>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-3">
+        <div class="grid gap-6 {{ $avecOptions ? 'xl:grid-cols-3' : '' }}">
             {{-- Remplissage par course --}}
-            <div class="rfl-carte overflow-hidden xl:col-span-2">
+            <div class="rfl-carte overflow-hidden {{ $avecOptions ? 'xl:col-span-2' : '' }}">
                 <h2 class="px-6 py-4 font-display text-vert">Inscrits par course</h2>
                 <div class="overflow-x-auto">
                     <table class="rfl-tableau min-w-[560px]">
@@ -119,6 +120,7 @@
                 </div>
             </div>
 
+            @if ($avecOptions)
             {{-- T-shirts --}}
             <div class="rfl-carte overflow-hidden">
                 <h2 class="px-6 py-4 font-display text-vert">Options vendues</h2>
@@ -139,6 +141,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         </div>
     @endif
 </x-admin-shell>

@@ -56,7 +56,7 @@ class InscriptionController extends Controller
         $lignes = function () use ($request, $evenement) {
             foreach ($this->requete($request, $evenement)->lazy() as $i) {
                 $p = $i->participant;
-                yield [
+                $ligne = [
                     $i->id_inscription,
                     $p->user->nom,
                     $p->user->prenom,
@@ -77,13 +77,25 @@ class InscriptionController extends Controller
                     $i->urgence_tel,
                     $i->commande?->date_commande?->format('d/m/Y H:i'),
                 ];
+
+                yield $this->sansOptions($ligne);
             }
         };
 
-        return Csv::telecharger("inscrits-{$evenement->id_evenement}-".now()->format('Ymd').'.csv', [
+        return Csv::telecharger("inscrits-{$evenement->id_evenement}-".now()->format('Ymd').'.csv', $this->sansOptions([
             'N°', 'Nom', 'Prénom', 'Naissance', 'Âge le jour J', 'Sexe', 'Email', 'Téléphone', 'Responsable', 'Email du responsable',
             'Course', 'Statut', 'Dossard', 'Prix payé', 'Options', 'Documents manquants', 'Contact d\'urgence', 'Tél. d\'urgence', 'Commande',
-        ], $lignes());
+        ]), $lignes());
+    }
+
+    /** Retire la colonne « Options » (15e) de l'export tant que les options sont masquées. */
+    private function sansOptions(array $ligne): array
+    {
+        if (! config('rfl.options')) {
+            array_splice($ligne, 14, 1);
+        }
+
+        return $ligne;
     }
 
     /** Liste des dossards attribués, par course puis numéro (retrait des dossards, chronométrage du jour J). */

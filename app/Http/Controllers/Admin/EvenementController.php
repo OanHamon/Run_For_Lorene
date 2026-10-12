@@ -57,7 +57,8 @@ class EvenementController extends Controller
 
     public function show(Request $request, Evenement $evenement, Consentements $consentements): View
     {
-        $onglet = array_key_exists($request->query('onglet'), self::ONGLETS) ? $request->query('onglet') : 'general';
+        $onglets = config('rfl.options') ? self::ONGLETS : array_diff_key(self::ONGLETS, ['options' => true]);
+        $onglet = array_key_exists($request->query('onglet'), $onglets) ? $request->query('onglet') : 'general';
 
         $evenement->load([
             'courses' => fn ($q) => $q->orderBy('heure_depart')->with(['tarifs' => fn ($t) => $t->orderBy('valide_du')]),
@@ -68,6 +69,7 @@ class EvenementController extends Controller
         return view('admin.evenements.show', [
             'evenement' => $evenement,
             'onglet' => $onglet,
+            'onglets' => $onglets,
             'textesEnVigueur' => $consentements->textes($evenement),
             'typesTextes' => TexteLegalController::TYPES,
         ]);

@@ -66,7 +66,7 @@ Esprit : « élan collectif ». Positif sans naïveté, humain, clair, accessibl
 ### Composants
 
 - Classes partagées (`app.css`) : `rfl-btn` (pilule vert), `rfl-btn-secondaire`, `rfl-btn-moutarde` (action principale de la page événement uniquement), `rfl-lien`, `rfl-ruban` (bandeau de titre de la charte : pilule vert doux, texte blanc), `rfl-surligne` (mot dans un aplat), `rfl-champ`, `rfl-label`, `rfl-alerte*`, et pour les espaces connectés et l'admin : `rfl-carte`, `rfl-tableau`, `rfl-badge`, `rfl-champ-compact`.
-- Back-office : layout `<x-admin-shell>` (routes dans `routes/admin.php`, middleware `admin:{niveau}`), composants `resources/views/components/admin/` (`titre`, `champ`, `statut`, `filtre-evenement`). Toute action sensible passe par `App\Services\Admin\Journal`.
+- Back-office : layout `<x-admin-shell>` (routes dans `routes/admin.php`, middleware `admin:{niveau}`), composants `resources/views/components/admin/` (`titre`, `champ`, `statut`, `filtre-evenement`). Toute action sensible passe par `App\Services\Admin\Journal`. Options (t-shirts) masquées tant que `OPTIONS_ACTIVES=false` (`config/rfl.php`).
 - Formes de la charte en composants Blade (`resources/views/components/charte/`) : `<x-charte.colline>` (bas de section ondulé), `<x-charte.cercle>` (disque + arc décalé), `<x-charte.tache>` (tache de fond).
 - Rayons : 28 px pour les grands panneaux, `rounded-3xl` pour les cartes, `rounded-2xl` pour les blocs internes, pilules pour boutons et badges. Jamais d'angle vif.
 - Pas de libellés en capitales espacées, pas d'ombres portées : des contours `ring-bordure`.

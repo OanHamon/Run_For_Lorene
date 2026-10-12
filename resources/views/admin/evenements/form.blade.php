@@ -1,6 +1,6 @@
 <x-admin-shell title="Nouvel événement">
     <p class="mb-2 text-sm"><a href="{{ route('admin.evenements.index') }}" class="rfl-lien">Événements</a></p>
-    <x-admin.titre titre="Nouvel événement" sous-titre="Les courses, options et textes légaux s'ajoutent ensuite." />
+    <x-admin.titre titre="Nouvel événement" sous-titre="Les courses et les textes légaux s'ajoutent ensuite." />
 
     <form method="POST" action="{{ route('admin.evenements.store') }}" class="rfl-carte max-w-3xl p-6">
         @csrf

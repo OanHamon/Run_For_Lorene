@@ -64,7 +64,7 @@
             <dl class="divide-y divide-bordure text-sm">
                 {!! $ligne('Course', $course->nom.' · départ '.substr($course->heure_depart, 0, 5)) !!}
                 {!! $ligne('Tarif', $i->tarif->libelle.' · '.Format::euros($i->prix_paye).' payé') !!}
-                @foreach ($i->declinaisons as $d)
+                @foreach (config('rfl.options') ? $i->declinaisons : [] as $d)
                     {!! $ligne($d->declinaison->optionEvenement->libelle, $d->declinaison->libelle.' · '.((float) $d->prix_unitaire > 0 ? Format::euros($d->prix_unitaire) : 'offert')) !!}
                 @endforeach
                 {!! $ligne('Plage de la course', $course->dossard_debut !== null ? "{$course->dossard_debut}–{$course->dossard_fin}" : 'non définie') !!}

@@ -22,7 +22,7 @@
     </x-admin.titre>
 
     <nav class="mb-6 flex gap-2 overflow-x-auto text-sm" aria-label="Onglets de l'événement">
-        @foreach (EvenementController::ONGLETS as $cle => $libelle)
+        @foreach ($onglets as $cle => $libelle)
             <a href="{{ route('admin.evenements.show', [$evenement, 'onglet' => $cle]) }}" @if ($onglet === $cle) aria-current="page" @endif
                 class="shrink-0 rounded-full px-4 py-2 {{ $onglet === $cle ? 'bg-vert font-bold text-white' : 'bg-white ring-1 ring-bordure hover:bg-fond' }}">{{ $libelle }}</a>
         @endforeach

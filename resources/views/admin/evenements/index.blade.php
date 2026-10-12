@@ -1,5 +1,5 @@
 <x-admin-shell title="Événements">
-    <x-admin.titre titre="Événements" sous-titre="Une édition par ligne : ses courses, tarifs, options et textes légaux.">
+    <x-admin.titre titre="Événements" sous-titre="Une édition par ligne : ses courses, tarifs et textes légaux.">
         @if (auth()->user()->peutAdmin(3))
             <a href="{{ route('admin.evenements.create') }}" class="rfl-btn px-5 py-2.5 text-sm">Créer un événement</a>
         @endif

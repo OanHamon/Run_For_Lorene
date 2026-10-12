@@ -58,7 +58,8 @@ test("lot 2 : un admin crée de zéro une course fictive complète", function ()
 
     expect($course->tarifPour(30)?->montant)->toBe('15.50');
 
-    // 3. Le t-shirt et ses tailles
+    // 3. Le t-shirt et ses tailles (écrans masqués par défaut, activés ici)
+    config(['rfl.options' => true]);
     $this->post("/admin/evenements/{$evenement->id_evenement}/options", ['libelle' => 'T-shirt', 'prix' => '0'])->assertRedirect();
     $option = OptionEvenement::where('id_evenement', $evenement->id_evenement)->firstOrFail();
     $this->post("/admin/options/{$option->id_option}/declinaisons", ['libelle' => 'M', 'stock' => '10']);
@@ -156,6 +157,7 @@ test("une course, un tarif ou une taille déjà utilisés ne se suppriment pas",
     $taille = Declinaison::first();
     InscriptionDeclinaison::create(['id_inscription' => $inscription->id_inscription, 'id_declinaison' => $taille->id_declinaison, 'quantite' => 1, 'prix_unitaire' => 0]);
 
+    config(['rfl.options' => true]);
     $this->actingAs(admin(3));
     $this->delete("/admin/courses/{$course->id_course}")->assertSessionHas('erreur');
     $this->delete("/admin/tarifs/{$inscription->id_tarif}")->assertSessionHas('erreur');
@@ -213,6 +215,7 @@ test("chaque page du paramétrage s'affiche", function () {
     $evenement = Evenement::first();
     $course = Course::first();
     $option = OptionEvenement::first();
+    config(['rfl.options' => true]);
 
     $this->actingAs(admin(3));
     $this->get('/admin/evenements')->assertOk()->assertSee('Run For Lorène 3');
@@ -224,4 +227,23 @@ test("chaque page du paramétrage s'affiche", function () {
     $this->get("/admin/tarifs/{$course->tarifs()->first()->id_tarif}")->assertOk();
     $this->get("/admin/evenements/{$evenement->id_evenement}/options/nouvelle")->assertOk();
     $this->get("/admin/options/{$option->id_option}")->assertOk()->assertSee('XS');
+});
+
+test("les options (t-shirts) sont masquées tant qu'elles ne sont pas activées", function () {
+    $this->seed();
+    $evenement = Evenement::first();
+    $option = OptionEvenement::first();
+    inscriptionPayee(User::factory()->create(), Course::first());
+
+    $this->actingAs(admin(3));
+    $this->get("/admin/evenements/{$evenement->id_evenement}")->assertOk()->assertDontSee('Options et tailles');
+    $this->get("/admin/evenements/{$evenement->id_evenement}?onglet=options")->assertOk()->assertDontSee('Ajouter une option');
+    $this->get("/admin/options/{$option->id_option}")->assertNotFound();
+    $this->post("/admin/evenements/{$evenement->id_evenement}/options", ['libelle' => 'Casquette', 'prix' => '5'])->assertNotFound();
+    $this->get('/admin')->assertDontSee('Options vendues');
+    expect($this->get('/admin/inscriptions/export')->streamedContent())->not->toContain('Options');
+
+    config(['rfl.options' => true]);
+    $this->get('/admin')->assertSee('Options vendues');
+    $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Options et tailles');
 });
