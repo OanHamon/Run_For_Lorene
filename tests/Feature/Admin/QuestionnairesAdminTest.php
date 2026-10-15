@@ -6,7 +6,6 @@ use App\Models\Inscription;
 use App\Models\JournalAdmin;
 use App\Models\Participant;
 use App\Models\QuestionSante;
-use App\Models\ReponseSante;
 use App\Models\User;
 use App\Services\Inscriptions\Questionnaires;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +25,7 @@ beforeEach(function () {
     $this->questionnaire = app(Questionnaires::class)->enregistrer($this->inscription, 'sante', $reponses, true, $this->parent->id_user);
 });
 
-test("les réponses de santé sont réservées au niveau 2", function () {
+test('les réponses de santé sont réservées au niveau 2', function () {
     $this->actingAs(admin(1));
     $this->get('/admin/questionnaires')->assertForbidden();
     $this->get("/admin/questionnaires/{$this->questionnaire->id_document}")->assertForbidden();
@@ -47,7 +46,7 @@ test('les réponses sont chiffrées en base et déchiffrées à l\'affichage', f
         ->assertSee($this->parent->email);
 });
 
-test("la liste distingue les questionnaires à vérifier, avec un « oui », et vérifiés", function () {
+test('la liste distingue les questionnaires à vérifier, avec un « oui », et vérifiés', function () {
     $this->actingAs(admin(2));
 
     $this->get('/admin/questionnaires')->assertOk()->assertSee('Léo Leroy');
@@ -75,4 +74,21 @@ test("vérifier un questionnaire ne change pas le statut de l'inscription", func
     $this->actingAs(admin(2))->post("/admin/questionnaires/{$this->questionnaire->id_document}/verifier");
 
     expect($this->inscription->fresh()->statut)->toBe(Inscription::DOSSIER_INCOMPLET);
+});
+
+test('consulter un questionnaire de santé est noté dans le journal', function () {
+    $this->actingAs($admin = admin(2))->get("/admin/questionnaires/{$this->questionnaire->id_document}")->assertOk();
+
+    $ligne = JournalAdmin::where('action', 'document.consultation')->sole();
+    expect($ligne->id_admin)->toBe($admin->id_user)
+        ->and($ligne->cible_type)->toBe('inscription')
+        ->and($ligne->cible_id)->toBe($this->inscription->id_inscription)
+        ->and($ligne->details)->toBe(['document' => $this->questionnaire->id_document])
+        ->and($ligne->libelle())->toBe('Questionnaire de santé consulté');
+});
+
+test("une consultation refusée n'est pas notée", function () {
+    $this->actingAs(admin(1))->get("/admin/questionnaires/{$this->questionnaire->id_document}")->assertForbidden();
+
+    expect(JournalAdmin::where('action', 'document.consultation')->exists())->toBeFalse();
 });

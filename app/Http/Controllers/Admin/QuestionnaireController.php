@@ -48,13 +48,16 @@ class QuestionnaireController extends Controller
         ]);
     }
 
-    public function show(Document $document): View
+    public function show(Document $document, Journal $journal): View
     {
         $questionnaire = QuestionnaireSante::with('reponses.question', 'document.deposant', 'document.validateur', 'document.inscription.participant.user', 'document.inscription.evenement', 'document.inscription.tarif.course')
             ->where('type_questionnaire', QuestionSante::SANTE)
             ->findOrFail($document->id_document);
 
         $inscription = $questionnaire->document->inscription;
+
+        // Données de santé : chaque consultation est tracée, avec son auteur et l'heure.
+        $journal->noter('document.consultation', $inscription, ['document' => $questionnaire->id_document]);
 
         return view('admin.questionnaires.show', [
             'questionnaire' => $questionnaire,
