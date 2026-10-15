@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CommandeController;
+use App\Http\Controllers\Admin\ConfirmationController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\DonController;
 use App\Http\Controllers\Admin\EvenementController;
@@ -19,7 +20,16 @@ use Illuminate\Support\Facades\Route;
  * Back-office (préfixe /admin, noms admin.*), réservé aux admins : niveau 1 en lecture,
  * `admin:2` pour gérer inscriptions et documents, `admin:3` pour le paramétrage,
  * les remboursements et les admins.
+ *
+ * Toutes les pages demandent en plus un code reçu par email, valable quelques heures
+ * (middleware `admin.confirme`), sauf la page qui sert à le saisir.
  */
+
+Route::withoutMiddleware('admin.confirme')->middleware('throttle:30,1')->group(function () {
+    Route::get('confirmation', [ConfirmationController::class, 'show'])->name('confirmation');
+    Route::post('confirmation', [ConfirmationController::class, 'valider'])->name('confirmation.valider');
+    Route::post('confirmation/renvoyer', [ConfirmationController::class, 'renvoyer'])->name('confirmation.renvoyer');
+});
 
 Route::get('/', TableauController::class)->name('tableau');
 Route::get('journal', JournalController::class)->name('journal');

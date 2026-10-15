@@ -7,4 +7,10 @@ return [
     | avec l'événement ; seuls les écrans et les chiffres de l'admin disparaissent.
     */
     'options' => (bool) env('OPTIONS_ACTIVES', false),
+
+    /*
+    | Entrée dans le back-office : un code reçu par email est redemandé une fois ce délai
+    | passé, même si l'admin est déjà connecté (cookie « se souvenir de moi » compris).
+    */
+    'admin_confirmation_heures' => (int) env('ADMIN_CONFIRMATION_HEURES', 8),
 ];

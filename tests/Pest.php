@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Middleware\ConfirmationAdmin;
 use App\Models\Commande;
 use App\Models\Course;
 use App\Models\Inscription;
 use App\Models\Participant;
 use App\Models\User;
+use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\Questionnaires;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportTesting\Testable;
 use Tests\TestCase;
@@ -99,7 +102,7 @@ function documentsComplets(Inscription $inscription): Inscription
 {
     $deposant = $inscription->participant->id_responsable ?? $inscription->id_participant;
 
-    app(\App\Services\Inscriptions\Consentements::class)->enregistrer($inscription, true, $deposant, '127.0.0.1');
+    app(Consentements::class)->enregistrer($inscription, true, $deposant, '127.0.0.1');
     app(Questionnaires::class)->remplirDecharge($inscription, affirmations(), $deposant, '127.0.0.1');
 
     if ($inscription->santeRequise()) {
@@ -109,13 +112,26 @@ function documentsComplets(Inscription $inscription): Inscription
     return $inscription->fresh();
 }
 
-/** Compte admin vérifié, au niveau d'accès donné (1 lecture, 2 gestion, 3 super admin). */
-function admin(int $niveau = 3): User
+/**
+ * Compte admin vérifié, au niveau d'accès donné (1 lecture, 2 gestion, 3 super admin).
+ * Par défaut, la session du test est déjà confirmée par code email (voir adminConfirme()).
+ */
+function admin(int $niveau = 3, bool $confirme = true): User
 {
     $user = User::factory()->create();
     $user->admin()->create(['niveau_acces' => $niveau]);
 
+    if ($confirme) {
+        adminConfirme();
+    }
+
     return $user->fresh();
+}
+
+/** Marque la session du test comme confirmée par code email à l'entrée de l'admin. */
+function adminConfirme(?CarbonInterface $le = null): void
+{
+    test()->withSession([ConfirmationAdmin::CLE => ($le ?? now())->getTimestamp()]);
 }
 
 /** Inscription déjà réglée et validée pour $user sur $course (données de contexte des tests). */
