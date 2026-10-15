@@ -87,8 +87,8 @@ test('les chiffres du tableau de bord correspondent aux données', function () {
     $this->actingAs(admin(1))->get('/admin')
         ->assertOk()
         ->assertSee('125 €')
-        ->assertSee('68 €')
-        ->assertSee('45 €');
+        ->assertSee('dont 45 € de dons')
+        ->assertDontSee('Frais Stripe');
 });
 
 test("une plage de dossards pleine déclenche une alerte", function () {

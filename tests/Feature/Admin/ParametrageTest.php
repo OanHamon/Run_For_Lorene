@@ -244,6 +244,5 @@ test("les options (t-shirts) sont masquées tant qu'elles ne sont pas activées"
     expect($this->get('/admin/inscriptions/export')->streamedContent())->not->toContain('Options');
 
     config(['rfl.options' => true]);
-    $this->get('/admin')->assertSee('Options vendues');
     $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Options et tailles');
 });

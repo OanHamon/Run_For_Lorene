@@ -54,7 +54,7 @@ test('un super admin rembourse en partie, puis le reste', function () {
         ->and(JournalAdmin::where('action', 'paiement.remboursement')->count())->toBe(2);
 
     // Le tableau de bord en tient compte.
-    $this->get('/admin')->assertSee('Remboursé : 25 €');
+    $this->get("/admin/commandes/{$this->inscription->id_commande}")->assertSee('Remboursé');
 });
 
 test("un paiement non réussi ne se rembourse pas", function () {

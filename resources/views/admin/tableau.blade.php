@@ -3,7 +3,6 @@
     use App\Support\Format;
 
     $lienInscriptions = fn (array $filtres = []) => Route::has('admin.inscriptions.index') ? route('admin.inscriptions.index', $filtres) : null;
-    $avecOptions = config('rfl.options');
     $alertesDossards = $courses->filter(fn ($c) => $c->dossards['sans_dossard'] > 0 || ($c->dossards['libres'] !== null && $c->dossards['libres'] === 0));
 @endphp
 <x-admin-shell title="Tableau de bord">
@@ -37,13 +36,12 @@
             </div>
         @endforeach
 
-        {{-- Inscrits --}}
+        {{-- L'essentiel : inscrits par statut et recettes encaissées --}}
         <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
             @foreach ([
                 [Inscription::VALIDEE, 'Validées', 'inscriptions avec dossard'],
                 [Inscription::DOSSIER_INCOMPLET, 'Dossiers incomplets', 'payées, documents manquants'],
                 [Inscription::EN_ATTENTE_PAIEMENT, 'En attente de paiement', 'commandes non réglées'],
-                [Inscription::ANNULEE, 'Annulées', 'par un admin'],
             ] as [$statut, $libelle, $aide])
                 @php($lien = $lienInscriptions(['statut' => $statut]))
                 <a @if ($lien) href="{{ $lien }}" @endif class="rfl-carte block p-4 {{ $lien ? 'hover:bg-fond/60' : '' }}">
@@ -52,96 +50,56 @@
                     <p class="text-xs text-gris-texte">{{ $aide }}</p>
                 </a>
             @endforeach
-        </div>
 
-        {{-- Recettes : le total en moutarde, posé sur le vert (charte) --}}
-        <div class="mb-6 grid gap-4 lg:grid-cols-3">
-            <div class="rounded-3xl bg-vert p-6 text-white">
+            {{-- Le total en moutarde, posé sur le vert (charte) --}}
+            <div class="rounded-3xl bg-vert p-4 text-white">
                 <p class="text-sm text-vert-clair">Recettes encaissées</p>
-                <p class="mt-1 font-display text-4xl text-moutarde" data-test="recettes-total">{{ Format::euros($recettes['total']) }}</p>
-                <p class="mt-3 text-sm text-vert-clair">
-                    @if ($recettes['rembourse'] > 0)Remboursé : {{ Format::euros($recettes['rembourse']) }} · @endif
-                    Frais Stripe : {{ Format::euros($recettes['frais']) }}
-                </p>
-            </div>
-            <div class="rfl-carte grid {{ $avecOptions ? 'grid-cols-3' : 'grid-cols-2' }} gap-4 p-6 lg:col-span-2">
-                @foreach (array_filter(['inscriptions' => 'Inscriptions', 'options' => $avecOptions ? 'Options' : null, 'dons' => 'Dons']) as $cle => $libelle)
-                    <div>
-                        <p class="text-sm text-gris-texte">{{ $libelle }}</p>
-                        <p class="mt-1 font-display text-xl text-vert" data-test="recettes-{{ $cle }}">{{ Format::euros($recettes[$cle]) }}</p>
-                    </div>
-                @endforeach
+                <p class="mt-1 font-display text-2xl text-moutarde" data-test="recettes-total">{{ Format::euros($recettes['total']) }}</p>
+                @if ($recettes['dons'] > 0)
+                    <p class="text-xs text-vert-clair" data-test="recettes-dons">dont {{ Format::euros($recettes['dons']) }} de dons</p>
+                @endif
             </div>
         </div>
 
-        <div class="grid gap-6 {{ $avecOptions ? 'xl:grid-cols-3' : '' }}">
-            {{-- Remplissage par course --}}
-            <div class="rfl-carte overflow-hidden {{ $avecOptions ? 'xl:col-span-2' : '' }}">
-                <h2 class="px-6 py-4 font-display text-vert">Inscrits par course</h2>
-                <div class="overflow-x-auto">
-                    <table class="rfl-tableau min-w-[560px]">
-                        <thead>
-                            <tr>
-                                <th>Course</th>
-                                <th class="text-right">Réglées</th>
-                                <th class="text-right">En attente</th>
-                                <th class="w-1/3">Remplissage</th>
-                                <th class="text-right">Dossards libres</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($courses as $c)
-                                <tr>
-                                    <td class="font-bold">
-                                        @php($lien = $lienInscriptions(['course' => $c->course->id_course]))
-                                        @if ($lien)<a href="{{ $lien }}" class="hover:underline">{{ $c->course->nom }}</a>@else{{ $c->course->nom }}@endif
-                                    </td>
-                                    <td class="text-right" data-test="course-{{ $c->course->id_course }}-reglees">{{ $c->reglees }}</td>
-                                    <td class="text-right">{{ $c->en_attente }}</td>
-                                    <td>
-                                        @if ($c->quota)
-                                            <div class="flex items-center gap-3">
-                                                <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-fond ring-1 ring-bordure" role="meter" aria-valuemin="0" aria-valuemax="{{ $c->quota }}" aria-valuenow="{{ $c->places_prises }}" aria-label="Remplissage {{ $c->course->nom }}">
-                                                    <div class="h-full rounded-full {{ $c->remplissage >= 100 ? 'bg-vert' : 'bg-vert-doux' }}" style="width: {{ $c->remplissage }}%"></div>
-                                                </div>
-                                                <span class="w-20 shrink-0 text-right text-xs text-gris-texte">{{ $c->places_prises }} / {{ $c->quota }}</span>
-                                            </div>
-                                        @else
-                                            <span class="text-xs text-gris-texte">{{ $c->places_prises }} · sans limite</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-right">{{ $c->dossards['libres'] ?? '–' }}</td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="5" class="text-center text-gris-texte">Aucune course.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            @if ($avecOptions)
-            {{-- T-shirts --}}
-            <div class="rfl-carte overflow-hidden">
-                <h2 class="px-6 py-4 font-display text-vert">Options vendues</h2>
-                <table class="rfl-tableau">
+        {{-- Remplissage par course --}}
+        <div class="rfl-carte overflow-hidden">
+            <h2 class="px-6 py-4 font-display text-vert">Inscrits par course</h2>
+            <div class="overflow-x-auto">
+                <table class="rfl-tableau min-w-[480px]">
                     <thead>
-                        <tr><th>Taille</th><th class="text-right">Vendus</th><th class="text-right">Stock restant</th></tr>
+                        <tr>
+                            <th>Course</th>
+                            <th class="text-right">Inscrits</th>
+                            <th class="w-1/2">Remplissage</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        @forelse ($tshirts as $t)
+                        @forelse ($courses as $c)
                             <tr>
-                                <td>{{ $t->option }} {{ $t->taille }}</td>
-                                <td class="text-right font-bold" data-test="tshirt-{{ $t->taille }}">{{ $t->vendus }}</td>
-                                <td class="text-right {{ $t->restant === 0 ? 'font-bold text-vert' : '' }}">{{ $t->restant === null ? 'illimité' : ($t->restant === 0 ? 'épuisé' : "{$t->restant} / {$t->stock}") }}</td>
+                                <td class="font-bold">
+                                    @php($lien = $lienInscriptions(['course' => $c->course->id_course]))
+                                    @if ($lien)<a href="{{ $lien }}" class="hover:underline">{{ $c->course->nom }}</a>@else{{ $c->course->nom }}@endif
+                                </td>
+                                <td class="text-right" data-test="course-{{ $c->course->id_course }}-reglees">{{ $c->reglees }}</td>
+                                <td>
+                                    @if ($c->quota)
+                                        <div class="flex items-center gap-3">
+                                            <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-fond ring-1 ring-bordure" role="meter" aria-valuemin="0" aria-valuemax="{{ $c->quota }}" aria-valuenow="{{ $c->places_prises }}" aria-label="Remplissage {{ $c->course->nom }}">
+                                                <div class="h-full rounded-full {{ $c->remplissage >= 100 ? 'bg-vert' : 'bg-vert-doux' }}" style="width: {{ $c->remplissage }}%"></div>
+                                            </div>
+                                            <span class="w-20 shrink-0 text-right text-xs text-gris-texte">{{ $c->places_prises }} / {{ $c->quota }}</span>
+                                        </div>
+                                    @else
+                                        <span class="text-xs text-gris-texte">sans limite de places</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="text-center text-gris-texte">Aucune option.</td></tr>
+                            <tr><td colspan="3" class="text-center text-gris-texte">Aucune course.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            @endif
         </div>
     @endif
 </x-admin-shell>
