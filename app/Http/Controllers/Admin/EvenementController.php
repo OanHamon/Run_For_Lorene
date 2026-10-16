@@ -18,9 +18,11 @@ use Illuminate\View\View;
  */
 class EvenementController extends Controller
 {
+    /** Libellés du formulaire, plus explicites que Evenement::LIBELLES. */
     public const STATUTS = [
-        'brouillon' => 'Brouillon (invisible du public)',
-        'publie' => 'Publié',
+        Evenement::BROUILLON => 'Brouillon (invisible du public)',
+        Evenement::PUBLIE => 'Publié (sur le site)',
+        Evenement::CLOTURE => 'Clôturé (édition terminée, retirée du site)',
     ];
 
     public const ONGLETS = [
@@ -43,7 +45,7 @@ class EvenementController extends Controller
 
     public function create(): View
     {
-        return view('admin.evenements.form', ['evenement' => new Evenement(['statut' => 'brouillon'])]);
+        return view('admin.evenements.form', ['evenement' => new Evenement(['statut' => Evenement::BROUILLON])]);
     }
 
     public function store(Request $request): RedirectResponse

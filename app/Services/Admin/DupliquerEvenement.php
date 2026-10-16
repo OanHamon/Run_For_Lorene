@@ -14,17 +14,27 @@ use Illuminate\Support\Facades\Storage;
  */
 class DupliquerEvenement
 {
+    /** « Run For Lorène 3 » → « Run For Lorène 4 » ; sans numéro final : « Course » → « Course 2 ». */
+    public static function nomSuivant(string $nom): string
+    {
+        if (preg_match('/^(.*?)(\d+)$/u', trim($nom), $m)) {
+            return $m[1].((int) $m[2] + 1);
+        }
+
+        return trim($nom).' 2';
+    }
+
     public function __invoke(Evenement $source): Evenement
     {
         $source->load('courses.tarifs', 'optionEvenements.declinaisons', 'texteLegals');
 
         return DB::transaction(function () use ($source) {
             $copie = Evenement::create([
-                'nom' => "{$source->nom} (copie)",
+                'nom' => self::nomSuivant($source->nom),
                 'date_evenement' => $source->date_evenement->copy()->addYear(),
                 'ouverture' => $source->ouverture->copy()->addYear(),
                 'fermeture' => $source->fermeture->copy()->addYear(),
-                'statut' => 'brouillon',
+                'statut' => Evenement::BROUILLON,
             ]);
 
             foreach ($source->courses as $course) {

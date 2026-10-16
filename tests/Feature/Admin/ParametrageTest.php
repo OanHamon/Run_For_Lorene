@@ -184,6 +184,7 @@ test("dupliquer un événement copie courses, tarifs, options et textes, un an p
 
     $copie = Evenement::whereKeyNot($source->id_evenement)->firstOrFail();
     expect($copie->statut)->toBe('brouillon')
+        ->and($copie->nom)->toBe('Run For Lorène 4')
         ->and($copie->date_evenement->toDateString())->toBe('2028-04-03')
         ->and($copie->courses()->count())->toBe(4)
         ->and($copie->optionEvenements()->first()->declinaisons()->count())->toBe(5)
@@ -245,4 +246,34 @@ test("les options (t-shirts) sont masquées tant qu'elles ne sont pas activées"
 
     config(['rfl.options' => true]);
     $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Options et tailles');
+});
+
+test('dupliquer incrémente le numéro du nom, ou en ajoute un', function () {
+    expect(\App\Services\Admin\DupliquerEvenement::nomSuivant('Run For Lorène 3'))->toBe('Run For Lorène 4')
+        ->and(\App\Services\Admin\DupliquerEvenement::nomSuivant('RFL 2027'))->toBe('RFL 2028')
+        ->and(\App\Services\Admin\DupliquerEvenement::nomSuivant('Course solidaire'))->toBe('Course solidaire 2');
+});
+
+test("une édition clôturée est signalée dans l'admin et retirée du site", function () {
+    $this->seed();
+    $evenement = Evenement::first();
+
+    // Passée mais encore publiée : l'admin invite à la clôturer.
+    $evenement->update(['date_evenement' => today()->subDay(), 'ouverture' => today()->subMonth(), 'fermeture' => today()->subDays(2)]);
+    $this->actingAs(admin(3));
+    $this->get('/admin/evenements')->assertSee('Terminé, à clôturer');
+    $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Cette édition est terminée');
+
+    $this->put("/admin/evenements/{$evenement->id_evenement}", [
+        'nom' => $evenement->nom,
+        'date_evenement' => $evenement->date_evenement->toDateString(),
+        'ouverture' => $evenement->ouverture->format('Y-m-d\TH:i'),
+        'fermeture' => $evenement->fermeture->format('Y-m-d\TH:i'),
+        'statut' => Evenement::CLOTURE,
+    ])->assertSessionHasNoErrors();
+
+    $this->get('/admin/evenements')->assertSee('Clôturé');
+    $this->get("/admin/evenements/{$evenement->id_evenement}")->assertDontSee('Cette édition est terminée');
+    expect(Evenement::courant())->toBeNull()
+        ->and($evenement->fresh()->inscriptionsOuvertes())->toBeFalse();
 });

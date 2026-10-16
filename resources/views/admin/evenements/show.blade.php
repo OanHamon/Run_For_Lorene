@@ -12,7 +12,8 @@
 @endphp
 <x-admin-shell :title="$evenement->nom">
     <p class="mb-2 text-sm"><a href="{{ route('admin.evenements.index') }}" class="rfl-lien">Événements</a></p>
-    <x-admin.titre :titre="$evenement->nom" :sous-titre="$evenement->date_evenement->translatedFormat('l j F Y').' · '.($evenement->statut === 'publie' ? 'publié' : 'brouillon')">
+    <x-admin.titre :titre="$evenement->nom" :sous-titre="$evenement->date_evenement->translatedFormat('l j F Y')">
+        <x-admin.statut-evenement :evenement="$evenement" class="px-3 py-1 text-sm" />
         @if ($peutModifier)
             <form method="POST" action="{{ route('admin.evenements.dupliquer', $evenement) }}" onsubmit="return confirm('Dupliquer cet événement pour l\'édition suivante ?')">
                 @csrf
@@ -20,6 +21,13 @@
             </form>
         @endif
     </x-admin.titre>
+
+    @if ($evenement->statut === \App\Models\Evenement::PUBLIE && $evenement->date_evenement->lt(today()))
+        <div class="mb-6 rfl-alerte">
+            <p class="font-display text-vert">Cette édition est terminée</p>
+            <p class="mt-1 text-sm text-gris-texte">Elle est encore publiée. Passe son statut à « Clôturé » dans l'onglet Général pour la retirer du site.</p>
+        </div>
+    @endif
 
     <nav class="mb-6 flex gap-2 overflow-x-auto text-sm" aria-label="Onglets de l'événement">
         @foreach ($onglets as $cle => $libelle)

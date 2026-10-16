@@ -11,6 +11,19 @@ class Evenement extends Model
 
     protected $primaryKey = 'id_evenement';
 
+    /** Brouillon : en préparation, invisible. Publié : sur le site. Clôturé : édition terminée, retirée du site. */
+    public const BROUILLON = 'brouillon';
+
+    public const PUBLIE = 'publie';
+
+    public const CLOTURE = 'cloture';
+
+    public const LIBELLES = [
+        self::BROUILLON => 'Brouillon',
+        self::PUBLIE => 'Publié',
+        self::CLOTURE => 'Clôturé',
+    ];
+
     protected $fillable = [
         'nom',
         'date_evenement',
@@ -34,16 +47,16 @@ class Evenement extends Model
      */
     public static function courant(): ?self
     {
-        return static::where('statut', 'publie')
+        return static::where('statut', self::PUBLIE)
             ->whereDate('date_evenement', '>=', today())
             ->orderBy('date_evenement')
             ->first()
-            ?? static::where('statut', 'publie')->orderByDesc('date_evenement')->first();
+            ?? static::where('statut', self::PUBLIE)->orderByDesc('date_evenement')->first();
     }
 
     public function inscriptionsOuvertes(): bool
     {
-        return $this->statut === 'publie' && now()->between($this->ouverture, $this->fermeture);
+        return $this->statut === self::PUBLIE && now()->between($this->ouverture, $this->fermeture);
     }
 
     public function courses(): HasMany

@@ -18,7 +18,7 @@
                             <td>{{ $e->date_evenement->translatedFormat('j F Y') }}</td>
                             <td class="text-gris-texte">du {{ $e->ouverture->format('d/m/Y') }} au {{ $e->fermeture->format('d/m/Y') }}</td>
                             <td>
-                                <span class="rfl-badge {{ $e->statut === 'publie' ? 'bg-vert-clair text-vert' : 'bg-bordure text-gris-texte' }}">{{ $e->statut === 'publie' ? 'Publié' : 'Brouillon' }}</span>
+                                <x-admin.statut-evenement :evenement="$e" />
                             </td>
                             <td class="text-right">{{ $e->courses_count }}</td>
                             <td class="text-right">{{ $e->inscriptions_count }}</td>
