@@ -13,12 +13,17 @@ class TexteLegal extends Model
 
     public $timestamps = false;
 
-    public const OBLIGATOIRES = ['reglement', 'decharge', 'rgpd'];
+    /** PDF indispensables : le tunnel fait accepter le règlement et la RGPD. */
+    public const OBLIGATOIRES = ['reglement', 'rgpd'];
 
     /** Acceptés au volet « Conditions » du tunnel ; la décharge l'est à son propre volet. */
     public const AVANT_PAIEMENT = ['reglement', 'rgpd'];
 
-    public const FACULTATIFS = ['droit_image'];
+    /**
+     * PDF facultatifs. La décharge se fait par les affirmations à cocher du tunnel ; si un PDF
+     * est publié, son acceptation est enregistrée en plus (trace de la version).
+     */
+    public const FACULTATIFS = ['decharge', 'droit_image'];
 
     protected $fillable = [
         'type_texte',

@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Http\Controllers\TexteLegalController;
 use App\Models\Evenement;
+use App\Models\Inscription;
 use App\Models\TexteLegal;
 use App\Services\Inscriptions\Consentements;
 use Illuminate\Support\Collection;
@@ -11,7 +12,8 @@ use Illuminate\Support\Collection;
 /**
  * « Prêt à publier ? » : ce qu'il faut pour que le tunnel fonctionne de bout en bout. Une
  * course au moins, des tarifs sans trou pour chaque course, et une version des textes
- * obligatoires (règlement, décharge, RGPD). Sert à la checklist de la fiche et au blocage
+ * obligatoires (règlement, RGPD ; PDF de la décharge seulement sans affirmations en ligne).
+ * Sert à la checklist de la fiche et au blocage
  * de la publication ; calculé avec les dates saisies, même pas encore enregistrées.
  */
 class PreparationEvenement
@@ -50,7 +52,9 @@ class PreparationEvenement
 
         foreach ([...TexteLegal::OBLIGATOIRES, ...TexteLegal::FACULTATIFS] as $type) {
             $texte = $textes->get($type);
-            $obligatoire = in_array($type, TexteLegal::OBLIGATOIRES, true);
+            // Le PDF de la décharge ne devient indispensable que si aucune affirmation n'est publiée.
+            $dechargeEnLigne = $type === 'decharge' && Inscription::questionsDechargeActives();
+            $obligatoire = in_array($type, TexteLegal::OBLIGATOIRES, true) || ($type === 'decharge' && ! $dechargeEnLigne);
             $libelle = TexteLegalController::LIBELLES[$type];
 
             $etapes->push($this->etape(
@@ -58,7 +62,11 @@ class PreparationEvenement
                 $texte !== null,
                 obligatoire: $obligatoire,
                 onglet: 'textes',
-                detail: $texte ? "Version {$texte->version} du {$texte->date_publication->format('d/m/Y')}." : 'Aucun PDF publié.',
+                detail: match (true) {
+                    $texte !== null => "Version {$texte->version} du {$texte->date_publication->format('d/m/Y')}.",
+                    $dechargeEnLigne => 'Pas de PDF : la décharge se fait par les affirmations à cocher du tunnel.',
+                    default => 'Aucun PDF publié.',
+                },
                 probleme: 'il manque : '.mb_strtolower($libelle),
             ));
         }

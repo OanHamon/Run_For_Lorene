@@ -98,13 +98,13 @@ class Inscription extends Model
     /** Même règle que documentsManquants() : décharge absente, ou questionnaire de santé absent pour un mineur. */
     public function scopeAvecDocumentsManquants(Builder $query, Evenement $evenement): void
     {
-        $questionsDecharge = QuestionSante::where('type_questionnaire', QuestionSante::DECHARGE)->where('active', true)->exists();
+        $query->where(function ($q) use ($evenement) {
+            self::questionsDechargeActives()
+                ? $q->whereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::DECHARGE))
+                : $q->whereDoesntHave('documents.consentement', fn ($c) => $c->where('accepte', true)
+                    ->whereHas('texteLegal', fn ($t) => $t->where('type_texte', 'decharge')));
 
-        $query->where(function ($q) use ($evenement, $questionsDecharge) {
-            $q->whereDoesntHave('documents.consentement', fn ($c) => $c->where('accepte', true)
-                ->whereHas('texteLegal', fn ($t) => $t->where('type_texte', 'decharge')))
-                ->when($questionsDecharge, fn ($q2) => $q2->orWhereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::DECHARGE)))
-                ->orWhere(fn ($mineur) => $mineur->mineurs($evenement)
+            $q->orWhere(fn ($mineur) => $mineur->mineurs($evenement)
                     ->whereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::SANTE)));
         });
     }
@@ -136,18 +136,22 @@ class Inscription extends Model
     }
 
     /**
-     * Décharge pas encore faite : texte non accepté, ou questionnaire publié mais pas rempli.
+     * Décharge pas encore faite. Elle se fait par les affirmations à cocher du tunnel (le PDF
+     * est facultatif) ; sans affirmations publiées, il faut accepter le PDF de la décharge.
      * Exigée dans le tunnel avant de payer ; sans elle, pas de départ.
      */
     public function dechargeManquante(): bool
     {
-        if (! in_array('decharge', $this->typesConsentis(), true)) {
-            return true;
+        if (self::questionsDechargeActives()) {
+            return ! $this->aRempli(QuestionSante::DECHARGE);
         }
 
-        $questionsActives = QuestionSante::where('type_questionnaire', QuestionSante::DECHARGE)->where('active', true)->exists();
+        return ! in_array('decharge', $this->typesConsentis(), true);
+    }
 
-        return $questionsActives && ! $this->aRempli(QuestionSante::DECHARGE);
+    public static function questionsDechargeActives(): bool
+    {
+        return QuestionSante::where('type_questionnaire', QuestionSante::DECHARGE)->where('active', true)->exists();
     }
 
     /** @return list<string> libellés des documents à remplir pour pouvoir prendre le départ */

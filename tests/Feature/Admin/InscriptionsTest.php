@@ -189,3 +189,17 @@ test("l'export des dossards liste les inscriptions validées par numéro", funct
         ->and($lignes[1])->toStartWith('1000;Premier;')
         ->and($lignes[2])->toStartWith('1001;Second;');
 });
+
+test('sans PDF de décharge, les affirmations du tunnel suffisent', function () {
+    App\Models\TexteLegal::where('type_texte', 'decharge')->delete();
+    $inscription = inscriptionPayee(User::factory()->create(), $this->dix, Inscription::DOSSIER_INCOMPLET);
+    expect($inscription->documentsManquants())->toBe(['la décharge de responsabilité']);
+
+    $inscription = documentsComplets($inscription);
+    expect($inscription->dechargeManquante())->toBeFalse()
+        ->and($inscription->typesConsentis())->not->toContain('decharge')
+        ->and(Inscription::avecDocumentsManquants($this->evenement)->pluck('id_inscription')->all())->not->toContain($inscription->id_inscription);
+
+    app(App\Services\Inscriptions\MettreAJourStatut::class)($inscription);
+    expect($inscription->fresh()->statut)->toBe(Inscription::VALIDEE);
+});

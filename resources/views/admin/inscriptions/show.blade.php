@@ -129,7 +129,8 @@
                 <div class="flex justify-between gap-4 py-1.5">
                     <dt class="text-gris-texte">Décharge de responsabilité</dt>
                     @php($acceptee = $historique->first(fn ($c) => $c->type_texte === 'decharge' && $c->accepte))
-                    <dd class="text-right font-bold">{{ $i->dechargeManquante() || ! $acceptee ? 'à remplir' : 'remplie le '.\Illuminate\Support\Carbon::parse($acceptee->date_depot)->format('d/m/Y') }}</dd>
+                    @php($dateDecharge = $decharge?->document->date_depot ?? ($acceptee ? \Illuminate\Support\Carbon::parse($acceptee->date_depot) : null))
+                    <dd class="text-right font-bold">{{ $i->dechargeManquante() || ! $dateDecharge ? 'à remplir' : 'remplie le '.$dateDecharge->format('d/m/Y') }}</dd>
                 </div>
                 <div class="flex justify-between gap-4 py-1.5">
                     <dt class="text-gris-texte">Questionnaire de santé</dt>

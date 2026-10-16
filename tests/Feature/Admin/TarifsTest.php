@@ -33,7 +33,9 @@ beforeEach(function () {
         'age_max' => '',
         ...$d,
     ];
-    // Textes obligatoires publiés : seuls les tarifs peuvent bloquer la publication ici.
+    // Affirmations de décharge en ligne et textes obligatoires publiés : seuls les tarifs
+    // peuvent bloquer la publication ici.
+    $this->seed(Database\Seeders\QuestionnairesSeeder::class);
     foreach (App\Models\TexteLegal::OBLIGATOIRES as $type) {
         App\Models\TexteLegal::create(['type_texte' => $type, 'version' => 1, 'date_publication' => today(), 'fichier' => "textes/{$type}.pdf", 'id_evenement' => $this->evenement->id_evenement]);
     }
@@ -136,9 +138,9 @@ test("un événement publié avec des trous est signalé sur le tableau de bord"
         ->assertSee('5 km n&#039;a pas de tarif', false);
 });
 
-test('publier exige le règlement, la décharge et la RGPD ; le droit à l\'image reste facultatif', function () {
+test('publier exige le règlement et la RGPD ; décharge (affirmations en ligne) et droit à l\'image en PDF facultatifs', function () {
     $this->course->tarifs()->create(($this->tarif)(['age_min' => null, 'age_max' => null]));
-    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'decharge')->delete();
+    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'rgpd')->delete();
     $champs = [
         'nom' => 'Édition test',
         'date_evenement' => $this->evenement->date_evenement->toDateString(),
@@ -148,9 +150,11 @@ test('publier exige le règlement, la décharge et la RGPD ; le droit à l\'imag
     ];
 
     $this->put("/admin/evenements/{$this->evenement->id_evenement}", $champs)->assertSessionHasErrors('statut');
-    expect(session('errors')->first('statut'))->toContain('il manque : décharge de responsabilité');
+    expect(session('errors')->first('statut'))->toContain('il manque : politique de protection des données');
 
-    App\Models\TexteLegal::create(['type_texte' => 'decharge', 'version' => 1, 'date_publication' => today(), 'fichier' => 'textes/decharge.pdf', 'id_evenement' => $this->evenement->id_evenement]);
+    App\Models\TexteLegal::create(['type_texte' => 'rgpd', 'version' => 1, 'date_publication' => today(), 'fichier' => 'textes/rgpd.pdf', 'id_evenement' => $this->evenement->id_evenement]);
+    // Sans PDF de décharge : publiable, la décharge se fait par les affirmations du tunnel.
+    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'decharge')->delete();
     $this->put("/admin/evenements/{$this->evenement->id_evenement}", $champs)->assertSessionHasNoErrors();
 });
 
