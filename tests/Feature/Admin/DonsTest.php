@@ -33,7 +33,7 @@ test('le filtre « reçu demandé » et l\'export CSV', function () {
 
     $this->get('/admin/dons?recu=1')->assertSee('Généreux')->assertDontSee('Discret');
 
-    $csv = $this->get('/admin/dons/export?recu=1')->assertOk()->streamedContent();
+    $csv = $this->get('/admin/dons/export?recu=1&format=csv')->assertOk()->streamedContent();
     expect($csv)->toStartWith("\xEF\xBB\xBFN°;Date;Montant;")
         ->and($csv)->toContain(';50,00;Généreux;')
         ->and($csv)->not->toContain('Discret');

@@ -58,8 +58,8 @@
             <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
                 <p class="text-sm text-gris-texte"><span class="font-bold text-vert-sombre">{{ $inscriptions->total() }}</span> inscription(s)</p>
                 <div class="flex flex-wrap gap-4 text-sm">
-                    <a href="{{ route('admin.inscriptions.export', $filtres) }}" class="rfl-lien">Exporter la liste (CSV)</a>
-                    <a href="{{ route('admin.inscriptions.dossards') }}" class="rfl-lien">Liste des dossards (CSV)</a>
+                    <span>Exporter la liste : <a href="{{ route('admin.inscriptions.export', $filtres) }}" class="rfl-lien">Excel</a> · <a href="{{ route('admin.inscriptions.export', [...$filtres, 'format' => 'csv']) }}" class="rfl-lien">CSV</a></span>
+                    <span>Liste des dossards : <a href="{{ route('admin.inscriptions.dossards') }}" class="rfl-lien">Excel</a> · <a href="{{ route('admin.inscriptions.dossards', ['format' => 'csv']) }}" class="rfl-lien">CSV</a></span>
                 </div>
             </div>
             <div class="overflow-x-auto">

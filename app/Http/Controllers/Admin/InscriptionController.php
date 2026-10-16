@@ -16,7 +16,6 @@ use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\Questionnaires;
 use App\Support\Csv;
 use App\Support\EvenementAdmin;
-use App\Support\Format;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +23,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Suivi des inscriptions (lot 6) : liste filtrée, fiche, dossard, annulation, relance,
@@ -48,7 +47,7 @@ class InscriptionController extends Controller
         ]);
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): Response
     {
         $evenement = EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
@@ -70,7 +69,7 @@ class InscriptionController extends Controller
                     $i->tarif->course->nom,
                     $i->libelleStatut(),
                     $i->dossard,
-                    Format::decimal($i->prix_paye),
+                    (float) $i->prix_paye,
                     $i->declinaisons->map(fn ($d) => "{$d->declinaison->optionEvenement->libelle} {$d->declinaison->libelle}")->join(', '),
                     implode(', ', $i->documentsManquants()),
                     $i->urgence_nom,
@@ -82,10 +81,10 @@ class InscriptionController extends Controller
             }
         };
 
-        return Csv::telecharger("inscrits-{$evenement->id_evenement}-".now()->format('Ymd').'.csv', $this->sansOptions([
+        return Csv::telecharger("inscrits-{$evenement->id_evenement}-".now()->format('Ymd'), $this->sansOptions([
             'N°', 'Nom', 'Prénom', 'Naissance', 'Âge le jour J', 'Sexe', 'Email', 'Téléphone', 'Responsable', 'Email du responsable',
             'Course', 'Statut', 'Dossard', 'Prix payé', 'Options', 'Documents manquants', 'Contact d\'urgence', 'Tél. d\'urgence', 'Commande',
-        ]), $lignes());
+        ]), $lignes(), Csv::format($request->query('format')));
     }
 
     /** Retire la colonne « Options » (15e) de l'export tant que les options sont masquées. */
@@ -99,7 +98,7 @@ class InscriptionController extends Controller
     }
 
     /** Liste des dossards attribués, par course puis numéro (retrait des dossards, chronométrage du jour J). */
-    public function exportDossards(Request $request): StreamedResponse
+    public function exportDossards(Request $request): Response
     {
         $evenement = EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
@@ -124,9 +123,9 @@ class InscriptionController extends Controller
             }
         };
 
-        return Csv::telecharger("dossards-{$evenement->id_evenement}-".now()->format('Ymd').'.csv', [
+        return Csv::telecharger("dossards-{$evenement->id_evenement}-".now()->format('Ymd'), [
             'Dossard', 'Nom', 'Prénom', 'Sexe', 'Âge le jour J', 'Course',
-        ], $lignes());
+        ], $lignes(), Csv::format($request->query('format')));
     }
 
     public function show(Inscription $inscription, Consentements $consentements, Questionnaires $questionnaires): View

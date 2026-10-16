@@ -279,7 +279,7 @@ test("les options (t-shirts) sont masquées tant qu'elles ne sont pas activées"
     $this->get("/admin/options/{$option->id_option}")->assertNotFound();
     $this->post("/admin/evenements/{$evenement->id_evenement}/options", ['libelle' => 'Casquette', 'prix' => '5'])->assertNotFound();
     $this->get('/admin')->assertDontSee('Options vendues');
-    expect($this->get('/admin/inscriptions/export')->streamedContent())->not->toContain('Options');
+    expect($this->get('/admin/inscriptions/export?format=csv')->streamedContent())->not->toContain('Options');
 
     config(['rfl.options' => true]);
     $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Options et tailles');

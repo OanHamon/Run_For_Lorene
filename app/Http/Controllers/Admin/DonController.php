@@ -7,11 +7,10 @@ use App\Models\Evenement;
 use App\Services\Admin\Statistiques;
 use App\Support\Csv;
 use App\Support\EvenementAdmin;
-use App\Support\Format;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Dons d'un événement (commandes payées) : liste, reçus fiscaux demandés, export CSV.
@@ -32,7 +31,7 @@ class DonController extends Controller
         ]);
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): Response
     {
         $evenement = EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
@@ -44,7 +43,7 @@ class DonController extends Controller
                 yield [
                     $don->id_don,
                     $don->commande->date_commande->format('d/m/Y'),
-                    Format::decimal($don->montant),
+                    (float) $don->montant,
                     $u->nom,
                     $u->prenom,
                     $u->email,
@@ -58,9 +57,9 @@ class DonController extends Controller
             }
         };
 
-        return Csv::telecharger("dons-{$evenement->id_evenement}-".now()->format('Ymd').'.csv', [
+        return Csv::telecharger("dons-{$evenement->id_evenement}-".now()->format('Ymd'), [
             'N°', 'Date', 'Montant', 'Nom', 'Prénom', 'Email', 'Adresse', 'Code postal', 'Ville', 'Anonyme', 'Reçu fiscal demandé', 'Commande',
-        ], $lignes());
+        ], $lignes(), Csv::format($request->query('format')));
     }
 
     private function requete(Request $request, Evenement $evenement): Builder
