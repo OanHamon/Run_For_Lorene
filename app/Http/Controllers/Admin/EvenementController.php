@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
 use App\Models\Evenement;
+use App\Models\Tarif;
 use App\Models\TexteLegal;
 use App\Services\Admin\ControleTarifs;
 use App\Services\Admin\DupliquerEvenement;
@@ -13,6 +15,8 @@ use App\Services\Inscriptions\Consentements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -121,6 +125,34 @@ class EvenementController extends Controller
         }
 
         return redirect()->route('admin.evenements.show', $evenement)->with('statut', 'Événement enregistré.');
+    }
+
+    /**
+     * Suppression d'un événement en brouillon, jamais ouvert aux inscriptions : il part avec ses
+     * courses, tarifs, options et textes légaux (PDF compris). Un événement publié ou clôturé,
+     * ou qui a la moindre inscription, se garde.
+     */
+    public function destroy(Evenement $evenement): RedirectResponse
+    {
+        if (! $evenement->supprimable()) {
+            return back()->with('erreur', 'Seul un événement en brouillon et sans aucune inscription peut être supprimé.');
+        }
+
+        $nom = $evenement->nom;
+
+        DB::transaction(function () use ($evenement) {
+            $courses = $evenement->courses()->pluck('id_course');
+            Tarif::whereIn('id_course', $courses)->delete();
+            Course::whereIn('id_course', $courses)->delete();
+            $evenement->optionEvenements()->each(fn ($option) => $option->delete()); // tailles en cascade
+            $evenement->texteLegals()->delete();
+            $evenement->delete();
+        });
+
+        Storage::disk('local')->deleteDirectory(dirname(TexteLegal::chemin($evenement, 'reglement', 1)));
+        $this->journal->noter('evenement.suppression', $evenement, ['nom' => $nom]);
+
+        return redirect()->route('admin.evenements.index')->with('statut', "Événement « {$nom} » supprimé.");
     }
 
     public function dupliquer(Evenement $evenement, DupliquerEvenement $dupliquer): RedirectResponse

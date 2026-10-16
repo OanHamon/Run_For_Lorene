@@ -19,6 +19,7 @@ class JournalAdmin extends Model
         'evenement.creation' => 'Événement créé',
         'evenement.modification' => 'Événement modifié',
         'evenement.duplication' => 'Événement dupliqué',
+        'evenement.suppression' => 'Événement supprimé',
         'course.creation' => 'Course créée',
         'course.modification' => 'Course modifiée',
         'course.suppression' => 'Course supprimée',

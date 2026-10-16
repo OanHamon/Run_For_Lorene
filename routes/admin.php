@@ -75,6 +75,7 @@ Route::middleware('admin:3')->group(function () {
     Route::get('evenements/nouveau', [EvenementController::class, 'create'])->name('evenements.create');
     Route::post('evenements', [EvenementController::class, 'store'])->name('evenements.store');
     Route::put('evenements/{evenement}', [EvenementController::class, 'update'])->name('evenements.update');
+    Route::delete('evenements/{evenement}', [EvenementController::class, 'destroy'])->name('evenements.destroy');
     Route::post('evenements/{evenement}/dupliquer', [EvenementController::class, 'dupliquer'])->name('evenements.dupliquer');
 
     Route::get('evenements/{evenement}/courses/nouvelle', [CourseController::class, 'create'])->name('courses.create');

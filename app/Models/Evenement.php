@@ -60,6 +60,12 @@ class Evenement extends Model
         return $this->exists && $this->inscriptions()->whereIn('statut', Inscription::ENGAGEES)->exists();
     }
 
+    /** Brouillon sans aucune inscription (même brouillon) : on peut le supprimer. */
+    public function supprimable(): bool
+    {
+        return $this->statut === self::BROUILLON && ! $this->inscriptions()->exists();
+    }
+
     public function inscriptionsOuvertes(): bool
     {
         return $this->statut === self::PUBLIE && now()->between($this->ouverture, $this->fermeture);

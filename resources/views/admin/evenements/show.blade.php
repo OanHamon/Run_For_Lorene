@@ -73,6 +73,19 @@
             @endif
         </form>
 
+        @if ($peutModifier && $evenement->supprimable())
+            <form method="POST" action="{{ route('admin.evenements.destroy', $evenement) }}" class="mt-6 flex max-w-3xl flex-wrap items-center justify-between gap-4 rounded-3xl border border-rose-200/70 bg-white p-6"
+                onsubmit="return confirm('Supprimer définitivement « {{ addslashes($evenement->nom) }} », ses courses, tarifs et textes légaux ?')">
+                @csrf
+                @method('DELETE')
+                <div>
+                    <p class="font-display text-vert">Supprimer l'événement</p>
+                    <p class="mt-1 text-sm text-gris-texte">Possible tant qu'il est en brouillon et sans inscription. Ses courses, tarifs et textes légaux partent avec lui.</p>
+                </div>
+                <button type="submit" class="rfl-btn-secondaire border-rose-300 px-5 py-2 text-sm text-rose-800 hover:border-rose-500">Supprimer</button>
+            </form>
+        @endif
+
     @elseif ($onglet === 'courses')
         <div class="space-y-4">
             @forelse ($evenement->courses as $course)

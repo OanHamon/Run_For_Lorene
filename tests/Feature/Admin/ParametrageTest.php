@@ -342,3 +342,39 @@ test("une édition clôturée est signalée dans l'admin et retirée du site", f
     expect(Evenement::courant())->toBeNull()
         ->and($evenement->fresh()->inscriptionsOuvertes())->toBeFalse();
 });
+
+test('un événement en brouillon sans inscription se supprime avec tout son paramétrage', function () {
+    $this->seed();
+    $source = Evenement::first();
+    Storage::disk('local')->put('textes-legaux/reglement-rfl3-v1.pdf', '%PDF');
+    $this->actingAs(admin(3))->post("/admin/evenements/{$source->id_evenement}/dupliquer");
+    $copie = Evenement::whereKeyNot($source->id_evenement)->firstOrFail();
+    Storage::disk('local')->assertExists(TexteLegal::chemin($copie, 'reglement', 1));
+
+    $this->get("/admin/evenements/{$copie->id_evenement}")->assertSee("Supprimer l'événement", false);
+    $this->delete("/admin/evenements/{$copie->id_evenement}")->assertRedirect('/admin/evenements');
+
+    expect(Evenement::find($copie->id_evenement))->toBeNull()
+        ->and(Course::where('id_evenement', $copie->id_evenement)->exists())->toBeFalse()
+        ->and(TexteLegal::where('id_evenement', $copie->id_evenement)->exists())->toBeFalse()
+        ->and(JournalAdmin::where('action', 'evenement.suppression')->exists())->toBeTrue();
+    Storage::disk('local')->assertMissing(TexteLegal::chemin($copie, 'reglement', 1));
+    // L'original ne bouge pas.
+    expect(Evenement::find($source->id_evenement))->not->toBeNull();
+});
+
+test("un événement publié, ou qui a une inscription, ne se supprime pas", function () {
+    $this->seed();
+    $publie = Evenement::first();
+
+    $this->actingAs(admin(3));
+    $this->get("/admin/evenements/{$publie->id_evenement}")->assertDontSee("Supprimer l'événement", false);
+    $this->delete("/admin/evenements/{$publie->id_evenement}")->assertSessionHas('erreur');
+
+    $publie->update(['statut' => Evenement::BROUILLON]);
+    inscriptionPayee(User::factory()->create(), Course::first(), App\Models\Inscription::BROUILLON);
+    $this->delete("/admin/evenements/{$publie->id_evenement}")->assertSessionHas('erreur');
+
+    $this->actingAs(admin(2))->delete("/admin/evenements/{$publie->id_evenement}")->assertForbidden();
+    expect(Evenement::find($publie->id_evenement))->not->toBeNull();
+});
