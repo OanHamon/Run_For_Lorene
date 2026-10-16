@@ -29,6 +29,30 @@
         </div>
     @endif
 
+    @if ($preparation)
+        @php($pret = $preparation->every(fn ($e) => $e->ok || ! $e->obligatoire))
+        <section class="mb-6 rfl-carte p-5" aria-labelledby="pret-a-publier">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 id="pret-a-publier" class="font-display text-vert">Prêt à publier ?</h2>
+                <span class="rfl-badge {{ $pret ? 'bg-vert-clair text-vert' : 'bg-moutarde/20 text-vert-sombre' }}">
+                    {{ $pret ? 'Tout est prêt : passe le statut à « Publié » dans l\'onglet Général' : 'Encore '.$preparation->filter(fn ($e) => $e->obligatoire && ! $e->ok)->count().' point(s) à régler' }}
+                </span>
+            </div>
+            <ul class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                @foreach ($preparation as $etape)
+                    <li class="flex items-start gap-2">
+                        <span aria-hidden="true" class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold {{ $etape->ok ? 'bg-vert text-white' : ($etape->obligatoire ? 'bg-moutarde text-vert-sombre' : 'bg-bordure text-gris-texte') }}">{{ $etape->ok ? '✓' : ($etape->obligatoire ? '!' : '–') }}</span>
+                        <span>
+                            <a href="{{ route('admin.evenements.show', [$evenement, 'onglet' => $etape->onglet]) }}" class="font-bold hover:underline">{{ $etape->libelle }}</a>
+                            <span class="sr-only">{{ $etape->ok ? ' : fait.' : ($etape->obligatoire ? ' : à faire.' : ' : facultatif, non fait.') }}</span>
+                            @if ($etape->detail)<span class="block text-gris-texte">{{ $etape->detail }}</span>@endif
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     <nav class="mb-6 flex gap-2 overflow-x-auto text-sm" aria-label="Onglets de l'événement">
         @foreach ($onglets as $cle => $libelle)
             <a href="{{ route('admin.evenements.show', [$evenement, 'onglet' => $cle]) }}" @if ($onglet === $cle) aria-current="page" @endif

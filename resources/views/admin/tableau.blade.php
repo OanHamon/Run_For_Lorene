@@ -18,15 +18,15 @@
             @endif
         </div>
     @else
-        @if ($tarifsManquants)
+        @if ($bloquants)
             <div class="mb-4 rfl-alerte" role="alert">
-                <p class="font-display text-vert">Tarifs manquants : certaines personnes ne peuvent pas s'inscrire</p>
+                <p class="font-display text-vert">Inscriptions bloquées : à corriger au plus vite</p>
                 <ul class="mt-1 list-disc pl-5 text-sm text-gris-texte">
-                    @foreach ($tarifsManquants as $probleme)
+                    @foreach ($bloquants as $probleme)
                         <li>{{ ucfirst($probleme) }}.</li>
                     @endforeach
                 </ul>
-                <a href="{{ route('admin.evenements.show', [$evenement, 'onglet' => 'courses']) }}" class="mt-2 inline-block rfl-lien text-sm">Compléter les tarifs</a>
+                <a href="{{ route('admin.evenements.show', $evenement) }}" class="mt-2 inline-block rfl-lien text-sm">Ouvrir l'événement</a>
             </div>
         @endif
 

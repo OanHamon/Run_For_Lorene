@@ -33,6 +33,10 @@ beforeEach(function () {
         'age_max' => '',
         ...$d,
     ];
+    // Textes obligatoires publiés : seuls les tarifs peuvent bloquer la publication ici.
+    foreach (App\Models\TexteLegal::OBLIGATOIRES as $type) {
+        App\Models\TexteLegal::create(['type_texte' => $type, 'version' => 1, 'date_publication' => today(), 'fichier' => "textes/{$type}.pdf", 'id_evenement' => $this->evenement->id_evenement]);
+    }
     $this->actingAs(admin(3));
 });
 
@@ -128,6 +132,38 @@ test("un événement publié avec des trous est signalé sur le tableau de bord"
     $this->course->tarifs()->create(($this->tarif)(['valide_au' => ($this->jour)(19), 'age_min' => null, 'age_max' => null]));
 
     $this->get('/admin?evenement='.$this->evenement->id_evenement)
-        ->assertSee('Tarifs manquants')
+        ->assertSee('Inscriptions bloquées')
         ->assertSee('5 km n&#039;a pas de tarif', false);
+});
+
+test('publier exige le règlement, la décharge et la RGPD ; le droit à l\'image reste facultatif', function () {
+    $this->course->tarifs()->create(($this->tarif)(['age_min' => null, 'age_max' => null]));
+    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'decharge')->delete();
+    $champs = [
+        'nom' => 'Édition test',
+        'date_evenement' => $this->evenement->date_evenement->toDateString(),
+        'ouverture' => $this->evenement->ouverture->format('Y-m-d\TH:i'),
+        'fermeture' => $this->evenement->fermeture->format('Y-m-d\TH:i'),
+        'statut' => Evenement::PUBLIE,
+    ];
+
+    $this->put("/admin/evenements/{$this->evenement->id_evenement}", $champs)->assertSessionHasErrors('statut');
+    expect(session('errors')->first('statut'))->toContain('il manque : décharge de responsabilité');
+
+    App\Models\TexteLegal::create(['type_texte' => 'decharge', 'version' => 1, 'date_publication' => today(), 'fichier' => 'textes/decharge.pdf', 'id_evenement' => $this->evenement->id_evenement]);
+    $this->put("/admin/evenements/{$this->evenement->id_evenement}", $champs)->assertSessionHasNoErrors();
+});
+
+test('la checklist « Prêt à publier ? » liste ce qui manque, seulement en brouillon', function () {
+    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'rgpd')->delete();
+
+    $this->get("/admin/evenements/{$this->evenement->id_evenement}")
+        ->assertSee('Prêt à publier ?')
+        ->assertSee('Encore 2 point(s) à régler') // tarifs du 5 km, RGPD
+        ->assertSee('Tarifs de « 5 km »')
+        ->assertSee('Aucun PDF publié.')
+        ->assertSee('(facultatif)');
+
+    $this->evenement->update(['statut' => Evenement::PUBLIE]);
+    $this->get("/admin/evenements/{$this->evenement->id_evenement}")->assertDontSee('Prêt à publier ?');
 });

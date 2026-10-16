@@ -8,6 +8,7 @@ use App\Models\TexteLegal;
 use App\Services\Admin\ControleTarifs;
 use App\Services\Admin\DupliquerEvenement;
 use App\Services\Admin\Journal;
+use App\Services\Admin\PreparationEvenement;
 use App\Services\Inscriptions\Consentements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,7 +61,7 @@ class EvenementController extends Controller
             ->with('statut', 'Événement créé. Ajoute maintenant ses courses.');
     }
 
-    public function show(Request $request, Evenement $evenement, Consentements $consentements, ControleTarifs $controle): View
+    public function show(Request $request, Evenement $evenement, Consentements $consentements, ControleTarifs $controle, PreparationEvenement $preparation): View
     {
         $onglets = config('rfl.options') ? self::ONGLETS : array_diff_key(self::ONGLETS, ['options' => true]);
         $onglet = array_key_exists($request->query('onglet'), $onglets) ? $request->query('onglet') : 'general';
@@ -77,12 +78,14 @@ class EvenementController extends Controller
             'onglets' => $onglets,
             // Nombre de trous de tarifs par course (badge « Tarifs à compléter »).
             'trous' => $evenement->courses->mapWithKeys(fn ($c) => [$c->id_course => $controle->trous($c->setRelation('evenement', $evenement))->count()]),
+            // Checklist « Prêt à publier ? », tant que l'événement est en brouillon.
+            'preparation' => $evenement->statut === Evenement::BROUILLON ? $preparation->etapes($evenement) : null,
             'textesEnVigueur' => $consentements->textes($evenement),
             'typesTextes' => TexteLegalController::TYPES,
         ]);
     }
 
-    public function update(Request $request, Evenement $evenement, ControleTarifs $controle): RedirectResponse
+    public function update(Request $request, Evenement $evenement, PreparationEvenement $preparation): RedirectResponse
     {
         $evenement->fill($this->valider($request, $evenement));
         $modifs = $evenement->getDirty();
@@ -102,9 +105,9 @@ class EvenementController extends Controller
             }
         }
 
-        // Publication : chaque course doit avoir un tarif pour chaque jour d'inscription et chaque âge.
+        // Publication : courses, tarifs sans trou et textes obligatoires (voir PreparationEvenement).
         if ($evenement->statut === Evenement::PUBLIE && $evenement->getOriginal('statut') !== Evenement::PUBLIE) {
-            $problemes = $this->problemesDePublication($evenement, $controle);
+            $problemes = $preparation->problemes($evenement);
 
             if ($problemes) {
                 throw ValidationException::withMessages(['statut' => ['Publication impossible : '.implode(' ; ', $problemes).'.']]);
@@ -127,28 +130,6 @@ class EvenementController extends Controller
 
         return redirect()->route('admin.evenements.show', $copie)
             ->with('statut', "Événement dupliqué, avec les dates décalées d'un an. Il reste en brouillon : vérifie ses dates, tarifs et textes avant de le publier.");
-    }
-
-    /**
-     * Ce qui empêche de publier : aucune course, une course sans tarif, ou des trous de tarifs.
-     * Calculé avec les dates saisies (pas encore enregistrées).
-     *
-     * @return list<string>
-     */
-    public static function problemesDePublication(Evenement $evenement, ControleTarifs $controle): array
-    {
-        $courses = $evenement->courses()->with('tarifs')->get();
-
-        if ($courses->isEmpty()) {
-            return ["l'événement n'a aucune course"];
-        }
-
-        return $courses->flatMap(function ($course) use ($evenement, $controle) {
-            $course->setRelation('evenement', $evenement);
-            $trous = $controle->trous($course);
-
-            return $trous->isEmpty() ? [] : ["{$course->nom} n'a pas de tarif ".ControleTarifs::libelle($trous->first()).($trous->count() > 1 ? ' (et '.($trous->count() - 1).' autre(s) trou(s))' : '')];
-        })->values()->all();
     }
 
     /**

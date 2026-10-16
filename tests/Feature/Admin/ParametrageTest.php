@@ -60,9 +60,8 @@ test("lot 2 : un admin crée de zéro une course fictive complète", function ()
 
     expect($course->tarifPour(30)?->montant)->toBe('15.50');
 
-    // Tarifs complets : l'événement peut être publié, les inscriptions sont ouvertes.
-    $this->put("/admin/evenements/{$evenement->id_evenement}", [...$champsEvenement, 'statut' => 'publie'])->assertSessionHasNoErrors();
-    expect($evenement->fresh()->inscriptionsOuvertes())->toBeTrue();
+    // Tarifs complets, mais pas encore de textes légaux : publication refusée.
+    $this->put("/admin/evenements/{$evenement->id_evenement}", [...$champsEvenement, 'statut' => 'publie'])->assertSessionHasErrors('statut');
 
     // 3. Le t-shirt et ses tailles (écrans masqués par défaut, activés ici)
     config(['rfl.options' => true]);
@@ -81,6 +80,11 @@ test("lot 2 : un admin crée de zéro une course fictive complète", function ()
     }
     expect(TexteLegal::where('id_evenement', $evenement->id_evenement)->count())->toBe(4);
     Storage::disk('local')->assertExists(TexteLegal::chemin($evenement, 'reglement', 1));
+
+    // Tout est prêt : la checklist est verte, l'événement se publie, les inscriptions sont ouvertes.
+    $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Tout est prêt');
+    $this->put("/admin/evenements/{$evenement->id_evenement}", [...$champsEvenement, 'statut' => 'publie'])->assertSessionHasNoErrors();
+    expect($evenement->fresh()->inscriptionsOuvertes())->toBeTrue();
 
     // Tout apparaît dans la fiche de l'événement, et chaque action est tracée.
     $this->get("/admin/evenements/{$evenement->id_evenement}?onglet=courses")->assertSee('8 km fictifs')->assertSee('15,50 €');
