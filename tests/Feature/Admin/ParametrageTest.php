@@ -131,6 +131,33 @@ test('les plages de dossards de deux courses ne se chevauchent pas', function ()
     ])->assertSessionHasNoErrors();
 });
 
+test("une plage de dossards ne peut pas être plus petite que le quota", function () {
+    $this->seed();
+    $evenement = Evenement::first();
+    $course = fn (array $d) => ['nom' => 'Relais', 'heure_depart' => '12:00', ...$d];
+
+    $this->actingAs(admin(3))
+        ->post("/admin/evenements/{$evenement->id_evenement}/courses", $course(['quota' => '20', 'dossard_debut' => '5000', 'dossard_fin' => '5014']))
+        ->assertSessionHasErrors(['dossard_fin' => "La plage ne contient que 15 dossard(s) pour 20 places : va au moins jusqu'à 5019, ou baisse le quota."]);
+
+    // Autant de numéros que de places : accepté.
+    $this->post("/admin/evenements/{$evenement->id_evenement}/courses", $course(['quota' => '20', 'dossard_debut' => '5000', 'dossard_fin' => '5019']))
+        ->assertSessionHasNoErrors();
+});
+
+test("places illimitées avec une plage finie, ou quota sans plage : avertissement non bloquant", function () {
+    $this->seed();
+    $marche = Course::where('nom', 'Marche 5 km')->first(); // places illimitées, plage 3000-3999
+
+    expect($marche->avertissementDossards())->toContain('au-delà de 1000 inscriptions validées');
+    $this->actingAs(admin(3))->get("/admin/courses/{$marche->id_course}")->assertSee('Places illimitées, mais la plage ne contient que 1000 dossards');
+
+    $marche->update(['quota' => 50, 'dossard_debut' => null, 'dossard_fin' => null]);
+    expect($marche->fresh()->avertissementDossards())->toContain('Aucune plage de dossards');
+
+    expect(Course::where('nom', 'Course 10 km')->first()->avertissementDossards())->toBeNull(); // 150 places, 1000 dossards
+});
+
 test("une plage ne peut pas exclure des dossards déjà attribués", function () {
     $this->seed();
     $course = Course::where('nom', 'Course 10 km')->first();

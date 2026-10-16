@@ -86,6 +86,31 @@ class Course extends Model
         return max($this->quota - $this->placesPrises($saufCommande), 0);
     }
 
+    /** Nombre de numéros d'une plage de dossards (bornes incluses). */
+    public static function taillePlage(int $debut, int $fin): int
+    {
+        return max($fin - $debut + 1, 0);
+    }
+
+    /**
+     * Décalage entre places et dossards, non bloquant (le cas bloquant, plage plus petite que
+     * le quota, est refusé à l'enregistrement) : places illimitées avec une plage finie, ou
+     * quota sans plage. Null si tout va bien.
+     */
+    public function avertissementDossards(): ?string
+    {
+        $plage = $this->dossard_debut !== null && $this->dossard_fin !== null
+            ? self::taillePlage($this->dossard_debut, $this->dossard_fin)
+            : null;
+
+        return match (true) {
+            $plage === null => "Aucune plage de dossards : les inscriptions validées n'auront pas de numéro.",
+            $this->quota === null => "Places illimitées, mais la plage ne contient que {$plage} dossards : au-delà de {$plage} inscriptions validées, les suivantes n'auront pas de numéro.",
+            $plage < $this->quota => "La plage ne contient que {$plage} dossards pour {$this->quota} places : élargis-la.",
+            default => null,
+        };
+    }
+
     public function estComplete(): bool
     {
         $restantes = $this->placesRestantes();

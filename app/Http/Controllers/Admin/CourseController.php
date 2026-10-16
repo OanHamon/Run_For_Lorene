@@ -110,10 +110,16 @@ class CourseController extends Controller
         ]);
 
         // La plage ne doit chevaucher celle d'aucune autre course de l'événement (dossard unique par événement),
-        // ni laisser de côté des dossards déjà attribués à cette course.
+        // ni laisser de côté des dossards déjà attribués à cette course, ni compter moins de numéros que de places.
         validator($donnees)->after(function (Validator $v) use ($donnees, $evenement, $course) {
             if (! isset($donnees['dossard_debut'], $donnees['dossard_fin'])) {
                 return;
+            }
+
+            $taille = Course::taillePlage((int) $donnees['dossard_debut'], (int) $donnees['dossard_fin']);
+            if (! empty($donnees['quota']) && $taille < (int) $donnees['quota']) {
+                $finMinimale = (int) $donnees['dossard_debut'] + (int) $donnees['quota'] - 1;
+                $v->errors()->add('dossard_fin', "La plage ne contient que {$taille} dossard(s) pour {$donnees['quota']} places : va au moins jusqu'à {$finMinimale}, ou baisse le quota.");
             }
 
             $chevauche = $evenement->courses()

@@ -33,9 +33,12 @@
                     <x-admin.champ name="age_max" label="Âge maximum" type="number" min="0" max="120" :value="$course->age_max" aide="Vide : pas de maximum." />
                     <x-admin.champ name="quota" label="Quota" type="number" min="1" :value="$course->quota" aide="Vide : places illimitées." class="sm:col-span-2" />
                     <x-admin.champ name="dossard_debut" label="Premier dossard" type="number" min="1" :value="$course->dossard_debut" />
-                    <x-admin.champ name="dossard_fin" label="Dernier dossard" type="number" min="1" :value="$course->dossard_fin" aide="Attribués dans l'ordre à la validation." />
+                    <x-admin.champ name="dossard_fin" label="Dernier dossard" type="number" min="1" :value="$course->dossard_fin" aide="Attribués dans l'ordre à la validation. Au moins autant de numéros que de places." />
                 </div>
             </fieldset>
+            @if (! $nouvelle && ($avertissement = $course->avertissementDossards()))
+                <p class="mt-4 rfl-alerte text-sm" role="status">{{ $avertissement }}</p>
+            @endif
             @if ($peutModifier)
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="rfl-btn px-6 py-3">{{ $nouvelle ? 'Créer la course' : 'Enregistrer' }}</button>
