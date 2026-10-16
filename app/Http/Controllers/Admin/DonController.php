@@ -59,7 +59,7 @@ class DonController extends Controller
 
         return Csv::telecharger("dons-{$evenement->id_evenement}-".now()->format('Ymd'), [
             'N°', 'Date', 'Montant', 'Nom', 'Prénom', 'Email', 'Adresse', 'Code postal', 'Ville', 'Anonyme', 'Reçu fiscal demandé', 'Commande',
-        ], $lignes(), Csv::format($request->query('format')));
+        ], $lignes());
     }
 
     private function requete(Request $request, Evenement $evenement): Builder

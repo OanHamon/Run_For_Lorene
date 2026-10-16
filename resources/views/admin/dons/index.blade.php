@@ -25,7 +25,7 @@
                     <a href="{{ route('admin.dons.index') }}" @if (! request()->boolean('recu')) aria-current="page" @endif class="rounded-full px-4 py-2 {{ request()->boolean('recu') ? 'ring-1 ring-bordure' : 'bg-vert font-bold text-white' }}">Tous</a>
                     <a href="{{ route('admin.dons.index', ['recu' => 1]) }}" @if (request()->boolean('recu')) aria-current="page" @endif class="rounded-full px-4 py-2 {{ request()->boolean('recu') ? 'bg-vert font-bold text-white' : 'ring-1 ring-bordure' }}">Reçu demandé</a>
                 </nav>
-                <span class="text-sm">Exporter : <a href="{{ route('admin.dons.export', request()->only('recu')) }}" class="rfl-lien">Excel</a> · <a href="{{ route('admin.dons.export', [...request()->only('recu'), 'format' => 'csv']) }}" class="rfl-lien">CSV</a></span>
+                <a href="{{ route('admin.dons.export', request()->only('recu')) }}" class="rfl-lien text-sm">Exporter (CSV)</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="rfl-tableau min-w-[640px]">

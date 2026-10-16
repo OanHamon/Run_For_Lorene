@@ -84,7 +84,7 @@ class InscriptionController extends Controller
         return Csv::telecharger("inscrits-{$evenement->id_evenement}-".now()->format('Ymd'), $this->sansOptions([
             'N°', 'Nom', 'Prénom', 'Naissance', 'Âge le jour J', 'Sexe', 'Email', 'Téléphone', 'Responsable', 'Email du responsable',
             'Course', 'Statut', 'Dossard', 'Prix payé', 'Options', 'Documents manquants', 'Contact d\'urgence', 'Tél. d\'urgence', 'Commande',
-        ]), $lignes(), Csv::format($request->query('format')));
+        ]), $lignes());
     }
 
     /** Retire la colonne « Options » (15e) de l'export tant que les options sont masquées. */
@@ -125,7 +125,7 @@ class InscriptionController extends Controller
 
         return Csv::telecharger("dossards-{$evenement->id_evenement}-".now()->format('Ymd'), [
             'Dossard', 'Nom', 'Prénom', 'Sexe', 'Âge le jour J', 'Course',
-        ], $lignes(), Csv::format($request->query('format')));
+        ], $lignes());
     }
 
     public function show(Inscription $inscription, Consentements $consentements, Questionnaires $questionnaires): View

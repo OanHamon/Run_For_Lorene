@@ -112,6 +112,12 @@ function documentsComplets(Inscription $inscription): Inscription
     return $inscription->fresh();
 }
 
+/** Contenu d'un export CSV (encodé en Windows-1252 pour Excel), relu en UTF-8. */
+function lireCsv(string $brut): string
+{
+    return mb_convert_encoding($brut, 'UTF-8', 'Windows-1252');
+}
+
 /**
  * Compte admin vérifié, au niveau d'accès donné (1 lecture, 2 gestion, 3 super admin).
  * Par défaut, la session du test est déjà confirmée par code email (voir adminConfirme()).

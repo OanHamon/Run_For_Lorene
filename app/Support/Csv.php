@@ -2,87 +2,42 @@
 
 namespace App\Support;
 
-use OpenSpout\Common\Entity\Cell;
-use OpenSpout\Common\Entity\Row;
-use OpenSpout\Common\Entity\Style\Style;
-use OpenSpout\Writer\XLSX\Writer;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Exports tableur : Excel (.xlsx, une colonne par champ quel que soit le réglage régional de
- * Windows) ou CSV (spec : séparateur point-virgule, UTF-8 avec BOM). Les montants arrivent
- * en nombres : vrais nombres dans Excel, « 25,00 » dans le CSV. Les textes ne deviennent
- * jamais des formules.
+ * Export CSV lisible colonne par colonne dans Excel, quel que soit le séparateur régional de
+ * Windows (virgule ou point-virgule) :
+ * - première ligne « sep=; » : Excel découpe alors sur le point-virgule ;
+ * - encodage Windows-1252 : avec « sep=; », Excel ignore le BOM UTF-8 et casserait les
+ *   accents ; Windows-1252 couvre le français (é, è, à, ç, œ…), le reste est translittéré ;
+ * - fins de ligne Windows, montants « 25,00 », textes jamais interprétés comme formules.
  */
 class Csv
 {
-    public const FORMATS = ['xlsx', 'csv'];
+    public const ENCODAGE = 'Windows-1252';
 
     /**
      * @param  string  $fichier  nom sans extension
      * @param  list<string>  $entetes
      * @param  iterable<array<int, mixed>>  $lignes
      */
-    public static function telecharger(string $fichier, array $entetes, iterable $lignes, string $format = 'xlsx'): StreamedResponse|BinaryFileResponse
-    {
-        return $format === 'csv'
-            ? self::csv("{$fichier}.csv", $entetes, $lignes)
-            : self::xlsx("{$fichier}.xlsx", $entetes, $lignes);
-    }
-
-    /** Format demandé (?format=csv), Excel par défaut. */
-    public static function format(?string $demande): string
-    {
-        return in_array($demande, self::FORMATS, true) ? $demande : 'xlsx';
-    }
-
-    private static function csv(string $fichier, array $entetes, iterable $lignes): StreamedResponse
+    public static function telecharger(string $fichier, array $entetes, iterable $lignes): StreamedResponse
     {
         return response()->streamDownload(function () use ($entetes, $lignes) {
             $sortie = fopen('php://output', 'w');
-            fwrite($sortie, "\xEF\xBB\xBF");
-            fputcsv($sortie, $entetes, ';', '"', '');
+            fwrite($sortie, "sep=;\r\n");
+            fputcsv($sortie, array_map(self::encoder(...), $entetes), ';', '"', '', "\r\n");
 
             foreach ($lignes as $ligne) {
-                fputcsv($sortie, array_map(self::celluleCsv(...), $ligne), ';', '"', '');
+                fputcsv($sortie, array_map(fn ($v) => self::encoder(self::cellule($v)), $ligne), ';', '"', '', "\r\n");
             }
 
             fclose($sortie);
-        }, $fichier, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    }
-
-    private static function xlsx(string $fichier, array $entetes, iterable $lignes): BinaryFileResponse
-    {
-        $chemin = tempnam(sys_get_temp_dir(), 'rfl-export-');
-        $writer = new Writer;
-        $writer->openToFile($chemin);
-
-        $writer->addRow(new Row(array_map(fn ($e) => new Cell\StringCell((string) $e, null), $entetes), (new Style)->setFontBold()));
-
-        foreach ($lignes as $ligne) {
-            $writer->addRow(new Row(array_map(self::celluleXlsx(...), $ligne)));
-        }
-
-        $writer->close();
-
-        return response()->download($chemin, $fichier, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ])->deleteFileAfterSend();
-    }
-
-    private static function celluleXlsx(mixed $valeur): Cell
-    {
-        return match (true) {
-            $valeur === null || $valeur === '' => new Cell\EmptyCell(null, null),
-            is_int($valeur), is_float($valeur) => new Cell\NumericCell($valeur, null),
-            // Texte pur : « =Durand » reste un nom, jamais une formule.
-            default => new Cell\StringCell((string) $valeur, null),
-        };
+        }, "{$fichier}.csv", ['Content-Type' => 'text/csv; charset='.self::ENCODAGE]);
     }
 
     /** Montants « 25,00 » ; neutralise les formules (=, +, -, @) qu'un tableur exécuterait à l'ouverture. */
-    private static function celluleCsv(mixed $valeur): string
+    private static function cellule(mixed $valeur): string
     {
         if (is_float($valeur)) {
             return number_format($valeur, 2, ',', '');
@@ -91,5 +46,13 @@ class Csv
         $valeur = (string) $valeur;
 
         return preg_match('/^[=+\-@\t\r]/', $valeur) && ! is_numeric($valeur) ? "'".$valeur : $valeur;
+    }
+
+    /** UTF-8 → Windows-1252, en translittérant ce qui n'y existe pas (ł → l, emoji retiré). */
+    private static function encoder(string $texte): string
+    {
+        $converti = @iconv('UTF-8', self::ENCODAGE.'//TRANSLIT//IGNORE', $texte);
+
+        return $converti === false ? mb_convert_encoding($texte, self::ENCODAGE, 'UTF-8') : $converti;
     }
 }

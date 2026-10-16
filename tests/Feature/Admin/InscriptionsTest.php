@@ -170,9 +170,9 @@ test("l'export CSV des inscrits est lisible par un tableur", function () {
     $adulte = User::factory()->create(['prenom' => 'Camille', 'nom' => '=Durand']);
     inscriptionPayee($adulte, $this->dix)->update(['dossard' => 1000, 'prix_paye' => 25]);
 
-    $csv = $this->actingAs(admin(1))->get('/admin/inscriptions/export?format=csv')->assertOk()->streamedContent();
+    $csv = lireCsv($this->actingAs(admin(1))->get('/admin/inscriptions/export')->assertOk()->streamedContent());
 
-    expect($csv)->toStartWith("\xEF\xBB\xBFN°;Nom;Prénom;")
+    expect($csv)->toStartWith("sep=;\r\nN°;Nom;Prénom;")
         ->and($csv)->toContain("'=Durand;Camille;") // formule neutralisée
         ->and($csv)->toContain(';"Course 10 km";Validée;1000;25,00;');
 });
@@ -182,38 +182,23 @@ test("l'export des dossards liste les inscriptions validées par numéro", funct
     inscriptionPayee(User::factory()->create(['nom' => 'Premier']), $this->dix)->update(['dossard' => 1000]);
     inscriptionPayee(User::factory()->create(['nom' => 'Incomplet']), $this->dix, Inscription::DOSSIER_INCOMPLET);
 
-    $csv = $this->actingAs(admin(1))->get('/admin/inscriptions/dossards?format=csv')->assertOk()->streamedContent();
-    $lignes = array_values(array_filter(explode("\n", $csv)));
+    $csv = lireCsv($this->actingAs(admin(1))->get('/admin/inscriptions/dossards')->assertOk()->streamedContent());
+    $lignes = array_values(array_filter(explode("\r\n", $csv)));
 
-    expect($lignes)->toHaveCount(3)
-        ->and($lignes[1])->toStartWith('1000;Premier;')
-        ->and($lignes[2])->toStartWith('1001;Second;');
+    expect($lignes)->toHaveCount(4)
+        ->and($lignes[2])->toStartWith('1000;Premier;')
+        ->and($lignes[3])->toStartWith('1001;Second;');
 });
 
-test("l'export Excel donne une colonne par champ, des montants en nombres et aucune formule", function () {
-    $adulte = User::factory()->create(['prenom' => 'Camille', 'nom' => '=Durand']);
-    inscriptionPayee($adulte, $this->dix)->update(['dossard' => 1000, 'prix_paye' => 25]);
+test("le CSV s'ouvre colonne par colonne dans Excel : ligne sep=;, Windows-1252, accents conservés", function () {
+    inscriptionPayee(User::factory()->create(['prenom' => 'Zoé', 'nom' => 'Lefèvre-Œuvray']), $this->dix)->update(['dossard' => 1000]);
 
-    $reponse = $this->actingAs(admin(1))->get('/admin/inscriptions/export')->assertOk();
-    expect($reponse->headers->get('content-disposition'))->toContain('.xlsx');
+    $brut = $this->actingAs(admin(1))->get('/admin/inscriptions/dossards')->assertOk()->streamedContent();
 
-    $lecteur = new OpenSpout\Reader\XLSX\Reader;
-    $lecteur->open($reponse->baseResponse->getFile()->getPathname());
-    $lignes = [];
-    foreach ($lecteur->getSheetIterator() as $feuille) {
-        foreach ($feuille->getRowIterator() as $ligne) {
-            $lignes[] = $ligne->toArray();
-        }
-    }
-    $lecteur->close();
-
-    $entetes = $lignes[0];
-    $donnees = array_combine($entetes, $lignes[1]);
-    expect($entetes)->toContain('Nom', 'Prénom', 'Course', 'Prix payé')
-        ->and($donnees['Nom'])->toBe('=Durand') // texte, pas une formule
-        ->and($donnees['Course'])->toBe('Course 10 km')
-        ->and($donnees['Dossard'])->toBe(1000)
-        ->and($donnees['Prix payé'])->toEqual(25);
+    expect($brut)->toStartWith("sep=;\r\n")
+        ->and(mb_check_encoding($brut, 'UTF-8'))->toBeFalse() // pas de l'UTF-8…
+        ->and(str_contains($brut, "\xE9"))->toBeTrue()         // … mais du Windows-1252 (é = 0xE9)
+        ->and(lireCsv($brut))->toContain('1000;Lefèvre-Œuvray;Zoé;');
 });
 
 test('sans PDF de décharge, les affirmations du tunnel suffisent', function () {
