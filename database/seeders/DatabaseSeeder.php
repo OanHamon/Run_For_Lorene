@@ -150,5 +150,11 @@ class DatabaseSeeder extends Seeder
             'ville' => 'Nantes',
             'pays' => 'France',
         ]);
+
+        // Jeu de démonstration (RFL2 clôturée, RFL3 bien remplie) : en développement seulement,
+        // les tests gardent ce petit jeu de données stable.
+        if (! app()->runningUnitTests()) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }
