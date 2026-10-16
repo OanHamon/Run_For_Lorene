@@ -248,6 +248,34 @@ test("les options (t-shirts) sont masquées tant qu'elles ne sont pas activées"
     $this->get("/admin/evenements/{$evenement->id_evenement}")->assertSee('Options et tailles');
 });
 
+test("pas d'événement dans le passé, ni d'inscriptions qui ferment après lui", function () {
+    $this->actingAs(admin(3));
+    $donnees = fn (array $d = []) => [
+        'nom' => 'Édition test',
+        'date_evenement' => today()->addMonth()->toDateString(),
+        'ouverture' => today()->format('Y-m-d\TH:i'),
+        'fermeture' => today()->addWeeks(2)->format('Y-m-d\TH:i'),
+        'statut' => 'brouillon',
+        ...$d,
+    ];
+
+    $this->post('/admin/evenements', $donnees(['date_evenement' => today()->subDay()->toDateString()]))
+        ->assertSessionHasErrors(['date_evenement' => "La date de l'événement ne peut pas être dans le passé."]);
+    $this->post('/admin/evenements', $donnees(['fermeture' => today()->addMonths(2)->format('Y-m-d\TH:i')]))
+        ->assertSessionHasErrors('fermeture');
+    // Fermeture le jour même de l'événement, en soirée : accepté.
+    $this->post('/admin/evenements', $donnees(['fermeture' => today()->addMonth()->format('Y-m-d').'T20:00']))
+        ->assertSessionHasNoErrors();
+    expect(Evenement::count())->toBe(1);
+
+    // Une édition passée se modifie encore (pour la clôturer) tant qu'on ne touche pas à sa date…
+    $passee = Evenement::create(['nom' => 'RFL2', 'date_evenement' => '2026-04-04', 'ouverture' => '2025-09-01', 'fermeture' => '2026-04-01', 'statut' => 'publie']);
+    $modif = ['nom' => 'RFL2', 'date_evenement' => '2026-04-04', 'ouverture' => '2025-09-01T00:00', 'fermeture' => '2026-04-01T00:00', 'statut' => 'cloture'];
+    $this->put("/admin/evenements/{$passee->id_evenement}", $modif)->assertSessionHasNoErrors();
+    // … mais on ne la déplace pas à une autre date passée.
+    $this->put("/admin/evenements/{$passee->id_evenement}", [...$modif, 'date_evenement' => '2026-04-05'])->assertSessionHasErrors('date_evenement');
+});
+
 test('dupliquer incrémente le numéro du nom, ou en ajoute un', function () {
     expect(\App\Services\Admin\DupliquerEvenement::nomSuivant('Run For Lorène 3'))->toBe('Run For Lorène 4')
         ->and(\App\Services\Admin\DupliquerEvenement::nomSuivant('RFL 2027'))->toBe('RFL 2028')

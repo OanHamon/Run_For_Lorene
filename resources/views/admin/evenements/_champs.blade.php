@@ -1,7 +1,7 @@
 {{-- Champs de l'événement (création et onglet Général). --}}
 <div class="grid gap-5 sm:grid-cols-2">
     <x-admin.champ name="nom" label="Nom" :value="$evenement->nom" required maxlength="150" class="sm:col-span-2" />
-    <x-admin.champ name="date_evenement" label="Date de l'événement" type="date" :value="$evenement->date_evenement?->format('Y-m-d')" required />
+    <x-admin.champ name="date_evenement" label="Date de l'événement" type="date" :value="$evenement->date_evenement?->format('Y-m-d')" :min="$evenement->exists ? null : today()->format('Y-m-d')" required />
     <x-admin.champ name="statut" label="Statut" aide="Seul un événement publié apparaît sur le site.">
         <select id="statut" name="statut" class="rfl-champ-compact">
             @foreach (\App\Http\Controllers\Admin\EvenementController::STATUTS as $valeur => $libelle)

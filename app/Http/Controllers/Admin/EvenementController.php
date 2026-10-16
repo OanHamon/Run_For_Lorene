@@ -10,6 +10,7 @@ use App\Services\Admin\Journal;
 use App\Services\Inscriptions\Consentements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
@@ -79,7 +80,7 @@ class EvenementController extends Controller
 
     public function update(Request $request, Evenement $evenement): RedirectResponse
     {
-        $evenement->fill($this->valider($request));
+        $evenement->fill($this->valider($request, $evenement));
         $modifs = $evenement->getDirty();
         $evenement->save();
 
@@ -100,14 +101,29 @@ class EvenementController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function valider(Request $request): array
+    /**
+     * Pas d'événement dans le passé : la date doit être aujourd'hui ou plus tard à la création,
+     * et quand on la change. Une édition passée reste modifiable (pour la clôturer) tant qu'on
+     * ne touche pas à sa date. Les inscriptions ferment au plus tard le jour de l'événement.
+     */
+    private function valider(Request $request, ?Evenement $evenement = null): array
     {
+        $dateChangee = ! $evenement || $request->input('date_evenement') !== $evenement->date_evenement?->toDateString();
+        // Lendemain de l'événement (la fermeture doit le précéder) ; null si la date saisie est invalide.
+        $lendemain = $request->filled('date_evenement')
+            ? rescue(fn () => Carbon::parse($request->input('date_evenement'))->addDay()->toDateString(), null, false)
+            : null;
+
         return $request->validate([
             'nom' => ['required', 'string', 'max:150'],
-            'date_evenement' => ['required', 'date'],
+            'date_evenement' => ['required', 'date', ...($dateChangee ? ['after_or_equal:today'] : [])],
             'ouverture' => ['required', 'date'],
-            'fermeture' => ['required', 'date', 'after:ouverture'],
+            'fermeture' => ['required', 'date', 'after:ouverture', ...($lendemain ? ["before:{$lendemain}"] : [])],
             'statut' => ['required', 'in:'.implode(',', array_keys(self::STATUTS))],
+        ], [
+            'date_evenement.after_or_equal' => "La date de l'événement ne peut pas être dans le passé.",
+            'fermeture.before' => "Les inscriptions doivent fermer au plus tard le jour de l'événement.",
+            'fermeture.after' => "La fermeture des inscriptions doit être postérieure à l'ouverture.",
         ]);
     }
 }
