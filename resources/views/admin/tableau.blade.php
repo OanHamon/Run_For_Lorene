@@ -18,6 +18,18 @@
             @endif
         </div>
     @else
+        @if ($tarifsManquants)
+            <div class="mb-4 rfl-alerte" role="alert">
+                <p class="font-display text-vert">Tarifs manquants : certaines personnes ne peuvent pas s'inscrire</p>
+                <ul class="mt-1 list-disc pl-5 text-sm text-gris-texte">
+                    @foreach ($tarifsManquants as $probleme)
+                        <li>{{ ucfirst($probleme) }}.</li>
+                    @endforeach
+                </ul>
+                <a href="{{ route('admin.evenements.show', [$evenement, 'onglet' => 'courses']) }}" class="mt-2 inline-block rfl-lien text-sm">Compléter les tarifs</a>
+            </div>
+        @endif
+
         @foreach ($alertesDossards as $c)
             <div class="mb-4 rfl-alerte" role="alert">
                 <p class="font-display text-vert">Dossards : {{ $c->course->nom }}</p>

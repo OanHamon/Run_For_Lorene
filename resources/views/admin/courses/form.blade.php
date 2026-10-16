@@ -45,6 +45,20 @@
 
         @unless ($nouvelle)
             <div class="space-y-6 xl:col-span-2">
+                @if ($trous->isNotEmpty())
+                    <div class="rfl-alerte" role="alert">
+                        <p class="font-display text-vert">Tarifs à compléter</p>
+                        <p class="mt-1 text-sm text-gris-texte">Pendant ces périodes, la course ne peut pas être vendue à ces âges :</p>
+                        <ul class="mt-2 list-disc space-y-0.5 pl-5 text-sm">
+                            @foreach ($trous as $trou)
+                                <li>{{ ucfirst(\App\Services\Admin\ControleTarifs::libelle($trou)) }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @else
+                    <p class="rfl-alerte-info text-sm text-vert" role="status">Tarifs complets : un tarif pour chaque âge, chaque jour, de l'ouverture à la fermeture des inscriptions.</p>
+                @endif
+
                 <div class="rfl-carte overflow-hidden">
                     <h2 class="px-6 py-4 font-display text-vert">Tarifs</h2>
                     <table class="rfl-tableau">
@@ -54,9 +68,7 @@
                                 <tr class="relative hover:bg-fond/60">
                                     <td class="font-bold">
                                         <a href="{{ route('admin.tarifs.edit', $tarif) }}" class="after:absolute after:inset-0">{{ $tarif->libelle }}</a>
-                                        @if ($tarif->age_min !== null || $tarif->age_max !== null)
-                                            <span class="block text-xs font-normal text-gris-texte">{{ $tarif->age_min ?? 0 }}–{{ $tarif->age_max ?? '∞' }} ans</span>
-                                        @endif
+                                        <span class="block text-xs font-normal text-gris-texte">{{ \App\Services\Admin\ControleTarifs::libelleAges($tarif->age_min, $tarif->age_max) }}</span>
                                     </td>
                                     <td class="text-gris-texte">{{ $tarif->valide_du->format('d/m/Y') }} → {{ $tarif->valide_au->format('d/m/Y') }}</td>
                                     <td class="text-right font-bold">{{ Format::euros($tarif->montant) }}</td>
@@ -71,8 +83,13 @@
                 @if ($peutModifier)
                     <form method="POST" action="{{ route('admin.tarifs.store', $course) }}" class="rfl-carte p-6">
                         @csrf
-                        <h2 class="mb-4 font-display text-vert">Ajouter un tarif</h2>
-                        @include('admin.tarifs._champs', ['tarif' => new Tarif(['libelle' => 'Plein tarif', 'valide_du' => today(), 'valide_au' => $evenement->date_evenement]), 'sac' => 'tarif'])
+                        <h2 class="mb-1 font-display text-vert">Ajouter un tarif</h2>
+                        @if ($trous->isNotEmpty())
+                            <p class="mb-4 text-xs text-gris-texte">Prérempli pour combler le premier trou.</p>
+                        @else
+                            <div class="mb-4"></div>
+                        @endif
+                        @include('admin.tarifs._champs', ['tarif' => $nouveauTarif, 'sac' => 'tarif'])
                         <button type="submit" class="mt-5 rfl-btn w-full px-5 py-2.5 text-sm">Ajouter le tarif</button>
                     </form>
                 @endif

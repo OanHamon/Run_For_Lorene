@@ -91,8 +91,8 @@ class DatabaseSeeder extends Seeder
             Tarif::create([
                 'libelle' => 'Plein tarif',
                 'montant' => $data['prix'],
-                'valide_du' => '2026-01-01',
-                'valide_au' => '2027-04-03',
+                'valide_du' => '2026-09-01',
+                'valide_au' => '2027-03-30',
                 'age_min' => $data['age_min'],
                 'age_max' => $data['age_max'],
                 'id_course' => $course->id_course,

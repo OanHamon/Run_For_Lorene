@@ -75,6 +75,9 @@
                         @empty
                             <li class="rfl-badge bg-moutarde/20 text-vert-sombre">Aucun tarif : la course n'est pas proposée</li>
                         @endforelse
+                        @if ($course->tarifs->isNotEmpty() && ($trous[$course->id_course] ?? 0) > 0)
+                            <li><a href="{{ route('admin.courses.edit', $course) }}" class="rfl-badge bg-moutarde/20 text-vert-sombre">Tarifs à compléter : {{ $trous[$course->id_course] }} trou(s)</a></li>
+                        @endif
                     </ul>
                 </div>
             @empty

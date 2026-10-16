@@ -21,16 +21,18 @@ test("lot 2 : un admin crée de zéro une course fictive complète", function ()
 
     // 1. L'événement
     $this->get('/admin/evenements/nouveau')->assertOk();
-    $this->post('/admin/evenements', [
+    $champsEvenement = [
         'nom' => 'Course fictive',
         'date_evenement' => now()->addMonths(3)->toDateString(),
         'ouverture' => now()->subDay()->format('Y-m-d\TH:i'),
         'fermeture' => now()->addMonths(2)->format('Y-m-d\TH:i'),
-        'statut' => 'publie',
-    ])->assertRedirect();
+        'statut' => 'brouillon',
+    ];
+    // Un nouvel événement ne peut pas être publié d'emblée : il n'a encore aucun tarif.
+    $this->post('/admin/evenements', [...$champsEvenement, 'statut' => 'publie'])->assertSessionHasErrors('statut');
+    $this->post('/admin/evenements', $champsEvenement)->assertRedirect();
 
     $evenement = Evenement::where('nom', 'Course fictive')->firstOrFail();
-    expect($evenement->inscriptionsOuvertes())->toBeTrue();
 
     // 2. La course et son tarif
     $this->post("/admin/evenements/{$evenement->id_evenement}/courses", [
@@ -50,13 +52,17 @@ test("lot 2 : un admin crée de zéro une course fictive complète", function ()
     $this->post("/admin/courses/{$course->id_course}/tarifs", [
         'libelle' => 'Plein tarif',
         'montant' => '15.50',
-        'valide_du' => today()->toDateString(),
-        'valide_au' => $evenement->date_evenement->toDateString(),
+        'valide_du' => $evenement->ouverture->toDateString(),
+        'valide_au' => $evenement->fermeture->toDateString(),
         'age_min' => '',
         'age_max' => '',
     ])->assertSessionHasNoErrors();
 
     expect($course->tarifPour(30)?->montant)->toBe('15.50');
+
+    // Tarifs complets : l'événement peut être publié, les inscriptions sont ouvertes.
+    $this->put("/admin/evenements/{$evenement->id_evenement}", [...$champsEvenement, 'statut' => 'publie'])->assertSessionHasNoErrors();
+    expect($evenement->fresh()->inscriptionsOuvertes())->toBeTrue();
 
     // 3. Le t-shirt et ses tailles (écrans masqués par défaut, activés ici)
     config(['rfl.options' => true]);
@@ -191,7 +197,7 @@ test("dupliquer un événement copie courses, tarifs, options et textes, un an p
         ->and($copie->texteLegals()->pluck('version')->unique()->all())->toBe([1]);
 
     $tarif = Tarif::whereIn('id_course', $copie->courses()->select('id_course'))->first();
-    expect($tarif->valide_au->toDateString())->toBe('2028-04-03');
+    expect($tarif->valide_au->toDateString())->toBe('2028-03-30');
 
     Storage::disk('local')->assertExists(TexteLegal::chemin($copie, 'reglement', 1));
 });

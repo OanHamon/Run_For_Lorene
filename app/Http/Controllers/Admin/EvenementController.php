@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Evenement;
 use App\Models\TexteLegal;
+use App\Services\Admin\ControleTarifs;
 use App\Services\Admin\DupliquerEvenement;
 use App\Services\Admin\Journal;
 use App\Services\Inscriptions\Consentements;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -58,7 +60,7 @@ class EvenementController extends Controller
             ->with('statut', 'Événement créé. Ajoute maintenant ses courses.');
     }
 
-    public function show(Request $request, Evenement $evenement, Consentements $consentements): View
+    public function show(Request $request, Evenement $evenement, Consentements $consentements, ControleTarifs $controle): View
     {
         $onglets = config('rfl.options') ? self::ONGLETS : array_diff_key(self::ONGLETS, ['options' => true]);
         $onglet = array_key_exists($request->query('onglet'), $onglets) ? $request->query('onglet') : 'general';
@@ -73,15 +75,27 @@ class EvenementController extends Controller
             'evenement' => $evenement,
             'onglet' => $onglet,
             'onglets' => $onglets,
+            // Nombre de trous de tarifs par course (badge « Tarifs à compléter »).
+            'trous' => $evenement->courses->mapWithKeys(fn ($c) => [$c->id_course => $controle->trous($c->setRelation('evenement', $evenement))->count()]),
             'textesEnVigueur' => $consentements->textes($evenement),
             'typesTextes' => TexteLegalController::TYPES,
         ]);
     }
 
-    public function update(Request $request, Evenement $evenement): RedirectResponse
+    public function update(Request $request, Evenement $evenement, ControleTarifs $controle): RedirectResponse
     {
         $evenement->fill($this->valider($request, $evenement));
         $modifs = $evenement->getDirty();
+
+        // Publication : chaque course doit avoir un tarif pour chaque jour d'inscription et chaque âge.
+        if ($evenement->statut === Evenement::PUBLIE && $evenement->getOriginal('statut') !== Evenement::PUBLIE) {
+            $problemes = $this->problemesDePublication($evenement, $controle);
+
+            if ($problemes) {
+                throw ValidationException::withMessages(['statut' => ['Publication impossible : '.implode(' ; ', $problemes).'.']]);
+            }
+        }
+
         $evenement->save();
 
         if ($modifs) {
@@ -100,7 +114,28 @@ class EvenementController extends Controller
             ->with('statut', "Événement dupliqué, avec les dates décalées d'un an. Il reste en brouillon : vérifie ses dates, tarifs et textes avant de le publier.");
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Ce qui empêche de publier : aucune course, une course sans tarif, ou des trous de tarifs.
+     * Calculé avec les dates saisies (pas encore enregistrées).
+     *
+     * @return list<string>
+     */
+    public static function problemesDePublication(Evenement $evenement, ControleTarifs $controle): array
+    {
+        $courses = $evenement->courses()->with('tarifs')->get();
+
+        if ($courses->isEmpty()) {
+            return ["l'événement n'a aucune course"];
+        }
+
+        return $courses->flatMap(function ($course) use ($evenement, $controle) {
+            $course->setRelation('evenement', $evenement);
+            $trous = $controle->trous($course);
+
+            return $trous->isEmpty() ? [] : ["{$course->nom} n'a pas de tarif ".ControleTarifs::libelle($trous->first()).($trous->count() > 1 ? ' (et '.($trous->count() - 1).' autre(s) trou(s))' : '')];
+        })->values()->all();
+    }
+
     /**
      * Pas d'événement dans le passé : la date doit être aujourd'hui ou plus tard à la création,
      * et quand on la change. Une édition passée reste modifiable (pour la clôturer) tant qu'on
@@ -119,8 +154,10 @@ class EvenementController extends Controller
             'date_evenement' => ['required', 'date', ...($dateChangee ? ['after_or_equal:today'] : [])],
             'ouverture' => ['required', 'date'],
             'fermeture' => ['required', 'date', 'after:ouverture', ...($lendemain ? ["before:{$lendemain}"] : [])],
-            'statut' => ['required', 'in:'.implode(',', array_keys(self::STATUTS))],
+            // Un nouvel événement n'a encore ni course ni tarif : il naît en brouillon (ou clôturé).
+            'statut' => ['required', 'in:'.implode(',', array_keys(self::STATUTS)), ...($evenement ? [] : ['not_in:'.Evenement::PUBLIE])],
         ], [
+            'statut.not_in' => 'Crée l\'événement en brouillon, ajoute ses courses et leurs tarifs, puis publie-le.',
             'date_evenement.after_or_equal' => "La date de l'événement ne peut pas être dans le passé.",
             'fermeture.before' => "Les inscriptions doivent fermer au plus tard le jour de l'événement.",
             'fermeture.after' => "La fermeture des inscriptions doit être postérieure à l'ouverture.",

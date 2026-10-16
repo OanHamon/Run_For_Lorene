@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Inscription;
+use App\Models\Tarif;
+use App\Services\Admin\ControleTarifs;
 use App\Services\Admin\Journal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,14 +34,27 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.edit', $course)->with('statut', 'Course créée. Ajoute maintenant son tarif.');
     }
 
-    public function edit(Course $course): View
+    public function edit(Course $course, ControleTarifs $controle): View
     {
         $course->load(['evenement', 'tarifs' => fn ($q) => $q->orderBy('valide_du')->withCount('inscriptions')]);
+        $trous = $controle->trous($course);
+
+        // Le formulaire d'ajout propose de combler le premier trou, sinon toute la période d'inscription.
+        $premier = $trous->first();
+        $nouveauTarif = new Tarif([
+            'libelle' => $course->tarifs->isEmpty() ? 'Plein tarif' : null,
+            'valide_du' => $premier?->du ?? $course->evenement->ouverture->copy()->startOfDay(),
+            'valide_au' => $premier?->au ?? $course->evenement->fermeture->copy()->startOfDay(),
+            'age_min' => $premier && $premier->age_min > 0 ? $premier->age_min : null,
+            'age_max' => $premier && $premier->age_max < ControleTarifs::AGE_MAX ? $premier->age_max : null,
+        ]);
 
         return view('admin.courses.form', [
             'evenement' => $course->evenement,
             'course' => $course,
             'inscriptions' => $this->inscriptions($course)->count(),
+            'trous' => $trous,
+            'nouveauTarif' => $nouveauTarif,
         ]);
     }
 
