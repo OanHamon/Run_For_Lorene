@@ -91,6 +91,23 @@ class TarifController extends Controller
         $donnees['age_max'] = isset($donnees['age_max']) ? (int) $donnees['age_max'] : null;
 
         validator($donnees)->after(function (Validator $v) use ($course, $tarif, $donnees) {
+            // Tarif déjà choisi par des inscrits : même prix pour tous sur sa période. On ne peut
+            // que le terminer (pas avant aujourd'hui) ou le prolonger, puis créer un nouveau tarif.
+            if ($tarif?->estVerrouille()) {
+                if (round((float) $donnees['montant'], 2) !== round((float) $tarif->montant, 2)) {
+                    $v->errors()->add('montant', 'Des inscrits ont déjà payé ce tarif : son montant ne change plus. Termine-le et crée un nouveau tarif au nouveau prix.');
+                }
+                if ($donnees['valide_du'] !== $tarif->valide_du->toDateString()) {
+                    $v->errors()->add('valide_du', 'Des inscrits ont déjà choisi ce tarif : sa date de début ne change plus.');
+                }
+                if ($donnees['age_min'] !== $tarif->age_min || $donnees['age_max'] !== $tarif->age_max) {
+                    $v->errors()->add('age_min', 'Des inscrits ont déjà choisi ce tarif : sa tranche d\'âge ne change plus.');
+                }
+                if ($donnees['valide_au'] < today()->toDateString()) {
+                    $v->errors()->add('valide_au', 'Un tarif déjà choisi ne peut pas finir avant aujourd\'hui.');
+                }
+            }
+
             if (! $this->controle->ageCompatible($course, $donnees['age_min'], $donnees['age_max'])) {
                 $v->errors()->add('age_min', 'Cette tranche d\'âge ('.ControleTarifs::libelleAges($donnees['age_min'], $donnees['age_max'])
                     .') ne croise pas celle de la course ('.ControleTarifs::libelleAges($course->age_min, $course->age_max).') : le tarif ne servirait jamais.');

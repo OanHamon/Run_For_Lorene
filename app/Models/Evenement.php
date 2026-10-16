@@ -54,6 +54,12 @@ class Evenement extends Model
             ?? static::where('statut', self::PUBLIE)->orderByDesc('date_evenement')->first();
     }
 
+    /** Au moins une inscription engagée (payée ou en cours de paiement) : date figée, plus de dépublication. */
+    public function aDesInscrits(): bool
+    {
+        return $this->exists && $this->inscriptions()->whereIn('statut', Inscription::ENGAGEES)->exists();
+    }
+
     public function inscriptionsOuvertes(): bool
     {
         return $this->statut === self::PUBLIE && now()->between($this->ouverture, $this->fermeture);

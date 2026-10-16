@@ -4,6 +4,7 @@
 
     $peutModifier = auth()->user()->peutAdmin(3);
     $nouvelle = ! $course->exists;
+    $verrouillee = ($engagees ?? 0) > 0;
 @endphp
 <x-admin-shell :title="$nouvelle ? 'Nouvelle course' : $course->nom">
     <p class="mb-2 text-sm">
@@ -29,9 +30,9 @@
                     <x-admin.champ name="nom" label="Nom" :value="$course->nom" required maxlength="100" class="sm:col-span-2" />
                     <x-admin.champ name="heure_depart" label="Heure de départ" type="time" :value="$course->heure_depart ? substr($course->heure_depart, 0, 5) : null" required />
                     <x-admin.champ name="distance" label="Distance (km, facultatif)" type="number" step="0.01" min="0" :value="$course->distance" />
-                    <x-admin.champ name="age_min" label="Âge minimum" type="number" min="0" max="120" :value="$course->age_min" aide="Vide : pas de minimum. Âge le jour de l'événement." />
-                    <x-admin.champ name="age_max" label="Âge maximum" type="number" min="0" max="120" :value="$course->age_max" aide="Vide : pas de maximum." />
-                    <x-admin.champ name="quota" label="Quota" type="number" min="1" :value="$course->quota" aide="Vide : places illimitées." class="sm:col-span-2" />
+                    <x-admin.champ name="age_min" label="Âge minimum" type="number" min="0" max="120" :value="$course->age_min" :readonly="$verrouillee" :aide="$verrouillee ? 'Figé : la course a des inscrits.' : 'Vide : pas de minimum. Âge le jour de l\'événement.'" />
+                    <x-admin.champ name="age_max" label="Âge maximum" type="number" min="0" max="120" :value="$course->age_max" :readonly="$verrouillee" :aide="$verrouillee ? 'Figé : la course a des inscrits.' : 'Vide : pas de maximum.'" />
+                    <x-admin.champ name="quota" label="Quota" type="number" :min="max(1, $engagees ?? 0)" :value="$course->quota" :aide="$verrouillee ? 'Vide : places illimitées. Au moins '.$engagees.' (inscrits actuels).' : 'Vide : places illimitées.'" class="sm:col-span-2" />
                     <x-admin.champ name="dossard_debut" label="Premier dossard" type="number" min="1" :value="$course->dossard_debut" />
                     <x-admin.champ name="dossard_fin" label="Dernier dossard" type="number" min="1" :value="$course->dossard_fin" aide="Attribués dans l'ordre à la validation. Au moins autant de numéros que de places." />
                 </div>

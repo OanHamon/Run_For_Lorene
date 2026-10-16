@@ -41,4 +41,14 @@ class Tarif extends Model
     {
         return $this->hasMany(Inscription::class, 'id_tarif', 'id_tarif');
     }
+
+    /**
+     * Tarif verrouillé : déjà choisi par une inscription engagée. Son montant, son début et sa
+     * tranche d'âge ne bougent plus ; on peut seulement le terminer plus tôt (pas avant
+     * aujourd'hui) ou le prolonger, puis créer un nouveau tarif.
+     */
+    public function estVerrouille(): bool
+    {
+        return $this->exists && $this->inscriptions()->whereIn('statut', Inscription::ENGAGEES)->exists();
+    }
 }

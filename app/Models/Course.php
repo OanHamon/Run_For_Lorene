@@ -86,6 +86,14 @@ class Course extends Model
         return max($this->quota - $this->placesPrises($saufCommande), 0);
     }
 
+    /** Inscriptions engagées (payées ou en cours de paiement) sur la course. */
+    public function nombreEngagees(): int
+    {
+        return Inscription::whereIn('id_tarif', $this->tarifs()->select('id_tarif'))
+            ->whereIn('statut', Inscription::ENGAGEES)
+            ->count();
+    }
+
     /** Nombre de numéros d'une plage de dossards (bornes incluses). */
     public static function taillePlage(int $debut, int $fin): int
     {

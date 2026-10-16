@@ -87,6 +87,21 @@ class EvenementController extends Controller
         $evenement->fill($this->valider($request, $evenement));
         $modifs = $evenement->getDirty();
 
+        // Avec des inscrits : la date ne bouge plus (les âges, donc les règles d'âge et le
+        // questionnaire de santé, en dépendent) et on ne dépublie plus.
+        if ($evenement->aDesInscrits()) {
+            $erreurs = [];
+            if ($evenement->isDirty('date_evenement')) {
+                $erreurs['date_evenement'] = ["L'événement a déjà des inscrits : sa date ne peut plus changer (les âges en dépendent)."];
+            }
+            if ($evenement->isDirty('statut') && $evenement->statut === Evenement::BROUILLON) {
+                $erreurs['statut'] = ["L'événement a déjà des inscrits : il ne peut plus repasser en brouillon. Pour arrêter les inscriptions, avance la date de fermeture."];
+            }
+            if ($erreurs) {
+                throw ValidationException::withMessages($erreurs);
+            }
+        }
+
         // Publication : chaque course doit avoir un tarif pour chaque jour d'inscription et chaque âge.
         if ($evenement->statut === Evenement::PUBLIE && $evenement->getOriginal('statut') !== Evenement::PUBLIE) {
             $problemes = $this->problemesDePublication($evenement, $controle);

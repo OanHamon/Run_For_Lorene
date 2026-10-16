@@ -31,6 +31,12 @@ class Inscription extends Model
         self::ANNULEE => 'Annulée',
     ];
 
+    /**
+     * Inscriptions qui engagent l'événement (payées ou en cours de paiement) : dès la première,
+     * le paramétrage se verrouille (âges, date, montants des tarifs commencés, quota minimal).
+     */
+    public const ENGAGEES = [self::EN_ATTENTE_PAIEMENT, self::VALIDEE, self::DOSSIER_INCOMPLET];
+
     protected $fillable = [
         'prix_paye',
         'statut',

@@ -53,6 +53,7 @@ class CourseController extends Controller
             'evenement' => $course->evenement,
             'course' => $course,
             'inscriptions' => $this->inscriptions($course)->count(),
+            'engagees' => $course->nombreEngagees(),
             'trous' => $trous,
             'nouveauTarif' => $nouveauTarif,
         ]);
@@ -112,6 +113,22 @@ class CourseController extends Controller
         // La plage ne doit chevaucher celle d'aucune autre course de l'événement (dossard unique par événement),
         // ni laisser de côté des dossards déjà attribués à cette course, ni compter moins de numéros que de places.
         validator($donnees)->after(function (Validator $v) use ($donnees, $evenement, $course) {
+            // Course avec des inscrits : âges figés (un inscrit ne doit pas devenir inéligible),
+            // quota jamais sous le nombre d'inscrits.
+            $inscrits = $course?->nombreEngagees() ?? 0;
+            if ($inscrits > 0) {
+                $ageMin = isset($donnees['age_min']) && $donnees['age_min'] !== '' ? (int) $donnees['age_min'] : null;
+                $ageMax = isset($donnees['age_max']) && $donnees['age_max'] !== '' ? (int) $donnees['age_max'] : null;
+
+                if ($ageMin !== $course->age_min || $ageMax !== $course->age_max) {
+                    $v->errors()->add('age_min', "La course a déjà {$inscrits} inscrit(s) : ses âges ne peuvent plus changer.");
+                }
+
+                if (! empty($donnees['quota']) && (int) $donnees['quota'] < $inscrits) {
+                    $v->errors()->add('quota', "La course a déjà {$inscrits} inscrit(s) : le quota ne peut pas descendre en dessous.");
+                }
+            }
+
             if (! isset($donnees['dossard_debut'], $donnees['dossard_fin'])) {
                 return;
             }
