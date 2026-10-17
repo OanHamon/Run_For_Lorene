@@ -23,7 +23,16 @@
             @endif
         </form>
 
-        @if ($emailValide)
+        @if ($emailValide && ! $compte)
+            {{-- Une inscription ne crée jamais de compte : on le crée d'abord, à part. --}}
+            <div class="rfl-alerte">
+                <p class="font-display text-vert">Aucun compte avec {{ $email }}</p>
+                <p class="mt-1 text-sm text-gris-texte">Vérifie d'abord l'orthographe avec la famille. Si l'adresse est bonne, crée son compte : la personne recevra un lien pour choisir son mot de passe, et tu reviendras ici pour l'inscription.</p>
+                <a href="{{ route('admin.utilisateurs.create', ['email' => $email, 'retour' => 'inscription']) }}" class="mt-4 rfl-btn px-5 py-2.5 text-sm">Créer le compte</a>
+            </div>
+        @endif
+
+        @if ($compte)
             <form method="POST" action="{{ route('admin.inscriptions.store') }}" class="group/form space-y-6">
                 @csrf
                 <input type="hidden" name="email" value="{{ $email }}">
@@ -31,22 +40,11 @@
                 <section class="rfl-carte space-y-4 p-6">
                     <h2 class="font-display text-vert">2. Qui participe ?</h2>
 
-                    @if ($compte)
-                        <p class="rfl-alerte-info text-sm">
-                            Compte trouvé : <strong>{{ $compte->name }}</strong> ({{ $compte->email }})
-                            @unless ($compte->hasVerifiedEmail())· ne s'est encore jamais connecté @endunless.
-                            Vérifie que c'est bien la bonne famille.
-                        </p>
-                    @else
-                        <div class="rfl-alerte text-sm">
-                            <p class="font-display text-vert">Aucun compte avec {{ $email }}</p>
-                            <p class="mt-1 text-gris-texte">Vérifie l'orthographe avec la famille : une faute, et elle ne recevra rien. Si l'adresse est bonne, un compte sera créé à ce nom.</p>
-                        </div>
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <x-admin.champ name="titulaire_prenom" label="Prénom du titulaire" required maxlength="100" />
-                            <x-admin.champ name="titulaire_nom" label="Nom du titulaire" required maxlength="100" />
-                        </div>
-                    @endif
+                    <p class="rfl-alerte-info text-sm">
+                        Compte trouvé : <strong>{{ $compte->name }}</strong> ({{ $compte->email }})
+                        @if ($compte->mot_de_passe === null)· pas encore activé (mot de passe à créer) @endif.
+                        Vérifie que c'est bien la bonne famille.
+                    </p>
 
                     <fieldset>
                         <legend class="rfl-label">Participant</legend>
@@ -118,7 +116,7 @@
                     <input type="hidden" name="prevenir" value="0">
                     <label class="flex items-start gap-3 text-sm">
                         <input type="checkbox" name="prevenir" value="1" class="mt-1" @checked(old('prevenir', true))>
-                        <span>Prévenir la famille par email ({{ $email }}) : un lien vers son espace pour remplir la décharge, et le questionnaire de santé pour un mineur.</span>
+                        <span>Prévenir la famille par email ({{ $email }}) : un lien vers l'inscription pour remplir la décharge, et le questionnaire de santé pour un mineur{{ $compte->mot_de_passe === null ? ', après avoir créé son mot de passe' : '' }}.</span>
                     </label>
                 </section>
 

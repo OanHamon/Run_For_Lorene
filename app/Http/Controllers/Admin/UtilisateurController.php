@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Inscription;
 use App\Models\User;
+use App\Notifications\CompteCree;
 use App\Services\Admin\Journal;
+use App\Support\Activation;
+use App\Support\Telephone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -37,6 +41,75 @@ class UtilisateurController extends Controller
             ->withQueryString();
 
         return view('admin.utilisateurs.index', ['utilisateurs' => $utilisateurs]);
+    }
+
+    /**
+     * Création d'un compte par l'association (niveau 2) : un compte comme ceux du site, que la
+     * personne active en choisissant son mot de passe depuis le lien reçu par email.
+     */
+    public function create(Request $request): View
+    {
+        return view('admin.utilisateurs.creer', [
+            'email' => Str::lower(trim((string) $request->query('email'))),
+            'retour' => $request->query('retour') === 'inscription' ? 'inscription' : null,
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->input('email'))),
+            'telephone' => Telephone::normaliser((string) $request->input('telephone')),
+        ]);
+
+        $donnees = $request->validate([
+            'prenom' => ['required', 'string', 'max:100'],
+            'nom' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email:filter', 'max:254', Rule::unique('users', 'email')],
+            'telephone' => Telephone::REGLE,
+            'retour' => ['nullable', 'in:inscription'],
+        ], [
+            'email.unique' => 'Un compte existe déjà avec cette adresse.',
+            'telephone.regex' => Telephone::MESSAGE,
+        ]);
+
+        $user = User::create([
+            'prenom' => trim($donnees['prenom']),
+            'nom' => trim($donnees['nom']),
+            'email' => $donnees['email'],
+            'telephone' => $donnees['telephone'] ?: null,
+        ]);
+        $user->forceFill(['remember_token' => Str::random(60)])->save();
+
+        $user->notify(new CompteCree);
+        $this->journal->noter('user.creation', $user, ['email' => $user->email]);
+
+        $message = "Compte créé. {$user->email} a reçu un lien pour choisir son mot de passe (valable ".Activation::VALIDITE_JOURS.' jours).';
+
+        return match (true) {
+            ($donnees['retour'] ?? null) === 'inscription' => redirect()->route('admin.inscriptions.create', ['email' => $user->email])->with('statut', $message),
+            $request->user()->peutAdmin(3) => redirect()->route('admin.utilisateurs.show', $user)->with('statut', $message),
+            default => redirect()->route('admin.inscriptions.index')->with('statut', $message),
+        };
+    }
+
+    /** Renvoie le lien « Créer mon mot de passe » d'un compte pas encore activé (un envoi par 10 minutes). */
+    public function renvoyerActivation(User $utilisateur): RedirectResponse
+    {
+        if ($utilisateur->mot_de_passe !== null || $utilisateur->email === null) {
+            return back()->with('erreur', 'Ce compte a déjà son mot de passe.');
+        }
+
+        $cle = "activation:{$utilisateur->id_user}";
+        if (RateLimiter::tooManyAttempts($cle, 1)) {
+            return back()->with('erreur', 'Un lien vient déjà de partir. Réessaie dans quelques minutes.');
+        }
+        RateLimiter::hit($cle, 600);
+
+        $utilisateur->notify(new CompteCree);
+        $this->journal->noter('user.activation', $utilisateur, ['email' => $utilisateur->email]);
+
+        return back()->with('statut', "Nouveau lien envoyé à {$utilisateur->email}.");
     }
 
     public function show(User $utilisateur): View
@@ -105,12 +178,19 @@ class UtilisateurController extends Controller
         $utilisateur->forceFill(['email' => $donnees['email']])->save();
         $this->journal->noter('user.email', $utilisateur, ['avant' => $avant, 'après' => $donnees['email']]);
 
-        return back()->with('statut', "Email corrigé : {$donnees['email']}. Pour renvoyer l'invitation, utilise « Relancer par email » sur la fiche de l'inscription.");
+        // Le lien parti vers la mauvaise adresse est désormais caduc (la clé dépend de l'email) : on en renvoie un.
+        if ($utilisateur->mot_de_passe === null) {
+            $utilisateur->notify(new CompteCree);
+
+            return back()->with('statut', "Email corrigé : {$donnees['email']}. Un nouveau lien pour créer le mot de passe vient d'y partir.");
+        }
+
+        return back()->with('statut', "Email corrigé : {$donnees['email']}.");
     }
 
     /**
-     * Réinitialise l'accès d'un compte : mot de passe effacé et sessions fermées. La personne
-     * se reconnecte avec un code reçu par email (et peut redéfinir un mot de passe ensuite).
+     * Réinitialise l'accès d'un compte : mot de passe effacé, sessions fermées, anciens liens
+     * caducs. La personne reçoit un lien pour choisir un nouveau mot de passe.
      */
     public function reinitialiser(Request $request, User $utilisateur): RedirectResponse
     {
@@ -122,7 +202,8 @@ class UtilisateurController extends Controller
         });
 
         $this->journal->noter('user.reinitialisation', $utilisateur);
+        $utilisateur->notify(new CompteCree(reinitialisation: true));
 
-        return back()->with('statut', "Accès réinitialisé : {$utilisateur->email} se reconnectera avec un code reçu par email.");
+        return back()->with('statut', "Accès réinitialisé : {$utilisateur->email} a reçu un lien pour choisir un nouveau mot de passe.");
     }
 }

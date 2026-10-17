@@ -42,6 +42,8 @@ class JournalAdmin extends Model
         'admin.retrait' => 'Accès admin retiré',
         'user.reinitialisation' => 'Accès réinitialisé',
         'user.email' => 'Email du compte corrigé',
+        'user.creation' => 'Compte créé',
+        'user.activation' => 'Lien d\'activation renvoyé',
     ];
 
     protected $fillable = [

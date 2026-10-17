@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Inscription;
+use App\Support\Activation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -30,6 +31,8 @@ class RelanceInscription extends Notification implements ShouldQueue
         $course = "{$inscription->tarif->course->nom} · {$inscription->evenement->nom}";
 
         $mail = (new MailMessage)->greeting("Bonjour {$notifiable->prenom},");
+        // Compte créé par l'association et pas encore activé : le lien fait d'abord choisir le mot de passe.
+        $lien = Activation::lienEspace($notifiable, route('espace.inscription', $inscription, absolute: false));
 
         if ($inscription->statut === Inscription::EN_ATTENTE_PAIEMENT) {
             $mail->subject('Ton inscription attend son paiement')
@@ -43,7 +46,7 @@ class RelanceInscription extends Notification implements ShouldQueue
         }
 
         return $mail
-            ->action('Ouvrir mon espace', route('espace.inscription', $inscription))
+            ->action($lien['active'] ? 'Ouvrir mon espace' : 'Créer mon mot de passe', $lien['url'])
             ->salutation("À très vite,\nL'équipe Run For Lorène");
     }
 }

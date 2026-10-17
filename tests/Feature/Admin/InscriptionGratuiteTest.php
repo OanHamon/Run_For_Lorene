@@ -22,9 +22,13 @@ beforeEach(function () {
     Notification::fake();
     $this->seed();
     $this->course = fn (string $nom) => Course::where('nom', $nom)->first();
+
+    // Compte créé par l'association, pas encore activé (pas de mot de passe).
+    $this->parent = User::create(['prenom' => 'Paul', 'nom' => 'Petit', 'email' => 'parent@exemple.fr']);
+    $this->parent->forceFill(['remember_token' => Illuminate\Support\Str::random(60)])->save();
 });
 
-/** Nouvelle personne (Lina, 10 ans) rattachée à un nouveau compte parent@exemple.fr. */
+/** Nouvelle personne (Lina, 10 ans) rattachée au compte parent@exemple.fr. */
 function gratuite(array $donnees = []): array
 {
     return [
@@ -33,8 +37,6 @@ function gratuite(array $donnees = []): array
         'prenom' => 'Lina',
         'nom' => 'Petit',
         'date_naissance' => '2017-03-10',
-        'titulaire_prenom' => 'Paul',
-        'titulaire_nom' => 'Petit',
         'id_course' => Course::where('nom', 'Course enfants')->value('id_course'),
         'consentements' => '1',
         'motif' => 'Partenaire école',
@@ -64,12 +66,15 @@ test("étape 1 : l'email retrouve le compte et ses participants, ou prévient qu
         ->assertSee('Léa Dupont')
         ->assertSee('né(e) le 02/05/2018');
 
+    // Pas de compte : l'inscription n'en crée pas, elle renvoie vers la création de compte.
     $this->get('/admin/inscriptions/gratuite?email=marie.dupond@exemple.fr')
         ->assertSee('Aucun compte avec marie.dupond@exemple.fr')
-        ->assertSee("Vérifie l'orthographe", false);
+        ->assertSee("Vérifie d'abord l'orthographe", false)
+        ->assertSee(route('admin.utilisateurs.create', ['email' => 'marie.dupond@exemple.fr', 'retour' => 'inscription']))
+        ->assertDontSee('2. Qui participe ?');
 });
 
-test("nouvelle personne sur un nouveau compte : compte sans mot de passe, commande gratuite, invitation", function () {
+test("nouvelle personne sur un compte pas encore activé : commande gratuite, invitation avec lien de mot de passe", function () {
     $this->actingAs($admin = admin(2));
     $this->post('/admin/inscriptions/gratuite', gratuite())->assertRedirect()->assertSessionHasNoErrors();
 
@@ -89,15 +94,27 @@ test("nouvelle personne sur un nouveau compte : compte sans mot de passe, comman
     expect(Consentement::whereHas('document', fn ($q) => $q->where('id_deposant', $admin->id_user))->count())->toBe(2);
     expect(JournalAdmin::where('action', 'inscription.gratuite')->sole()->details)->toMatchArray(['participant' => 'Lina Petit', 'titulaire' => 'parent@exemple.fr', 'motif' => 'Partenaire école']);
 
-    // L'email guide pas à pas : pas de mot de passe, un code, le bon lien.
+    // Compte pas encore activé : le bouton fait créer le mot de passe, puis mène à l'inscription.
     Notification::assertSentTo($parent, InscriptionOfferte::class, function ($n) use ($parent, $inscription) {
         $mail = $n->toMail($parent);
-        $texte = implode(' ', $mail->introLines).' '.implode(' ', $mail->outroLines);
 
         return $mail->subject === 'Lina est inscrit(e) à Run For Lorène 3'
-            && str_contains($texte, 'Pas de mot de passe à créer')
-            && str_contains($texte, 'parent@exemple.fr')
-            && $mail->actionUrl === route('espace.inscription', $inscription);
+            && $mail->actionText === 'Créer mon mot de passe'
+            && str_contains($mail->actionUrl, '/activation/'.$parent->id_user)
+            && str_contains(urldecode($mail->actionUrl), 'suite=/espace/inscriptions/'.$inscription->id_inscription);
+    });
+});
+
+test("compte déjà activé : l'invitation mène directement à l'inscription", function () {
+    $this->parent->forceFill(['mot_de_passe' => Hash::make('secret123'), 'email_verifie_le' => now()])->save();
+
+    $this->actingAs(admin(2))->post('/admin/inscriptions/gratuite', gratuite())->assertSessionHasNoErrors();
+    $inscription = Inscription::sole();
+
+    Notification::assertSentTo($this->parent, InscriptionOfferte::class, function ($n) use ($inscription) {
+        $mail = $n->toMail($this->parent);
+
+        return $mail->actionText === 'Remplir les documents' && $mail->actionUrl === route('espace.inscription', $inscription);
     });
 });
 
@@ -174,13 +191,13 @@ test("les règles du tunnel s'appliquent : âge, unicité, quota", function () {
     expect(Inscription::count())->toBe(1);
 });
 
-test("sans consentements recueillis, ou sans nom pour un nouveau compte, pas d'inscription", function () {
+test("sans consentements recueillis, ou sans compte existant, pas d'inscription ; jamais de compte créé au passage", function () {
     $this->actingAs(admin(2));
     $this->post('/admin/inscriptions/gratuite', gratuite(['consentements' => '']))->assertSessionHasErrors('consentements');
-    $this->post('/admin/inscriptions/gratuite', gratuite(['titulaire_prenom' => '', 'titulaire_nom' => '']))->assertSessionHasErrors('titulaire_prenom');
+    $this->post('/admin/inscriptions/gratuite', gratuite(['email' => 'inconnu@exemple.fr']))->assertSessionHasErrors('email');
 
     expect(Inscription::count())->toBe(0)
-        ->and(User::where('email', 'parent@exemple.fr')->exists())->toBeFalse();
+        ->and(User::where('email', 'inconnu@exemple.fr')->exists())->toBeFalse();
 });
 
 test("l'inscription gratuite demande le niveau 2", function () {
@@ -190,16 +207,19 @@ test("l'inscription gratuite demande le niveau 2", function () {
 });
 
 test("le super admin corrige l'email d'un compte qui ne s'est jamais connecté, pas celui d'un compte utilisé", function () {
+    $parent = $this->parent;
+    $parent->forceFill(['email' => 'paul.petti@exemple.fr'])->save();
     $this->actingAs(admin(2))->post('/admin/inscriptions/gratuite', gratuite(['email' => 'paul.petti@exemple.fr']));
-    $parent = User::where('email', 'paul.petti@exemple.fr')->sole();
 
     $this->actingAs(admin(3));
-    $this->get('/admin/inscriptions/'.Inscription::sole()->id_inscription)->assertSee("ne s'est encore jamais connecté", false);
+    $this->get('/admin/inscriptions/'.Inscription::sole()->id_inscription)->assertSee('pas encore activé');
     $this->get("/admin/utilisateurs/{$parent->id_user}")->assertSee("Corriger l'email", false);
     $this->put("/admin/utilisateurs/{$parent->id_user}/email", ['email' => ' Paul.Petit@exemple.fr '])->assertSessionHasNoErrors();
 
     expect($parent->fresh()->email)->toBe('paul.petit@exemple.fr')
         ->and(JournalAdmin::where('action', 'user.email')->sole()->details)->toBe(['avant' => 'paul.petti@exemple.fr', 'après' => 'paul.petit@exemple.fr']);
+    // Un nouveau lien part vers la bonne adresse.
+    Notification::assertSentTo($parent->fresh(), App\Notifications\CompteCree::class);
 
     // Une fois connecté (email vérifié), l'email ne se change plus ici.
     $parent->markEmailAsVerified();

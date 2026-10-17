@@ -15,7 +15,7 @@
                 <h2 class="mb-3 font-display text-vert">Compte</h2>
                 <dl class="divide-y divide-bordure text-sm">
                     <div class="flex justify-between gap-4 py-1.5"><dt class="text-gris-texte">Téléphone</dt><dd class="font-bold">{{ Telephone::lisible($u->telephone) ?: '–' }}</dd></div>
-                    <div class="flex justify-between gap-4 py-1.5"><dt class="text-gris-texte">Connexion</dt><dd class="font-bold">{{ $u->mot_de_passe ? 'mot de passe ou code email' : 'code email uniquement' }}</dd></div>
+                    <div class="flex justify-between gap-4 py-1.5"><dt class="text-gris-texte">Connexion</dt><dd class="font-bold">{{ $u->mot_de_passe ? 'mot de passe (ou code si oublié)' : 'pas encore activé : mot de passe à créer' }}</dd></div>
                     @if ($u->participant)
                         <div class="flex justify-between gap-4 py-1.5"><dt class="text-gris-texte">Date de naissance</dt><dd class="font-bold">{{ $u->participant->date_naissance->format('d/m/Y') }}</dd></div>
                         <div class="flex justify-between gap-4 py-1.5"><dt class="text-gris-texte">Ville</dt><dd class="font-bold">{{ trim("{$u->participant->code_postal} {$u->participant->ville}") ?: '–' }}</dd></div>
@@ -85,6 +85,17 @@
                 @endif
             </section>
 
+            @if ($u->mot_de_passe === null)
+                <section class="rfl-carte p-6">
+                    <h2 class="mb-1 font-display text-vert">Compte pas encore activé</h2>
+                    <p class="mb-4 text-sm text-gris-texte">La personne n'a pas encore choisi son mot de passe. Le lien reçu par email est valable {{ \App\Support\Activation::VALIDITE_JOURS }} jours ; tu peux en renvoyer un nouveau.</p>
+                    <form method="POST" action="{{ route('admin.utilisateurs.activation', $u) }}">
+                        @csrf
+                        <button type="submit" class="rfl-btn w-full px-5 py-2.5 text-sm">Renvoyer le lien</button>
+                    </form>
+                </section>
+            @endif
+
             @unless ($u->hasVerifiedEmail())
                 <section class="rfl-carte p-6">
                     <h2 class="mb-1 font-display text-vert">Corriger l'email</h2>
@@ -101,7 +112,7 @@
             @unless ($moi)
                 <section class="rfl-carte p-6">
                     <h2 class="mb-1 font-display text-vert">Réinitialiser l'accès</h2>
-                    <p class="mb-4 text-sm text-gris-texte">Efface le mot de passe et ferme les sessions ouvertes. La personne se reconnecte avec un code reçu par email.</p>
+                    <p class="mb-4 text-sm text-gris-texte">Efface le mot de passe et ferme les sessions ouvertes. La personne reçoit un lien pour en choisir un nouveau.</p>
                     <form method="POST" action="{{ route('admin.utilisateurs.reinitialiser', $u) }}" onsubmit="return confirm('Réinitialiser l\'accès de ce compte ?')">
                         @csrf
                         <button type="submit" class="rfl-btn-secondaire w-full px-5 py-2.5 text-sm">Réinitialiser</button>

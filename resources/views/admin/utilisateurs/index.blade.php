@@ -1,6 +1,8 @@
 @php use App\Models\Admin; @endphp
 <x-admin-shell title="Utilisateurs">
-    <x-admin.titre titre="Utilisateurs" sous-titre="Comptes avec email. Les participants gérés (enfants…) apparaissent sur la fiche de leur responsable." />
+    <x-admin.titre titre="Utilisateurs" sous-titre="Comptes avec email. Les participants gérés (enfants…) apparaissent sur la fiche de leur responsable.">
+        <a href="{{ route('admin.utilisateurs.create') }}" class="rfl-btn px-5 py-2.5 text-sm">Créer un compte</a>
+    </x-admin.titre>
 
     <form method="GET" class="rfl-carte mb-6 flex flex-wrap items-end gap-4 p-5" role="search">
         <div class="min-w-64 flex-1">

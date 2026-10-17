@@ -58,15 +58,21 @@
             </dl>
 
             @if ($titulaire)
-                <p class="mt-3 text-sm text-gris-texte">
-                    Compte de la famille : {{ $titulaire->email }}
-                    @unless ($titulaire->hasVerifiedEmail())
-                        · <strong class="text-vert-sombre">ne s'est encore jamais connecté</strong>
-                    @endunless
-                    @if (auth()->user()->peutAdmin(3))
-                        · <a href="{{ route('admin.utilisateurs.show', $titulaire) }}" class="rfl-lien">{{ $titulaire->hasVerifiedEmail() ? 'Voir le compte' : 'Voir le compte ou corriger l\'email' }}</a>
+                <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-gris-texte">
+                    <span>Compte de la famille : {{ $titulaire->email }}</span>
+                    @if ($titulaire->mot_de_passe === null)
+                        <span>· <strong class="text-vert-sombre">pas encore activé</strong> (mot de passe à créer)</span>
+                        @if ($peutGerer)
+                            <form method="POST" action="{{ route('admin.utilisateurs.activation', $titulaire) }}">
+                                @csrf
+                                <button type="submit" class="rfl-lien">Renvoyer le lien</button>
+                            </form>
+                        @endif
                     @endif
-                </p>
+                    @if (auth()->user()->peutAdmin(3))
+                        <a href="{{ route('admin.utilisateurs.show', $titulaire) }}" class="rfl-lien">{{ $titulaire->hasVerifiedEmail() ? 'Voir le compte' : 'Voir le compte ou corriger l\'email' }}</a>
+                    @endif
+                </div>
             @endif
 
             @if (auth()->user()->peutAdmin(3))

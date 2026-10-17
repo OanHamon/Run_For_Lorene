@@ -46,6 +46,11 @@ Route::middleware('admin:2')->group(function () {
     Route::get('questionnaires/{document}', [QuestionnaireController::class, 'show'])->name('questionnaires.show');
     Route::post('questionnaires/{document}/verifier', [QuestionnaireController::class, 'verifier'])->name('questionnaires.verifier');
 
+    // Comptes créés par l'association (activés par la personne via un lien « Créer mon mot de passe »).
+    Route::get('utilisateurs/nouveau', [UtilisateurController::class, 'create'])->name('utilisateurs.create');
+    Route::post('utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');
+    Route::post('utilisateurs/{utilisateur}/activation', [UtilisateurController::class, 'renvoyerActivation'])->name('utilisateurs.activation');
+
     Route::get('inscriptions/gratuite', [InscriptionGratuiteController::class, 'create'])->name('inscriptions.create');
     Route::post('inscriptions/gratuite', [InscriptionGratuiteController::class, 'store'])->name('inscriptions.store');
     Route::put('inscriptions/{inscription}/dossard', [InscriptionController::class, 'dossard'])->name('inscriptions.dossard');
@@ -100,7 +105,7 @@ Route::middleware('admin:3')->group(function () {
     Route::post('evenements/{evenement}/textes', [TexteLegalController::class, 'store'])->name('textes.store');
 
     Route::get('utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
-    Route::get('utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->name('utilisateurs.show');
+    Route::get('utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->whereNumber('utilisateur')->name('utilisateurs.show');
     Route::put('utilisateurs/{utilisateur}/niveau', [UtilisateurController::class, 'niveau'])->name('utilisateurs.niveau');
     Route::put('utilisateurs/{utilisateur}/email', [UtilisateurController::class, 'email'])->name('utilisateurs.email');
     Route::post('utilisateurs/{utilisateur}/reinitialiser', [UtilisateurController::class, 'reinitialiser'])->name('utilisateurs.reinitialiser');

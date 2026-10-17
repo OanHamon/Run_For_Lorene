@@ -20,7 +20,7 @@ use Illuminate\View\View;
 /**
  * Inscription manuelle gratuite (cas particuliers), niveau 2, en deux temps :
  * 1. l'email du titulaire : on retrouve son compte et ses participants (ou on prévient qu'il
- *    n'existe pas, pour vérifier l'orthographe) ;
+ *    n'existe pas : vérifier l'orthographe, ou créer d'abord le compte) ;
  * 2. le choix du participant (existant ou nouveau), la course et les consentements.
  */
 class InscriptionGratuiteController extends Controller
@@ -65,8 +65,6 @@ class InscriptionGratuiteController extends Controller
             'nom' => ['nullable', 'string', 'max:100'],
             'date_naissance' => ['nullable', 'date', 'before:today', 'after:1900-01-01'],
             'date_naissance_titulaire' => ['nullable', 'date', 'before:today', 'after:1900-01-01'],
-            'titulaire_prenom' => ['nullable', 'string', 'max:100'],
-            'titulaire_nom' => ['nullable', 'string', 'max:100'],
             'id_course' => ['required', Rule::exists('courses', 'id_course')->where('id_evenement', $evenement->id_evenement)],
             'consentements' => ['accepted'],
             'motif' => ['nullable', 'string', 'max:255'],

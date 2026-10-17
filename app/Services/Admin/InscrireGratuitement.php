@@ -18,8 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Inscription gratuite créée par un admin (cas particuliers, spec) : une commande à 0 €
- * marquée « gratuite », sans paiement. L'inscription est rattachée à un compte (créé au
- * besoin, sans mot de passe : connexion par code email) pour que la famille complète la
+ * marquée « gratuite », sans paiement. L'inscription est rattachée à un compte existant
+ * (jamais créé ici : voir Utilisateurs → Créer un compte) pour que la famille complète la
  * décharge, et le questionnaire de santé d'un mineur, depuis son espace. Le règlement et la
  * RGPD, recueillis par l'admin, sont enregistrés à son nom.
  *
@@ -36,7 +36,7 @@ class InscrireGratuitement
     ) {}
 
     /**
-     * @param  array{email: string, participant: string, prenom?: ?string, nom?: ?string, date_naissance?: ?string, titulaire_prenom?: ?string, titulaire_nom?: ?string}  $donnees
+     * @param  array{email: string, participant: string, prenom?: ?string, nom?: ?string, date_naissance?: ?string, date_naissance_titulaire?: ?string}  $donnees
      *
      * @throws ValidationException
      */
@@ -102,21 +102,19 @@ class InscrireGratuitement
         });
     }
 
-    /** Compte titulaire : existant (par email) ou créé, sans mot de passe (connexion par code). */
+    /**
+     * Compte titulaire : il doit exister. Une inscription ne crée jamais de compte ; le compte se
+     * crée à part (Utilisateurs → Créer un compte), comme ceux du site, avec son mot de passe.
+     */
     private function titulaire(array $donnees): User
     {
-        $email = Str::lower(trim($donnees['email']));
-        $user = User::where('email', $email)->first();
+        $user = User::where('email', Str::lower(trim($donnees['email'])))->first();
 
-        if ($user) {
-            return $user;
+        if (! $user) {
+            throw ValidationException::withMessages(['email' => "Aucun compte n'existe avec cet email : crée d'abord le compte."]);
         }
 
-        if (blank($donnees['titulaire_prenom'] ?? null) || blank($donnees['titulaire_nom'] ?? null)) {
-            throw ValidationException::withMessages(['titulaire_prenom' => "Aucun compte n'existe avec cet email : indique le prénom et le nom du titulaire pour le créer."]);
-        }
-
-        return User::create(['email' => $email, 'prenom' => trim($donnees['titulaire_prenom']), 'nom' => trim($donnees['titulaire_nom'])]);
+        return $user;
     }
 
     /** Participant choisi : « titulaire », l'identifiant d'un participant du compte, ou « nouveau ». */

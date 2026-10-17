@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccueilController;
+use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\EspaceController;
 use App\Http\Controllers\PaiementController;
 use App\Http\Controllers\StripeWebhookController;
@@ -10,6 +11,10 @@ use Livewire\Volt\Volt;
 
 Route::get('/', AccueilController::class)->name('home');
 Route::get('textes/{type}', TexteLegalController::class)->name('textes.show');
+
+// Compte créé par l'association : la personne choisit son mot de passe depuis le lien reçu par email.
+Route::get('activation/{user}', [ActivationController::class, 'show'])->middleware('throttle:30,1')->name('compte.activation');
+Route::post('activation/{user}', [ActivationController::class, 'store'])->middleware('throttle:10,1');
 
 Volt::route('inscription', 'inscription.tunnel')->name('inscription.tunnel');
 
