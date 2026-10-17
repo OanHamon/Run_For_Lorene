@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /** Comptes, participants gérés, admins et niveaux d'accès (super admin uniquement). */
@@ -83,6 +84,28 @@ class UtilisateurController extends Controller
         }
 
         return back()->with('statut', $niveau === 0 ? 'Accès admin retiré.' : 'Niveau d\'accès : '.Admin::LIBELLES[$niveau].'.');
+    }
+
+    /**
+     * Corrige l'email d'un compte qui ne s'est jamais connecté (faute de frappe à l'inscription
+     * manuelle). Un compte déjà utilisé garde son email : c'est son identifiant de connexion.
+     */
+    public function email(Request $request, User $utilisateur): RedirectResponse
+    {
+        if ($utilisateur->hasVerifiedEmail()) {
+            return back()->with('erreur', 'Ce compte s\'est déjà connecté : son email ne se change pas ici.');
+        }
+
+        $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
+        $donnees = $request->validateWithBag('email', [
+            'email' => ['required', 'email:filter', 'max:254', Rule::unique('users', 'email')->ignore($utilisateur->id_user, 'id_user')],
+        ], ['email.unique' => 'Un autre compte utilise déjà cette adresse.']);
+
+        $avant = $utilisateur->email;
+        $utilisateur->forceFill(['email' => $donnees['email']])->save();
+        $this->journal->noter('user.email', $utilisateur, ['avant' => $avant, 'après' => $donnees['email']]);
+
+        return back()->with('statut', "Email corrigé : {$donnees['email']}. Pour renvoyer l'invitation, utilise « Relancer par email » sur la fiche de l'inscription.");
     }
 
     /**

@@ -28,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('espace', EspaceController::class)->name('espace');
     Volt::route('espace/inscriptions/{inscription}', 'espace.inscription')->name('espace.inscription');
+    Volt::route('espace/compte', 'espace.compte')->name('espace.compte');
 });
 
 Route::post('stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');

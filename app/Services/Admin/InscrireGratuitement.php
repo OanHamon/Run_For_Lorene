@@ -10,19 +10,23 @@ use App\Models\TexteLegal;
 use App\Models\User;
 use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\MettreAJourStatut;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Inscription gratuite créée par un admin (cas particuliers, spec) : une commande à 0 €
  * marquée « gratuite », sans paiement. L'inscription est rattachée à un compte (créé au
- * besoin, connexion par code email) pour que le titulaire complète la décharge, et le
- * questionnaire de santé d'un mineur, depuis son espace. Le règlement et la politique RGPD,
- * recueillis par l'admin, sont enregistrés à son nom.
+ * besoin, sans mot de passe : connexion par code email) pour que la famille complète la
+ * décharge, et le questionnaire de santé d'un mineur, depuis son espace. Le règlement et la
+ * RGPD, recueillis par l'admin, sont enregistrés à son nom.
  *
- * Mêmes règles que le tunnel pour l'âge, le quota et l'unicité ; pas pour les dates
- * d'ouverture, ni pour le tarif (gratuit).
+ * Le participant est choisi explicitement : le titulaire, un participant déjà rattaché au
+ * compte, ou une nouvelle personne (refusée si elle ressemble à un participant existant :
+ * même prénom et même date de naissance). Mêmes règles que le tunnel pour l'âge, le quota et
+ * l'unicité ; pas pour les dates d'ouverture, ni pour le tarif (gratuit).
  */
 class InscrireGratuitement
 {
@@ -32,7 +36,7 @@ class InscrireGratuitement
     ) {}
 
     /**
-     * @param  array{email: string, pour: string, prenom: string, nom: string, date_naissance: string, titulaire_prenom?: ?string, titulaire_nom?: ?string}  $donnees
+     * @param  array{email: string, participant: string, prenom?: ?string, nom?: ?string, date_naissance?: ?string, titulaire_prenom?: ?string, titulaire_nom?: ?string}  $donnees
      *
      * @throws ValidationException
      */
@@ -67,7 +71,7 @@ class InscrireGratuitement
                 ->first();
 
             if ($inscription && ! in_array($inscription->statut, [Inscription::BROUILLON, Inscription::ANNULEE], true)) {
-                throw ValidationException::withMessages(['email' => "{$participant->user->name} est déjà inscrit(e) à {$evenement->nom} ({$inscription->libelleStatut()})."]);
+                throw ValidationException::withMessages(['participant' => "{$participant->user->name} est déjà inscrit(e) à {$evenement->nom} ({$inscription->libelleStatut()})."]);
             }
 
             $commande = Commande::create([
@@ -101,47 +105,75 @@ class InscrireGratuitement
     /** Compte titulaire : existant (par email) ou créé, sans mot de passe (connexion par code). */
     private function titulaire(array $donnees): User
     {
-        $email = mb_strtolower(trim($donnees['email']));
+        $email = Str::lower(trim($donnees['email']));
         $user = User::where('email', $email)->first();
 
         if ($user) {
             return $user;
         }
 
-        $soiMeme = $donnees['pour'] === 'titulaire';
-        $prenom = $soiMeme ? $donnees['prenom'] : ($donnees['titulaire_prenom'] ?? null);
-        $nom = $soiMeme ? $donnees['nom'] : ($donnees['titulaire_nom'] ?? null);
-
-        if (! $prenom || ! $nom) {
+        if (blank($donnees['titulaire_prenom'] ?? null) || blank($donnees['titulaire_nom'] ?? null)) {
             throw ValidationException::withMessages(['titulaire_prenom' => "Aucun compte n'existe avec cet email : indique le prénom et le nom du titulaire pour le créer."]);
         }
 
-        return User::create(['email' => $email, 'prenom' => $prenom, 'nom' => $nom]);
+        return User::create(['email' => $email, 'prenom' => trim($donnees['titulaire_prenom']), 'nom' => trim($donnees['titulaire_nom'])]);
     }
 
-    /** Le titulaire lui-même, ou un participant géré (retrouvé par prénom et nom, sinon créé). */
+    /** Participant choisi : « titulaire », l'identifiant d'un participant du compte, ou « nouveau ». */
     private function participant(User $titulaire, array $donnees): Participant
     {
-        if ($donnees['pour'] === 'titulaire') {
-            return $titulaire->participant
-                ?? Participant::create(['id_user' => $titulaire->id_user, 'date_naissance' => $donnees['date_naissance']]);
+        $choix = (string) $donnees['participant'];
+
+        if ($choix === 'titulaire') {
+            if ($titulaire->participant) {
+                return $titulaire->participant;
+            }
+
+            $this->exiger($donnees, ['date_naissance_titulaire'], 'la date de naissance du titulaire');
+
+            return Participant::create(['id_user' => $titulaire->id_user, 'date_naissance' => $donnees['date_naissance_titulaire']]);
         }
 
-        $existant = $titulaire->participantsGeres()->with('user')->get()->first(
-            fn (Participant $p) => mb_strtolower($p->user->prenom) === mb_strtolower(trim($donnees['prenom']))
-                && mb_strtolower($p->user->nom) === mb_strtolower(trim($donnees['nom']))
-        );
+        if ($choix === 'nouveau') {
+            $this->exiger($donnees, ['prenom', 'nom', 'date_naissance'], 'le prénom, le nom et la date de naissance de la nouvelle personne');
 
-        if ($existant) {
-            return $existant;
+            // Garde-fou anti-doublon : même prénom (sans accents ni majuscules) et même date de naissance.
+            $prenom = Str::lower(Str::ascii(trim($donnees['prenom'])));
+            $doublon = $titulaire->participantsGeres()->with('user')->get()->first(
+                fn (Participant $p) => $p->date_naissance->toDateString() === Carbon::parse($donnees['date_naissance'])->toDateString()
+                    && Str::lower(Str::ascii($p->user->prenom)) === $prenom
+            );
+            if ($doublon) {
+                throw ValidationException::withMessages(['participant' => "{$doublon->user->name}, né(e) le {$doublon->date_naissance->format('d/m/Y')}, est déjà rattaché(e) à ce compte : choisis-le ou la dans la liste plutôt que de créer une nouvelle personne."]);
+            }
+
+            $user = User::create(['prenom' => trim($donnees['prenom']), 'nom' => trim($donnees['nom'])]);
+
+            return Participant::create([
+                'id_user' => $user->id_user,
+                'date_naissance' => $donnees['date_naissance'],
+                'id_responsable' => $titulaire->id_user,
+            ]);
         }
 
-        $user = User::create(['prenom' => trim($donnees['prenom']), 'nom' => trim($donnees['nom'])]);
+        // Participant existant : uniquement s'il appartient bien à ce compte.
+        $participant = $titulaire->participantsGeres()->whereKey((int) $choix)->first()
+            ?? ($titulaire->participant?->id_user === (int) $choix ? $titulaire->participant : null);
 
-        return Participant::create([
-            'id_user' => $user->id_user,
-            'date_naissance' => $donnees['date_naissance'],
-            'id_responsable' => $titulaire->id_user,
-        ]);
+        if (! $participant) {
+            throw ValidationException::withMessages(['participant' => 'Ce participant n\'appartient pas à ce compte.']);
+        }
+
+        return $participant;
+    }
+
+    /** @param list<string> $champs */
+    private function exiger(array $donnees, array $champs, string $libelle): void
+    {
+        foreach ($champs as $champ) {
+            if (blank($donnees[$champ] ?? null)) {
+                throw ValidationException::withMessages([$champ => "Indique {$libelle}."]);
+            }
+        }
     }
 }

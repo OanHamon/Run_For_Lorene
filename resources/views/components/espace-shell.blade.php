@@ -10,13 +10,16 @@
     {{-- Barre mobile --}}
     <div class="flex items-center justify-between rounded-b-[28px] bg-white px-5 py-3 ring-1 ring-bordure lg:hidden">
         <a href="{{ route('espace') }}"><img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-10 w-auto"></a>
-        @if ($user->peutAdmin())
-            <a href="{{ route('admin.tableau') }}" class="text-sm rfl-lien">Administration</a>
-        @endif
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="text-sm rfl-lien">Se déconnecter</button>
-        </form>
+        <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+            @if ($user->peutAdmin())
+                <a href="{{ route('admin.tableau') }}" class="text-sm rfl-lien">Administration</a>
+            @endif
+            <a href="{{ route('espace.compte') }}" class="text-sm rfl-lien">Mon compte</a>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="text-sm rfl-lien">Se déconnecter</button>
+            </form>
+        </div>
     </div>
 
     <div class="mx-auto flex max-w-7xl">
@@ -36,7 +39,9 @@
 
             <p class="mt-8 mb-2 px-3 font-display text-vert">Mon espace</p>
             <nav class="space-y-1 text-sm" aria-label="Espace participant">
-                <a href="{{ route('espace') }}" @if (request()->routeIs('espace*')) aria-current="page" @endif class="block rounded-full px-4 py-2 {{ request()->routeIs('espace*') ? 'bg-vert-clair font-bold text-vert-sombre' : 'text-vert-sombre hover:bg-fond' }}">Tableau de bord</a>
+                @foreach ([['espace', ['espace', 'espace.inscription'], 'Tableau de bord'], ['espace.compte', ['espace.compte'], 'Mon compte']] as [$route, $motifs, $libelle])
+                    <a href="{{ route($route) }}" @if (request()->routeIs(...$motifs)) aria-current="page" @endif class="block rounded-full px-4 py-2 {{ request()->routeIs(...$motifs) ? 'bg-vert-clair font-bold text-vert-sombre' : 'text-vert-sombre hover:bg-fond' }}">{{ $libelle }}</a>
+                @endforeach
             </nav>
 
             <p class="mt-8 mb-2 px-3 font-display text-vert">Événement</p>

@@ -85,6 +85,19 @@
                 @endif
             </section>
 
+            @unless ($u->hasVerifiedEmail())
+                <section class="rfl-carte p-6">
+                    <h2 class="mb-1 font-display text-vert">Corriger l'email</h2>
+                    <p class="mb-4 text-sm text-gris-texte">Ce compte ne s'est encore jamais connecté : si l'adresse a été mal saisie, corrige-la, puis relance la famille depuis la fiche de l'inscription.</p>
+                    <form method="POST" action="{{ route('admin.utilisateurs.email', $u) }}" class="space-y-3">
+                        @csrf
+                        @method('PUT')
+                        <x-admin.champ name="email" label="Adresse email" type="email" :value="$u->email" sac="email" required maxlength="254" />
+                        <button type="submit" class="rfl-btn w-full px-5 py-2.5 text-sm">Enregistrer l'email</button>
+                    </form>
+                </section>
+            @endunless
+
             @unless ($moi)
                 <section class="rfl-carte p-6">
                     <h2 class="mb-1 font-display text-vert">Réinitialiser l'accès</h2>

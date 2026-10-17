@@ -57,6 +57,18 @@
                 @endif
             </dl>
 
+            @if ($titulaire)
+                <p class="mt-3 text-sm text-gris-texte">
+                    Compte de la famille : {{ $titulaire->email }}
+                    @unless ($titulaire->hasVerifiedEmail())
+                        · <strong class="text-vert-sombre">ne s'est encore jamais connecté</strong>
+                    @endunless
+                    @if (auth()->user()->peutAdmin(3))
+                        · <a href="{{ route('admin.utilisateurs.show', $titulaire) }}" class="rfl-lien">{{ $titulaire->hasVerifiedEmail() ? 'Voir le compte' : 'Voir le compte ou corriger l\'email' }}</a>
+                    @endif
+                </p>
+            @endif
+
             @if (auth()->user()->peutAdmin(3))
                 <details class="mt-4 border-t border-bordure pt-3" @if ($errors->participant->any()) open @endif>
                     <summary class="cursor-pointer rfl-lien text-sm">Modifier les informations</summary>

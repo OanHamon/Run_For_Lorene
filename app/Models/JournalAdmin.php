@@ -41,6 +41,7 @@ class JournalAdmin extends Model
         'admin.niveau' => 'Niveau d\'accès modifié',
         'admin.retrait' => 'Accès admin retiré',
         'user.reinitialisation' => 'Accès réinitialisé',
+        'user.email' => 'Email du compte corrigé',
     ];
 
     protected $fillable = [
