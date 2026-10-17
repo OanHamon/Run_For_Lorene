@@ -214,3 +214,74 @@ test('sans PDF de décharge, les affirmations du tunnel suffisent', function () 
     app(App\Services\Inscriptions\MettreAJourStatut::class)($inscription);
     expect($inscription->fresh()->statut)->toBe(Inscription::VALIDEE);
 });
+
+/** Champs du formulaire « Modifier les informations », d'après le participant de l'inscription. */
+function champsParticipant(Inscription $i, array $d = []): array
+{
+    $p = $i->participant;
+
+    return [
+        'prenom' => $p->user->prenom,
+        'nom' => $p->user->nom,
+        'date_naissance' => $p->date_naissance->toDateString(),
+        'sexe' => (string) $p->sexe,
+        'telephone' => (string) $p->user->telephone,
+        'email_contact' => (string) $p->email_contact,
+        'adresse' => '',
+        'code_postal' => '',
+        'ville' => '',
+        'pays' => 'France',
+        'urgence_nom' => '',
+        'urgence_tel' => '',
+        ...$d,
+    ];
+}
+
+test('un super admin corrige les informations du participant, et la correction est tracée', function () {
+    $parent = User::factory()->create(['nom' => 'Bernard']);
+    $enfant = enfantInscrit($parent, $this->cinq);
+
+    $this->actingAs(admin(3))->get("/admin/inscriptions/{$enfant->id_inscription}")->assertSee('Modifier les informations');
+
+    $this->put("/admin/inscriptions/{$enfant->id_inscription}/participant", champsParticipant($enfant, [
+        'prenom' => 'Léon',
+        'telephone' => '06 12 34 56 78',
+        'email_contact' => 'Leon@Exemple.fr',
+        'urgence_nom' => 'Mamie',
+        'urgence_tel' => '0698765432',
+    ]))->assertSessionHasNoErrors();
+
+    $enfant = $enfant->fresh();
+    expect($enfant->participant->user->prenom)->toBe('Léon')
+        ->and($enfant->participant->user->telephone)->toBe('0612345678')
+        ->and($enfant->participant->email_contact)->toBe('leon@exemple.fr')
+        ->and($enfant->urgence_nom)->toBe('Mamie');
+
+    expect(JournalAdmin::where('action', 'inscription.participant')->sole()->details)->toMatchArray(['prenom' => 'Léo → Léon']);
+});
+
+test("une date de naissance incompatible avec la course, ou qui change le statut mineur, est refusée", function () {
+    $adulte = inscriptionPayee(User::factory()->create(), $this->dix); // né en 1980, 10 km dès 16 ans
+
+    $this->actingAs(admin(3));
+    // 12 ans le jour J : hors de la course 10 km.
+    $this->put("/admin/inscriptions/{$adulte->id_inscription}/participant", champsParticipant($adulte, ['date_naissance' => $this->evenement->date_evenement->copy()->subYears(12)->toDateString()]))
+        ->assertSessionHasErrorsIn('participant', 'date_naissance');
+    // 17 ans : accepté par la course, mais deviendrait mineur.
+    $this->put("/admin/inscriptions/{$adulte->id_inscription}/participant", champsParticipant($adulte, ['date_naissance' => $this->evenement->date_evenement->copy()->subYears(17)->toDateString()]))
+        ->assertSessionHasErrorsIn('participant', 'date_naissance');
+    // Correction d'un jour, toujours majeur : acceptée.
+    $this->put("/admin/inscriptions/{$adulte->id_inscription}/participant", champsParticipant($adulte, ['date_naissance' => '1980-01-02']))
+        ->assertSessionHasNoErrors();
+
+    expect($adulte->participant->fresh()->date_naissance->toDateString())->toBe('1980-01-02');
+});
+
+test("seul le super admin modifie les informations du participant", function () {
+    $inscription = inscriptionPayee(User::factory()->create(), $this->dix);
+
+    $this->actingAs(admin(2))->get("/admin/inscriptions/{$inscription->id_inscription}")->assertDontSee('Modifier les informations');
+    $this->put("/admin/inscriptions/{$inscription->id_inscription}/participant", champsParticipant($inscription, ['prenom' => 'Pirate']))->assertForbidden();
+
+    expect($inscription->participant->user->fresh()->prenom)->not->toBe('Pirate');
+});

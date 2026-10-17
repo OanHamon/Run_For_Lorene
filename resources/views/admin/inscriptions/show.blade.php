@@ -56,6 +56,41 @@
                     {!! $ligne('Inscrit par', $titulaire->name.' ('.$titulaire->email.')') !!}
                 @endif
             </dl>
+
+            @if (auth()->user()->peutAdmin(3))
+                <details class="mt-4 border-t border-bordure pt-3" @if ($errors->participant->any()) open @endif>
+                    <summary class="cursor-pointer rfl-lien text-sm">Modifier les informations</summary>
+                    <form method="POST" action="{{ route('admin.inscriptions.participant', $i) }}" class="mt-4 space-y-4">
+                        @csrf
+                        @method('PUT')
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <x-admin.champ name="prenom" label="Prénom" :value="$p->user->prenom" sac="participant" required maxlength="100" />
+                            <x-admin.champ name="nom" label="Nom" :value="$p->user->nom" sac="participant" required maxlength="100" />
+                            <x-admin.champ name="date_naissance" label="Date de naissance" type="date" :value="$p->date_naissance->format('Y-m-d')" sac="participant" required aide="Doit rester compatible avec la course, sans changer le statut mineur ou majeur." />
+                            <x-admin.champ name="sexe" label="Sexe" sac="participant">
+                                <select id="participant-sexe" name="sexe" class="rfl-champ-compact">
+                                    <option value="">Non renseigné</option>
+                                    @foreach (['femme' => 'Femme', 'homme' => 'Homme', 'autre' => 'Autre'] as $valeur => $libelle)
+                                        <option value="{{ $valeur }}" @selected(($errors->participant->any() ? old('sexe') : $p->sexe) === $valeur)>{{ $libelle }}</option>
+                                    @endforeach
+                                </select>
+                            </x-admin.champ>
+                            <x-admin.champ name="telephone" label="Téléphone" type="tel" :value="Telephone::lisible($p->user->telephone)" sac="participant" />
+                            @if ($p->estGere())
+                                <x-admin.champ name="email_contact" label="Email de contact" type="email" :value="$p->email_contact" sac="participant" maxlength="254" />
+                            @endif
+                            <x-admin.champ name="adresse" label="Adresse" :value="$p->adresse" sac="participant" maxlength="255" class="sm:col-span-2" />
+                            <x-admin.champ name="code_postal" label="Code postal" :value="$p->code_postal" sac="participant" />
+                            <x-admin.champ name="ville" label="Ville" :value="$p->ville" sac="participant" maxlength="100" />
+                            <x-admin.champ name="urgence_nom" label="Personne à prévenir" :value="$i->urgence_nom" sac="participant" maxlength="150" />
+                            <x-admin.champ name="urgence_tel" label="Son téléphone" type="tel" :value="Telephone::lisible($i->urgence_tel)" sac="participant" />
+                        </div>
+                        <input type="hidden" name="pays" value="{{ $p->pays }}">
+                        <p class="text-xs text-gris-texte">{{ $p->estGere() ? '' : 'L\'email de connexion du compte ne se change pas ici. ' }}Chaque correction est notée au journal.</p>
+                        <button type="submit" class="rfl-btn px-5 py-2.5 text-sm">Enregistrer</button>
+                    </form>
+                </details>
+            @endif
         </section>
 
         {{-- Course et dossard --}}

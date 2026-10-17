@@ -72,6 +72,8 @@ Route::get('textes/{texte}', [TexteLegalController::class, 'show'])->name('texte
 
 // … modification réservée aux super admins.
 Route::middleware('admin:3')->group(function () {
+    Route::put('inscriptions/{inscription}/participant', [InscriptionController::class, 'participant'])->name('inscriptions.participant');
+
     Route::get('evenements/nouveau', [EvenementController::class, 'create'])->name('evenements.create');
     Route::post('evenements', [EvenementController::class, 'store'])->name('evenements.store');
     Route::put('evenements/{evenement}', [EvenementController::class, 'update'])->name('evenements.update');

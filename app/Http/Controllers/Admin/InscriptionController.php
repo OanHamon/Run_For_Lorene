@@ -16,10 +16,14 @@ use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\Questionnaires;
 use App\Support\Csv;
 use App\Support\EvenementAdmin;
+use App\Support\Telephone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -140,6 +144,106 @@ class InscriptionController extends Controller
             'journal' => JournalAdmin::with('auteur')->where('cible_type', 'inscription')->where('cible_id', $inscription->id_inscription)->orderByDesc('id_journal')->get(),
             'titulaire' => $inscription->titulaire(),
         ]);
+    }
+
+    /**
+     * Correction des informations du participant par un super admin (faute de frappe signalée
+     * par téléphone…), avec les mêmes règles que l'espace participant. Une nouvelle date de
+     * naissance ne doit ni sortir le participant de la tranche d'âge de sa course, ni le faire
+     * passer de mineur à majeur (ou l'inverse) : le questionnaire de santé en dépend.
+     */
+    public function participant(Request $request, Inscription $inscription): RedirectResponse
+    {
+        $request->merge([
+            'telephone' => Telephone::normaliser((string) $request->input('telephone')),
+            'urgence_tel' => Telephone::normaliser((string) $request->input('urgence_tel')),
+            'email_contact' => Str::lower(trim((string) $request->input('email_contact'))),
+            'code_postal' => preg_replace('/\s+/', '', (string) $request->input('code_postal')),
+        ]);
+
+        $donnees = $request->validateWithBag('participant', [
+            'prenom' => ['required', 'string', 'max:100'],
+            'nom' => ['required', 'string', 'max:100'],
+            'date_naissance' => ['required', 'date_format:Y-m-d', 'before:today', 'after:1900-01-01'],
+            'sexe' => ['nullable', 'in:femme,homme,autre'],
+            'telephone' => Telephone::REGLE,
+            'email_contact' => ['nullable', 'email:rfc', 'max:254'],
+            'adresse' => ['nullable', 'string', 'max:255'],
+            'code_postal' => ['nullable', 'regex:/^\d{5}$/'],
+            'ville' => ['nullable', 'string', 'max:100'],
+            'pays' => ['nullable', 'string', 'max:100'],
+            'urgence_nom' => ['nullable', 'string', 'max:150', 'required_with:urgence_tel'],
+            'urgence_tel' => [...Telephone::REGLE, 'required_with:urgence_nom'],
+        ], [
+            'telephone.regex' => Telephone::MESSAGE,
+            'urgence_tel.regex' => Telephone::MESSAGE,
+            'code_postal.regex' => 'Le code postal contient 5 chiffres.',
+            'urgence_nom.required_with' => 'Indique le nom de la personne à prévenir.',
+            'urgence_tel.required_with' => 'Indique le numéro de la personne à prévenir.',
+            'date_naissance.before' => 'La date de naissance doit être dans le passé.',
+        ]);
+
+        $participant = $inscription->participant;
+        $jourJ = $inscription->evenement->date_evenement;
+
+        if ($donnees['date_naissance'] !== $participant->date_naissance->toDateString()) {
+            $age = (int) Carbon::parse($donnees['date_naissance'])->diffInYears($jourJ);
+            $course = $inscription->tarif->course;
+            $erreur = match (true) {
+                ! $course->accepteAge($age) => "Avec cette date, le participant aurait {$age} ans le jour J : ce n'est pas compatible avec {$course->nom}.",
+                ($age < 18) !== ($participant->ageAu($jourJ) < 18) => "Avec cette date, le participant passerait de ".($age < 18 ? 'majeur à mineur' : 'mineur à majeur').' le jour J : le questionnaire de santé en dépend. Annule et refais l\'inscription si c\'est bien la bonne date.',
+                default => null,
+            };
+
+            if ($erreur) {
+                throw ValidationException::withMessages(['date_naissance' => $erreur])->errorBag('participant');
+            }
+        }
+
+        $avant = [
+            ...$participant->user->only(['prenom', 'nom', 'telephone']),
+            ...$participant->only(['sexe', 'email_contact', 'adresse', 'code_postal', 'ville', 'pays']),
+            'date_naissance' => $participant->date_naissance->toDateString(),
+            ...$inscription->only(['urgence_nom', 'urgence_tel']),
+        ];
+
+        DB::transaction(function () use ($inscription, $participant, $donnees) {
+            $participant->user->forceFill([
+                'prenom' => trim($donnees['prenom']),
+                'nom' => trim($donnees['nom']),
+                'telephone' => $donnees['telephone'] ?: null,
+            ])->save();
+
+            $participant->forceFill([
+                'date_naissance' => $donnees['date_naissance'],
+                'sexe' => $donnees['sexe'] ?: null,
+                // Le titulaire d'un compte se connecte avec son email : seul un participant géré a un email de contact.
+                'email_contact' => $participant->estGere() ? ($donnees['email_contact'] ?: null) : $participant->email_contact,
+                'adresse' => trim((string) $donnees['adresse']) ?: null,
+                'code_postal' => $donnees['code_postal'] ?: null,
+                'ville' => trim((string) $donnees['ville']) ?: null,
+                'pays' => trim((string) $donnees['pays']) ?: 'France',
+            ])->save();
+
+            $inscription->forceFill([
+                'urgence_nom' => trim((string) $donnees['urgence_nom']) ?: null,
+                'urgence_tel' => $donnees['urgence_tel'] ?: null,
+            ])->save();
+        });
+
+        $apres = [
+            ...$participant->user->fresh()->only(['prenom', 'nom', 'telephone']),
+            ...$participant->fresh()->only(['sexe', 'email_contact', 'adresse', 'code_postal', 'ville', 'pays']),
+            'date_naissance' => $participant->fresh()->date_naissance->toDateString(),
+            ...$inscription->fresh()->only(['urgence_nom', 'urgence_tel']),
+        ];
+        $modifs = collect($apres)->filter(fn ($v, $k) => $v !== $avant[$k])->map(fn ($v, $k) => ($avant[$k] ?? '–').' → '.($v ?? '–'))->all();
+
+        if ($modifs) {
+            $this->journal->noter('inscription.participant', $inscription, $modifs);
+        }
+
+        return back()->with('statut', $modifs ? 'Informations du participant enregistrées.' : 'Aucune modification.');
     }
 
     /** Dossard saisi à la main : dans la plage de la course, unique pour l'événement. */

@@ -33,6 +33,7 @@ class JournalAdmin extends Model
         'inscription.dossard' => 'Dossard modifié',
         'inscription.annulation' => 'Inscription annulée',
         'inscription.relance' => 'Relance envoyée',
+        'inscription.participant' => 'Informations du participant corrigées',
         'inscription.gratuite' => 'Inscription gratuite créée',
         'document.consultation' => 'Questionnaire de santé consulté',
         'document.verification' => 'Questionnaire vérifié',
