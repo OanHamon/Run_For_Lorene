@@ -15,9 +15,15 @@
     <x-charte.tache class="pointer-events-none fixed -bottom-28 -left-24 h-72 w-72 rotate-180 text-vert-clair/60" />
 
     <div class="relative flex min-h-screen flex-col items-center px-4 py-6 sm:py-8">
-        <a href="{{ route('home') }}" class="mb-6 flex w-full max-w-[480px] items-center p-1">
-            <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-16 w-auto">
-        </a>
+        <div class="mb-6 flex w-full max-w-[480px] items-center justify-between gap-4">
+            <a href="{{ route('home') }}" class="p-1">
+                <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-16 w-auto">
+            </a>
+            {{-- Une fois connecté, on peut toujours quitter le tunnel pour retrouver son espace. --}}
+            @auth
+                <a href="{{ route('espace') }}" class="rfl-btn-secondaire px-5 py-2 text-sm">Mon espace</a>
+            @endauth
+        </div>
 
         <div class="w-full max-w-[480px] rounded-[28px] bg-white p-6 ring-1 ring-bordure sm:p-9">
             @if ($step)

@@ -41,7 +41,14 @@ function inscrire($tunnel, string $choix, string $prenom, string $naissance, int
 }
 
 test('un invité voit l\'identification dans le tunnel', function () {
-    $this->get('/inscription')->assertOk()->assertSee('Connecte-toi');
+    $this->get('/inscription')->assertOk()->assertSee('Connecte-toi')->assertDontSee('Mon espace');
+});
+
+test('un compte connecté peut quitter le tunnel pour retrouver son espace', function () {
+    $this->actingAs($this->parent)->get('/inscription')
+        ->assertOk()
+        ->assertSee('Mon espace')
+        ->assertSee(route('espace'));
 });
 
 test('un parent inscrit un enfant et lui-même, paie, et chacun reçoit un dossard', function () {

@@ -18,11 +18,11 @@
                 <a href="#contact" class="hover:text-vert">Contact</a>
             </nav>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 sm:gap-4">
                 @auth
                     <a href="{{ route('espace') }}" class="rfl-btn px-5 py-2.5">Mon espace</a>
                 @else
-                    <a href="{{ route('login') }}" class="hidden font-display text-vert hover:text-vert sm:inline">Se connecter</a>
+                    <a href="{{ route('login') }}" class="font-display text-vert hover:text-vert">Se connecter</a>
                     <a href="{{ route('inscription.tunnel') }}" class="rfl-btn px-5 py-2.5">S'inscrire</a>
                 @endauth
             </div>
