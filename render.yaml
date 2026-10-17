@@ -15,10 +15,9 @@ services:
         value: production
       - key: APP_DEBUG
         value: "false"
+      # Générée par Render ; start.sh ajoute le préfixe « base64: » attendu par Laravel.
       - key: APP_KEY
-        sync: false
-      - key: APP_URL
-        sync: false
+        generateValue: true
       - key: APP_LOCALE
         value: fr
       - key: APP_FALLBACK_LOCALE
@@ -53,23 +52,16 @@ services:
       - key: QUEUE_CONNECTION
         value: database
 
-      # Brevo en SMTP
+      # Emails : écrits dans les logs pour la démo. Pour envoyer via Brevo, ajouter dans Render :
+      # MAIL_MAILER=smtp, MAIL_HOST=smtp-relay.brevo.com, MAIL_PORT=587, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS
       - key: MAIL_MAILER
-        value: smtp
-      - key: MAIL_HOST
-        value: smtp-relay.brevo.com
-      - key: MAIL_PORT
-        value: "587"
-      - key: MAIL_USERNAME
-        sync: false
-      - key: MAIL_PASSWORD
-        sync: false
+        value: log
       - key: MAIL_FROM_ADDRESS
-        sync: false
+        value: noreply@runforlorene.fr
       - key: MAIL_FROM_NAME
         value: Run For Lorène
 
-      # Stripe (mode test)
+      # Stripe (mode test) : facultatif, peut rester vide tant qu'on ne teste pas le paiement
       - key: STRIPE_KEY
         sync: false
       - key: STRIPE_SECRET

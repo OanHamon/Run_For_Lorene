@@ -7,6 +7,17 @@ cd /var/www/html
 sed -ri "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
+# Clé générée par Render (base64 brut) : Laravel attend le préfixe « base64: ».
+case "${APP_KEY}" in
+    base64:*|'') ;;
+    *) export APP_KEY="base64:${APP_KEY}" ;;
+esac
+
+# URL publique fournie par Render si APP_URL n'est pas définie.
+if [ -z "${APP_URL}" ] && [ -n "${RENDER_EXTERNAL_URL}" ]; then
+    export APP_URL="${RENDER_EXTERNAL_URL}"
+fi
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
