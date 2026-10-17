@@ -1,0 +1,11 @@
+# MariaDB embarquée pour la démo : réglages sobres (instance gratuite Render = 512 Mo de RAM).
+[mysqld]
+bind-address = 127.0.0.1
+skip-name-resolve
+performance_schema = OFF
+innodb_buffer_pool_size = 32M
+innodb_log_buffer_size = 4M
+key_buffer_size = 4M
+max_connections = 20
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci

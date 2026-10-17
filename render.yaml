@@ -1,5 +1,6 @@
 # Blueprint Render : https://render.com/docs/blueprint-spec
-# Les valeurs « sync: false » sont demandées par Render à la création (secrets, URL de la base).
+# Démo à explorer : base MariaDB dans le conteneur, données fictives recréées à chaque démarrage.
+# Aucune variable à saisir. Stripe peut être ajouté plus tard dans Environment (facultatif).
 services:
   - type: web
     name: run-for-lorene
@@ -22,27 +23,12 @@ services:
         value: fr
       - key: APP_FALLBACK_LOCALE
         value: fr
+      - key: APP_FAKER_LOCALE
+        value: fr_FR
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
-        value: warning
-
-      # MySQL externe (Aiven, offre gratuite) : SSL obligatoire, certificat CA en Secret File.
-      - key: DB_CONNECTION
-        value: mysql
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        sync: false
-      - key: DB_DATABASE
-        sync: false
-      - key: DB_USERNAME
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: MYSQL_ATTR_SSL_CA
-        value: /etc/secrets/ca.pem
-
+        value: info
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_SECURE_COOKIE
@@ -51,26 +37,12 @@ services:
         value: database
       - key: QUEUE_CONNECTION
         value: database
-
-      # Emails : écrits dans les logs pour la démo. Pour envoyer via Brevo, ajouter dans Render :
-      # MAIL_MAILER=smtp, MAIL_HOST=smtp-relay.brevo.com, MAIL_PORT=587, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS
+      # Emails écrits dans les logs Render (liens « Créer mon mot de passe » visibles là).
       - key: MAIL_MAILER
         value: log
       - key: MAIL_FROM_ADDRESS
         value: noreply@runforlorene.fr
       - key: MAIL_FROM_NAME
         value: Run For Lorène
-
-      # Stripe (mode test) : facultatif, peut rester vide tant qu'on ne teste pas le paiement
-      - key: STRIPE_KEY
-        sync: false
-      - key: STRIPE_SECRET
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-
       - key: OPTIONS_ACTIVES
-        value: "false"
-      # true au premier déploiement pour créer RFL3 + le compte admin (ignoré si la base contient déjà des comptes)
-      - key: RFL_SEED
         value: "false"
