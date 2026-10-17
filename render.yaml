@@ -1,0 +1,84 @@
+# Blueprint Render : https://render.com/docs/blueprint-spec
+# Les valeurs « sync: false » sont demandées par Render à la création (secrets, URL de la base).
+services:
+  - type: web
+    name: run-for-lorene
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: deploiement-render
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Run For Lorène
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: APP_LOCALE
+        value: fr
+      - key: APP_FALLBACK_LOCALE
+        value: fr
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+
+      # MySQL externe (Aiven, offre gratuite) : SSL obligatoire, certificat CA en Secret File.
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: MYSQL_ATTR_SSL_CA
+        value: /etc/secrets/ca.pem
+
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+      # Brevo en SMTP
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp-relay.brevo.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Run For Lorène
+
+      # Stripe (mode test)
+      - key: STRIPE_KEY
+        sync: false
+      - key: STRIPE_SECRET
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      - key: OPTIONS_ACTIVES
+        value: "false"
+      # true au premier déploiement pour créer RFL3 + le compte admin (ignoré si la base contient déjà des comptes)
+      - key: RFL_SEED
+        value: "false"

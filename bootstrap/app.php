@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Derrière le proxy HTTPS de l'hébergeur (Render) : sans ça, Laravel génère des URL en http.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => NiveauAdmin::class,
             'admin.confirme' => ConfirmationAdmin::class,
