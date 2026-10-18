@@ -65,21 +65,51 @@
                 @if ($moi)
                     <p class="text-sm text-gris-texte">Ton propre niveau se change par un autre super admin.</p>
                 @else
-                    <form method="POST" action="{{ route('admin.utilisateurs.niveau', $u) }}" class="space-y-3">
+                    @php
+                        $actuel = $u->niveauAdmin();
+                        $choisi = (int) old('niveau_acces', $actuel);
+                    @endphp
+                    {{-- Donner plus de droits demande une confirmation (vérifiée côté serveur) ; super admin : recopier l'email. --}}
+                    <form method="POST" action="{{ route('admin.utilisateurs.niveau', $u) }}" class="group/niveau space-y-3"
+                        onsubmit="const n = +this.niveau_acces.value; return n <= {{ $actuel }} || confirm(n === 3 ? 'Donner TOUS les droits (super admin) à {{ addslashes($u->name) }} ?' : 'Donner cet accès admin à {{ addslashes($u->name) }} ?')">
                         @csrf
                         @method('PUT')
                         <fieldset class="space-y-2 text-sm">
                             <legend class="sr-only">Niveau d'accès</legend>
                             @foreach ([0 => 'Aucun (participant)'] + Admin::LIBELLES as $niveau => $libelle)
                                 <label class="flex items-start gap-2">
-                                    <input type="radio" name="niveau_acces" value="{{ $niveau }}" class="mt-1" @checked($u->niveauAdmin() === $niveau)>
+                                    <input type="radio" name="niveau_acces" value="{{ $niveau }}" id="niveau-{{ $niveau }}" class="mt-1" @checked($choisi === $niveau)>
                                     <span>
                                         {{ $libelle }}
-                                        <span class="block text-xs text-gris-texte">{{ [0 => 'Pas d\'accès au back-office', 1 => 'Consulte tout, sauf les réponses de santé', 2 => 'Gère inscriptions, dossards et documents', 3 => 'Paramétrage, remboursements et admins'][$niveau] }}</span>
+                                        <span class="block text-xs text-gris-texte">{{ [0 => 'Pas d\'accès au back-office', 1 => 'Consulte tout, sauf les réponses de santé', 2 => 'Gère inscriptions, dossards et documents', 3 => 'Tous les droits : paramétrage, remboursements, admins'][$niveau] }}</span>
                                     </span>
                                 </label>
                             @endforeach
                         </fieldset>
+
+                        @php
+                            $promotions = collect([1, 2, 3])->filter(fn ($n) => $n > $actuel);
+                            // Classes écrites en entier pour que Tailwind les génère : le bloc apparaît dès qu'un niveau supérieur est coché.
+                            $siCoche = [1 => 'group-has-[#niveau-1:checked]/niveau:block', 2 => 'group-has-[#niveau-2:checked]/niveau:block', 3 => 'group-has-[#niveau-3:checked]/niveau:block'];
+                        @endphp
+                        @if ($promotions->isNotEmpty())
+                            <div class="{{ $errors->niveau->any() ? '' : 'hidden' }} {{ $promotions->map(fn ($n) => $siCoche[$n])->join(' ') }} space-y-3 rounded-2xl border border-moutarde/40 bg-moutarde/10 p-4 text-sm">
+                                <p class="font-bold">Tu donnes plus de droits à {{ $u->prenom }}.</p>
+                                <label class="flex items-start gap-2">
+                                    <input type="checkbox" name="confirmation" value="1" class="mt-1">
+                                    <span>Je confirme : {{ $u->name }} ({{ $u->email }}) aura cet accès à l'administration. Il ou elle en sera informé(e) par email.</span>
+                                </label>
+                                @error('confirmation', 'niveau')<p class="rfl-erreur">{{ $message }}</p>@enderror
+                                @if ($actuel < 3)
+                                    <div class="hidden group-has-[#niveau-3:checked]/niveau:block {{ $errors->niveau->has('confirmation_email') ? '!block' : '' }}">
+                                        <label for="confirmation_email" class="rfl-label">Super admin : recopie son email pour confirmer</label>
+                                        <input id="confirmation_email" name="confirmation_email" type="email" autocomplete="off" class="rfl-champ-compact" placeholder="{{ $u->email }}">
+                                        @error('confirmation_email', 'niveau')<p class="rfl-erreur">{{ $message }}</p>@enderror
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+
                         <button type="submit" class="rfl-btn w-full px-5 py-2.5 text-sm">Enregistrer</button>
                     </form>
                 @endif
@@ -117,6 +147,27 @@
                         @csrf
                         <button type="submit" class="rfl-btn-secondaire w-full px-5 py-2.5 text-sm">Réinitialiser</button>
                     </form>
+                </section>
+            @endunless
+
+            @unless ($moi)
+                <section class="rounded-3xl border border-rose-200/70 bg-white p-6">
+                    <h2 class="mb-1 font-display text-vert">Supprimer le compte</h2>
+                    @if ($obstaclesSuppression)
+                        <p class="text-sm text-gris-texte">Impossible pour ce compte :</p>
+                        <ul class="mt-1 list-disc pl-5 text-sm text-gris-texte">
+                            @foreach ($obstaclesSuppression as $obstacle)
+                                <li>{{ ucfirst($obstacle) }}.</li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="mb-4 text-sm text-gris-texte">Ce compte n'a jamais servi : il part définitivement, avec ses participants gérés{{ $u->participantsGeres->isNotEmpty() ? ' ('.$u->participantsGeres->map(fn ($p) => $p->user->prenom)->join(', ').')' : '' }} et ses inscriptions non terminées.</p>
+                        <form method="POST" action="{{ route('admin.utilisateurs.destroy', $u) }}" onsubmit="return confirm('Supprimer définitivement le compte de {{ addslashes($u->name) }} ?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="rfl-btn-secondaire w-full border-rose-300 px-5 py-2.5 text-sm text-rose-800 hover:border-rose-500">Supprimer le compte</button>
+                        </form>
+                    @endif
                 </section>
             @endunless
         </aside>

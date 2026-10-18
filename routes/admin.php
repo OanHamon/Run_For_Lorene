@@ -106,6 +106,7 @@ Route::middleware('admin:3')->group(function () {
 
     Route::get('utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
     Route::get('utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->whereNumber('utilisateur')->name('utilisateurs.show');
+    Route::delete('utilisateurs/{utilisateur}', [UtilisateurController::class, 'destroy'])->whereNumber('utilisateur')->name('utilisateurs.destroy');
     Route::put('utilisateurs/{utilisateur}/niveau', [UtilisateurController::class, 'niveau'])->name('utilisateurs.niveau');
     Route::put('utilisateurs/{utilisateur}/email', [UtilisateurController::class, 'email'])->name('utilisateurs.email');
     Route::post('utilisateurs/{utilisateur}/reinitialiser', [UtilisateurController::class, 'reinitialiser'])->name('utilisateurs.reinitialiser');

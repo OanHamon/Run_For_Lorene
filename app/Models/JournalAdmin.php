@@ -43,6 +43,7 @@ class JournalAdmin extends Model
         'user.reinitialisation' => 'Accès réinitialisé',
         'user.email' => 'Email du compte corrigé',
         'user.creation' => 'Compte créé',
+        'user.suppression' => 'Compte supprimé',
         'user.activation' => 'Lien d\'activation renvoyé',
     ];
 

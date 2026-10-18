@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Inscription;
 use App\Models\User;
+use App\Notifications\AccesAdminModifie;
 use App\Notifications\CompteCree;
 use App\Services\Admin\Journal;
+use App\Services\Admin\SupprimerCompte;
 use App\Support\Activation;
 use App\Support\Telephone;
 use Illuminate\Http\RedirectResponse;
@@ -112,7 +114,7 @@ class UtilisateurController extends Controller
         return back()->with('statut', "Nouveau lien envoyé à {$utilisateur->email}.");
     }
 
-    public function show(User $utilisateur): View
+    public function show(Request $request, User $utilisateur, SupprimerCompte $supprimer): View
     {
         abort_if($utilisateur->email === null, 404, 'Participant géré sans compte : voir son responsable.');
 
@@ -126,6 +128,7 @@ class UtilisateurController extends Controller
                 ->where('statut', '!=', Inscription::BROUILLON)
                 ->orderByDesc('id_inscription')
                 ->get(),
+            'obstaclesSuppression' => $supprimer->obstacles($utilisateur, $request->user()),
         ]);
     }
 
@@ -148,6 +151,21 @@ class UtilisateurController extends Controller
             return back()->with('erreur', 'Il doit rester au moins un super admin.');
         }
 
+        // Donner plus de droits se confirme explicitement ; super admin, en retapant l'email du compte.
+        if ($niveau > $avant) {
+            $request->validateWithBag('niveau', [
+                'confirmation' => ['accepted'],
+                'confirmation_email' => $niveau === Admin::SUPER ? ['required', function ($attribut, $valeur, $echec) use ($utilisateur) {
+                    if (mb_strtolower(trim((string) $valeur)) !== $utilisateur->email) {
+                        $echec("Recopie exactement l'email du compte ({$utilisateur->email}) pour confirmer.");
+                    }
+                }] : ['nullable'],
+            ], [
+                'confirmation.accepted' => 'Coche la case pour confirmer ce nouvel accès.',
+                'confirmation_email.required' => "Recopie l'email du compte pour confirmer l'accès super admin.",
+            ]);
+        }
+
         if ($niveau === 0) {
             $utilisateur->admin()->delete();
             $this->journal->noter('admin.retrait', $utilisateur, ['avant' => $avant]);
@@ -156,7 +174,27 @@ class UtilisateurController extends Controller
             $this->journal->noter('admin.niveau', $utilisateur, ['avant' => $avant, 'après' => $niveau]);
         }
 
-        return back()->with('statut', $niveau === 0 ? 'Accès admin retiré.' : 'Niveau d\'accès : '.Admin::LIBELLES[$niveau].'.');
+        // La personne est prévenue de tout changement : une promotion par erreur se voit tout de suite.
+        $utilisateur->notify(new AccesAdminModifie($avant, $niveau, $request->user()->name));
+
+        return back()->with('statut', $niveau === 0 ? 'Accès admin retiré.' : 'Niveau d\'accès : '.Admin::LIBELLES[$niveau].'. '.$utilisateur->prenom.' en est informé(e) par email.');
+    }
+
+    /** Suppression d'un compte qui n'a jamais servi (voir SupprimerCompte pour les conditions). */
+    public function destroy(Request $request, User $utilisateur, SupprimerCompte $supprimer): RedirectResponse
+    {
+        $obstacles = $supprimer->obstacles($utilisateur, $request->user());
+
+        if ($obstacles) {
+            return back()->with('erreur', 'Suppression impossible : '.implode(' ; ', $obstacles).'.');
+        }
+
+        $nom = $utilisateur->name;
+        $email = $utilisateur->email;
+        $resultat = $supprimer($utilisateur);
+        $this->journal->noter('user.suppression', $utilisateur, ['nom' => $nom, 'email' => $email, 'participants gérés supprimés' => $resultat['geres']]);
+
+        return redirect()->route('admin.utilisateurs.index')->with('statut', "Compte de {$nom} supprimé.");
     }
 
     /**
