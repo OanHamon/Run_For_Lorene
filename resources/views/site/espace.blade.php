@@ -83,13 +83,18 @@
             @endif
 
             @if ($aInscrire)
-                <section class="relative mb-6 overflow-hidden rounded-[28px] bg-vert px-6 py-10 text-white sm:px-10 sm:py-12">
-                    <x-charte.cercle disque="bg-vert-doux/40" arc="border-moutarde" class="pointer-events-none absolute -right-10 -bottom-12 hidden w-48 sm:block" />
-                    <div class="relative max-w-lg">
-                        <p class="font-display text-moutarde">{{ $evenement->date_evenement->translatedFormat('l j F Y') }} &middot; Nantes</p>
-                        <h2 class="mt-2 font-display text-3xl">Prêt(e) pour {{ $evenement->nom }} ?</h2>
-                        <p class="mt-3 text-white/85">Tu n'as pas encore d'inscription pour cette édition. Inscris-toi, ou inscris un proche, en quelques minutes.</p>
-                        <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="mt-7 rfl-btn-secondaire border-white text-lg">Nouvelle inscription</a>
+                <section class="mb-6 grid overflow-hidden rounded-3xl border border-bordure bg-white sm:grid-cols-[minmax(0,1fr)_220px]">
+                    <div class="flex flex-col items-start p-6 sm:p-8">
+                        <img src="/images/pictos/evenement.png" alt="" class="h-14 w-14">
+                        <h2 class="mt-4 font-display text-2xl text-vert">Rejoins {{ $evenement->nom }}</h2>
+                        <p class="mt-2 max-w-md text-vert-sombre">Tu n'as pas encore d'inscription pour cette édition. Inscris-toi, ou inscris un proche : ça prend quelques minutes.</p>
+                        <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="mt-6 w-full rfl-btn px-8 py-3.5 text-lg sm:w-auto">Nouvelle inscription</a>
+                    </div>
+                    {{-- Chiffre clé : moutarde sur vert profond, comme le dossard. --}}
+                    <div class="order-first flex flex-col items-center justify-center bg-vert px-6 py-5 text-center sm:order-last">
+                        <p class="text-sm text-white/85">Départ dans</p>
+                        <p class="mt-1 font-display text-5xl text-moutarde">J-{{ max($joursRestants, 0) }}</p>
+                        <p class="mt-1 text-sm text-white">{{ $evenement->date_evenement->translatedFormat('j F Y') }}</p>
                     </div>
                 </section>
             @elseif ($evenement)
