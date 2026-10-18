@@ -45,6 +45,22 @@ function panier(array $personnes, Course $course, bool $commander = true)
     return Inscription::orderBy('id_inscription')->get();
 }
 
+test("sans inscription pour l'événement, le tableau de bord met en avant « Nouvelle inscription »", function () {
+    $this->get('/espace')->assertOk()
+        ->assertSee('Nouvelle inscription')
+        ->assertSee(route('inscription.tunnel', ['nouveau' => 1]), false)
+        ->assertDontSee('Dossiers validés');
+});
+
+test('une fois inscrit, le grand appel à s\'inscrire laisse place au suivi', function () {
+    panier([['moi', 'Sam', '1985-06-01']], $this->marche);
+
+    $this->get('/espace')->assertOk()
+        ->assertDontSee('Nouvelle inscription')
+        ->assertSee('Dossiers validés')
+        ->assertSee("Inscrire quelqu'un", false);
+});
+
 test('chaque inscription du tableau de bord mène à sa page de suivi', function () {
     [$inscription] = panier([['moi', 'Sam', '1985-06-01']], $this->marche);
 

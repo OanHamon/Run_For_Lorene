@@ -12,6 +12,9 @@
     $joursRestants = $evenement ? (int) today()->diffInDays($evenement->date_evenement, false) : null;
     $inscriptionsEvenement = $evenement ? $inscriptions->where('id_evenement', $evenement->id_evenement) : collect();
     $ouvert = $evenement?->inscriptionsOuvertes();
+    // Rien en cours pour l'événement : l'inscription devient l'action principale de la page.
+    $aInscrire = $ouvert && $commandesEnAttente->isEmpty()
+        && $inscriptionsEvenement->where('statut', '!=', Inscription::ANNULEE)->isEmpty();
 @endphp
 <x-espace-shell title="Mon espace">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -21,7 +24,7 @@
                         <p class="mt-1 text-sm text-gris-texte">{{ $evenement->nom }} &middot; {{ $evenement->date_evenement->translatedFormat('l j F Y') }} &middot; Nantes</p>
                     @endif
                 </div>
-                @if ($ouvert)
+                @if ($ouvert && ! $aInscrire)
                     <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="rfl-btn px-5 py-2.5 text-sm">Inscrire quelqu'un</a>
                 @endif
             </div>
@@ -79,7 +82,17 @@
                 </div>
             @endif
 
-            @if ($evenement)
+            @if ($aInscrire)
+                <section class="relative mb-6 overflow-hidden rounded-[28px] bg-vert px-6 py-10 text-white sm:px-10 sm:py-12">
+                    <x-charte.cercle disque="bg-vert-doux/40" arc="border-moutarde" class="pointer-events-none absolute -right-10 -bottom-12 hidden w-48 sm:block" />
+                    <div class="relative max-w-lg">
+                        <p class="font-display text-moutarde">{{ $evenement->date_evenement->translatedFormat('l j F Y') }} &middot; Nantes</p>
+                        <h2 class="mt-2 font-display text-3xl">Prêt(e) pour {{ $evenement->nom }} ?</h2>
+                        <p class="mt-3 text-white/85">Tu n'as pas encore d'inscription pour cette édition. Inscris-toi, ou inscris un proche, en quelques minutes.</p>
+                        <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="mt-7 rfl-btn-secondaire border-white text-lg">Nouvelle inscription</a>
+                    </div>
+                </section>
+            @elseif ($evenement)
                 <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <div class="rounded-3xl border border-bordure bg-white p-4">
                         <p class="text-sm text-gris-texte">Inscriptions</p>
@@ -111,6 +124,7 @@
                 </div>
             @endif
 
+            @if ($inscriptions->isNotEmpty() || ! $aInscrire)
             <div class="mb-6 overflow-hidden rounded-3xl border border-bordure bg-white">
                 <div class="flex items-center justify-between px-6 py-4">
                     <h2 class="font-display text-vert">Inscriptions</h2>
@@ -119,9 +133,6 @@
                 @if ($inscriptions->isEmpty())
                     <div class="border-t border-bordure px-6 py-8 text-center text-sm text-gris-texte">
                         Aucune inscription pour l'instant.
-                        @if ($ouvert)
-                            <a href="{{ route('inscription.tunnel') }}" class="rfl-lien">S'inscrire à {{ $evenement->nom }}</a>
-                        @endif
                     </div>
                 @else
                     <div class="relative overflow-x-auto">
@@ -159,6 +170,7 @@
                     </div>
                 @endif
             </div>
+            @endif
 
             @if ($dons->isNotEmpty())
                 <div class="overflow-hidden rounded-3xl border border-bordure bg-white">
