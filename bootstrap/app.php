@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ConfirmationAdmin;
+use App\Http\Middleware\EntetesSecurite;
 use App\Http\Middleware\NiveauAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => NiveauAdmin::class,
             'admin.confirme' => ConfirmationAdmin::class,
         ]);
+
+        $middleware->append(EntetesSecurite::class);
 
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('espace'));

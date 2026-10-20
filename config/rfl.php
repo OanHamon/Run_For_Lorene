@@ -13,4 +13,12 @@ return [
     | passé, même si l'admin est déjà connecté (cookie « se souvenir de moi » compris).
     */
     'admin_confirmation_heures' => (int) env('ADMIN_CONFIRMATION_HEURES', 8),
+
+    /*
+    | Proxy ou répartiteur de charge devant le site (hébergeur, CDN) : ses adresses, séparées
+    | par des virgules, ou « * ». Sans ce réglage derrière un proxy, toutes les requêtes ont
+    | l'IP du proxy : les limites par IP (connexion, codes) bloqueraient tout le monde, et
+    | l'IP des consentements serait fausse. Vide : aucun proxy.
+    */
+    'proxies_de_confiance' => env('TRUSTED_PROXIES'),
 ];
