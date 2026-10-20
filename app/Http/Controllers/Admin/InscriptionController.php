@@ -56,6 +56,9 @@ class InscriptionController extends Controller
         $evenement = EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
 
+        // Données personnelles (mineurs, contacts d'urgence) qui sortent du site : chaque export est tracé.
+        $this->journal->noter('export.inscrits', $evenement, array_filter($request->only(['q', 'statut', 'course', 'mineur', 'documents'])));
+
         $lignes = function () use ($request, $evenement) {
             foreach ($this->requete($request, $evenement)->lazy() as $i) {
                 $p = $i->participant;
@@ -106,6 +109,8 @@ class InscriptionController extends Controller
     {
         $evenement = EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
+
+        $this->journal->noter('export.dossards', $evenement);
 
         $inscriptions = Inscription::with('participant.user', 'tarif.course')
             ->where('id_evenement', $evenement->id_evenement)

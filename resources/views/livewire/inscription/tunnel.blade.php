@@ -165,6 +165,15 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         }
     }
 
+    /**
+     * Chaque action du tunnel suppose un compte connecté et vérifié : un invité ne voit que
+     * l'identification (composant à part), il n'a aucune action à appeler ici.
+     */
+    public function hydrate(): void
+    {
+        abort_unless(Auth::check() && Auth::user()->hasVerifiedEmail(), 403);
+    }
+
     // ------------------------------------------------------------------
     // Données calculées
     // ------------------------------------------------------------------
@@ -511,6 +520,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     public function participantSuivant(): void
     {
+        // Inscriptions fermées pendant le parcours : on ne crée plus de participant.
+        if (! $this->evenement?->inscriptionsOuvertes()) {
+            $this->aller('ferme');
+
+            return;
+        }
+
         $user = Auth::user();
 
         $this->telephone = Telephone::normaliser($this->telephone);

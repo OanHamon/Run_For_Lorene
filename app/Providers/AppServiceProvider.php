@@ -24,8 +24,10 @@ class AppServiceProvider extends ServiceProvider
                 return $app->make(PasserelleStripe::class);
             }
 
-            if ($app->isProduction()) {
-                throw new RuntimeException('Paiement : la simulation est interdite en production, configure STRIPE_SECRET.');
+            // Simulation réservée au poste de développement et aux tests : un serveur de recette
+            // public sans clé Stripe permettrait sinon de s'inscrire sans payer.
+            if (! $app->environment('local', 'testing')) {
+                throw new RuntimeException('Paiement : la simulation est réservée à APP_ENV=local, configure STRIPE_SECRET.');
             }
 
             return $app->make(PasserelleSimulation::class);

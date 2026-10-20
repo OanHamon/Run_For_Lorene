@@ -115,6 +115,18 @@ test("un paiement reçu sur une commande abandonnée est signalé dans le tablea
         ->assertSee('abandonnée');
 });
 
+test("la simulation de paiement n'existe qu'en local : refusée sur un serveur de recette", function () {
+    [, $paiement] = commandeEnAttente($this->user, $this->marche);
+    app()->detectEnvironment(fn () => 'staging');
+    $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+
+    $this->get(route('paiement.simulation', $paiement))->assertNotFound();
+    $this->post(route('paiement.simuler', [$paiement, 'reussi']))->assertNotFound();
+
+    expect($paiement->fresh()->statut)->toBe(Paiement::EN_ATTENTE);
+    expect(fn () => app(\App\Services\Paiement\Passerelle::class))->toThrow(RuntimeException::class);
+});
+
 test("webhook : session expirée → l'inscription reste en attente de paiement et la place est libérée", function () {
     $this->marche->update(['quota' => 5]);
     [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);

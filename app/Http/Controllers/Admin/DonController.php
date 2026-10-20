@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Evenement;
+use App\Services\Admin\Journal;
 use App\Services\Admin\Statistiques;
 use App\Support\Csv;
 use App\Support\EvenementAdmin;
@@ -31,10 +32,13 @@ class DonController extends Controller
         ]);
     }
 
-    public function export(Request $request): Response
+    public function export(Request $request, Journal $journal): Response
     {
         $evenement = EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
+
+        // Noms et adresses des donateurs qui sortent du site : chaque export est tracé.
+        $journal->noter('export.dons', $evenement, array_filter($request->only(['q', 'recu', 'anonyme'])));
 
         $lignes = function () use ($request, $evenement) {
             foreach ($this->requete($request, $evenement)->lazy() as $don) {

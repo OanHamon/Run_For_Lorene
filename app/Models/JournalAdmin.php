@@ -45,6 +45,9 @@ class JournalAdmin extends Model
         'user.creation' => 'Compte créé',
         'user.suppression' => 'Compte supprimé',
         'user.activation' => 'Lien d\'activation renvoyé',
+        'export.inscrits' => 'Export des inscrits',
+        'export.dossards' => 'Export des dossards',
+        'export.dons' => 'Export des dons',
     ];
 
     protected $fillable = [

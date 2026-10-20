@@ -283,6 +283,32 @@ test('inscriptions fermées', function () {
     Volt::test('inscription.tunnel')->assertSet('etape', 'ferme')->assertSee('Inscriptions fermées');
 });
 
+test("inscriptions fermées pendant le parcours : aucun participant n'est créé", function () {
+    $this->actingAs($this->parent);
+    $tunnel = Volt::test('inscription.tunnel')->call('choisirParticipant', 'nouveau');
+
+    Evenement::query()->update(['fermeture' => now()->subMinute()]);
+
+    $tunnel->set('prenom', 'Lou')->set('dateNaissance', '2018-02-10')
+        ->call('participantSuivant')
+        ->assertSet('etape', 'ferme');
+
+    expect(Participant::where('id_responsable', $this->parent->id_user)->exists())->toBeFalse();
+});
+
+test("les actions du tunnel sont refusées sans compte vérifié", function () {
+    $avant = Participant::count();
+
+    Volt::test('inscription.tunnel')->assertSet('etape', 'compte')->call('participantSuivant')->assertForbidden();
+    Volt::test('inscription.tunnel')->call('payer')->assertForbidden();
+
+    $tunnel = Volt::test('inscription.tunnel');
+    $this->actingAs(User::factory()->unverified()->create());
+    $tunnel->call('choisirParticipant', 'moi')->assertForbidden();
+
+    expect(Participant::count())->toBe($avant);
+});
+
 test('un paiement en attente est proposé à la place du tunnel', function () {
     $this->actingAs($this->parent);
 

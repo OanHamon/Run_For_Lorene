@@ -170,11 +170,21 @@ test("l'export CSV des inscrits est lisible par un tableur", function () {
     $adulte = User::factory()->create(['prenom' => 'Camille', 'nom' => '=Durand']);
     inscriptionPayee($adulte, $this->dix)->update(['dossard' => 1000, 'prix_paye' => 25]);
 
-    $csv = lireCsv($this->actingAs(admin(1))->get('/admin/inscriptions/export')->assertOk()->streamedContent());
+    $lecteur = admin(1);
+    $csv = lireCsv($this->actingAs($lecteur)->get('/admin/inscriptions/export?mineur=1')->assertOk()->streamedContent());
 
-    expect($csv)->toStartWith("sep=;\r\nN°;Nom;Prénom;")
-        ->and($csv)->toContain("'=Durand;Camille;") // formule neutralisée
+    expect($csv)->toStartWith("sep=;\r\nN°;Nom;Prénom;");
+
+    $csv = lireCsv($this->get('/admin/inscriptions/export')->assertOk()->streamedContent());
+
+    expect($csv)->toContain("'=Durand;Camille;") // formule neutralisée
         ->and($csv)->toContain(';"Course 10 km";Validée;1000;25,00;');
+
+    // Chaque export est tracé au journal, avec son auteur et ses filtres.
+    $journal = JournalAdmin::where('action', 'export.inscrits')->orderBy('id_journal')->get();
+    expect($journal)->toHaveCount(2)
+        ->and($journal->first()->id_admin)->toBe($lecteur->id_user)
+        ->and($journal->first()->details)->toBe(['mineur' => '1']);
 });
 
 test("l'export des dossards liste les inscriptions validées par numéro", function () {

@@ -77,7 +77,7 @@ class PaiementController extends Controller
     }
 
     // ------------------------------------------------------------------
-    // Simulation (hors production, sans clé Stripe)
+    // Simulation (APP_ENV local ou testing uniquement, sans clé Stripe)
     // ------------------------------------------------------------------
 
     public function simulation(Request $request, Paiement $paiement): View
@@ -106,7 +106,7 @@ class PaiementController extends Controller
 
     private function autoriserSimulation(Request $request, Paiement $paiement): void
     {
-        abort_if(app()->isProduction() || config('paiement.passerelle') !== 'simulation', 404);
+        abort_if(! app()->environment('local', 'testing') || config('paiement.passerelle') !== 'simulation', 404);
         $this->autoriser($request, $paiement->commande);
         abort_unless($paiement->statut === Paiement::EN_ATTENTE, 410, 'Cette tentative de paiement est terminée.');
 
