@@ -40,12 +40,7 @@ Route::post('stripe/webhook', StripeWebhookController::class)->name('stripe.webh
 
 Route::redirect('dashboard', 'espace')->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
-
-    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
-    Volt::route('settings/password', 'settings.password')->name('settings.password');
-    Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
-});
+// Anciennes pages « settings » du starter kit : tout se règle dans « Mon compte ».
+Route::redirect('settings/{page?}', '/espace/compte');
 
 require __DIR__.'/auth.php';

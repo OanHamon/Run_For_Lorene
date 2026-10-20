@@ -271,10 +271,10 @@ test("mot de passe oublié : après connexion par code, on redéfinit son mot de
         ->set('email', 'camille@exemple.fr')->call('continuerEmail')->call('recevoirCode');
     $composant->set('code', codeEnvoyeA($user))->call('validerCode');
 
-    Volt::test('settings.password')
-        ->set('password', 'nouveaumotdepasse')
-        ->set('password_confirmation', 'nouveaumotdepasse')
-        ->call('updatePassword')
+    Volt::test('espace.compte')
+        ->set('nouveau', 'nouveaumotdepasse')
+        ->set('nouveau_confirmation', 'nouveaumotdepasse')
+        ->call('enregistrerMotDePasse')
         ->assertHasNoErrors();
 
     expect(Hash::check('nouveaumotdepasse', $user->fresh()->mot_de_passe))->toBeTrue();
@@ -287,9 +287,9 @@ test("après une connexion par mot de passe, le mot de passe actuel reste exigé
         ->set('email', 'camille@exemple.fr')->call('continuerEmail')
         ->set('password', 'password')->call('seConnecter');
 
-    Volt::test('settings.password')
-        ->set('password', 'nouveaumotdepasse')
-        ->set('password_confirmation', 'nouveaumotdepasse')
-        ->call('updatePassword')
-        ->assertHasErrors('current_password');
+    Volt::test('espace.compte')
+        ->set('nouveau', 'nouveaumotdepasse')
+        ->set('nouveau_confirmation', 'nouveaumotdepasse')
+        ->call('enregistrerMotDePasse')
+        ->assertHasErrors('actuel');
 });
