@@ -24,6 +24,7 @@
     --color-gris-texte: #4F6A64;
     --color-fond: #F1FAF8;
     --color-bordure: #D2E8E3;
+    --color-fond-admin: #DDEFEB; /* fond du back-office, un ton sous `fond` pour détacher les cartes */
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
