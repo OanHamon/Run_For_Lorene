@@ -6,6 +6,7 @@ use App\Services\Paiement\Passerelle;
 use App\Services\Paiement\PasserelleSimulation;
 use App\Services\Paiement\PasserelleStripe;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 use RuntimeException;
 use Stripe\StripeClient;
 
@@ -36,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // 8 caractères minimum ; en production, refus des mots de passe déjà sortis dans une
+        // fuite connue (service Have I Been Pwned, seul un préfixe du hash est envoyé).
+        Password::defaults(fn () => $this->app->isProduction()
+            ? Password::min(8)->uncompromised()
+            : Password::min(8));
     }
 }

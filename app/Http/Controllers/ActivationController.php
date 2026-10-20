@@ -36,7 +36,7 @@ class ActivationController extends Controller
         }
 
         $request->validate([
-            'mot_de_passe' => ['required', 'string', Password::min(8), 'confirmed'],
+            'mot_de_passe' => ['required', 'string', Password::defaults(), 'confirmed'],
         ], [
             'mot_de_passe.required' => 'Choisis un mot de passe.',
             'mot_de_passe.min' => 'Le mot de passe doit contenir au moins 8 caractères.',

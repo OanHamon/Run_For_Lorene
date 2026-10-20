@@ -1,8 +1,11 @@
 <?php
 
+use App\Notifications\MotDePasseModifie;
 use App\Support\Telephone;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -60,7 +63,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon compte'])] class extend
         $this->validate([
             // Pas de mot de passe actuel à saisir si le compte n'en a pas, ou juste après une connexion par code.
             'actuel' => $user->doitConfirmerMotDePasse() ? ['required', 'string', 'current_password'] : ['nullable'],
-            'nouveau' => ['required', 'string', Password::min(8), 'confirmed'],
+            'nouveau' => ['required', 'string', Password::defaults(), 'confirmed'],
         ], [
             'actuel.required' => 'Indique ton mot de passe actuel.',
             'actuel.current_password' => 'Ce n\'est pas ton mot de passe actuel. Tu l\'as oublié ? Déconnecte-toi, puis reçois un code par email.',
@@ -70,8 +73,23 @@ new #[Layout('components.espace-shell', ['title' => 'Mon compte'])] class extend
         ]);
 
         $avait = (bool) $user->mot_de_passe;
-        $user->forceFill(['mot_de_passe' => Hash::make($this->nouveau)])->save();
+
+        // Nouveau mot de passe : les autres sessions et les cookies « rester connecté » des
+        // autres appareils sont révoqués ; cet appareil reste connecté.
+        $resteConnecte = request()->hasCookie(Auth::guard()->getRecallerName());
+        $user->forceFill([
+            'mot_de_passe' => Hash::make($this->nouveau),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $user->id_user)
+            ->where('id', '!=', session()->getId())
+            ->delete();
+
+        Auth::login($user, remember: $resteConnecte);
         session()->put('auth.password_confirmed_at', time());
+        $user->notify(new MotDePasseModifie);
 
         $this->reset('actuel', 'nouveau', 'nouveau_confirmation');
         session()->flash('statut', $avait ? 'Mot de passe changé.' : 'Mot de passe enregistré. Tu peux aussi continuer à te connecter avec un code.');

@@ -2,7 +2,10 @@
 
 use App\Models\User;
 use App\Notifications\CodeEmailNotification;
+use App\Notifications\MotDePasseModifie;
 use App\Services\Auth\CodeEmail;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
@@ -292,4 +295,35 @@ test("après une connexion par mot de passe, le mot de passe actuel reste exigé
         ->set('nouveau_confirmation', 'nouveaumotdepasse')
         ->call('enregistrerMotDePasse')
         ->assertHasErrors('actuel');
+});
+
+test("« Rester connecté » décoché : pas de cookie de connexion durable", function (bool $coche) {
+    User::factory()->create(['email' => 'camille@exemple.fr']);
+
+    Volt::test('auth.identification')
+        ->set('email', 'camille@exemple.fr')->call('continuerEmail')
+        ->set('resterConnecte', $coche)
+        ->set('password', 'password')->call('seConnecter');
+
+    expect(auth()->check())->toBeTrue()
+        ->and(Cookie::hasQueued(auth()->guard()->getRecallerName()))->toBe($coche);
+})->with(['coché' => true, 'décoché' => false]);
+
+test('nouveau mot de passe : autres appareils déconnectés et titulaire prévenu par email', function () {
+    $user = User::factory()->create(['email' => 'camille@exemple.fr', 'remember_token' => 'ancien-jeton']);
+    DB::table('sessions')->insert(['id' => 'autre-appareil', 'user_id' => $user->id_user, 'payload' => '', 'last_activity' => time()]);
+
+    $this->actingAs($user);
+    session()->put('auth.password_confirmed_at', time());
+
+    Volt::test('espace.compte')
+        ->set('nouveau', 'nouveaumotdepasse')
+        ->set('nouveau_confirmation', 'nouveaumotdepasse')
+        ->call('enregistrerMotDePasse')
+        ->assertHasNoErrors();
+
+    expect($user->fresh()->remember_token)->not->toBe('ancien-jeton')
+        ->and(DB::table('sessions')->where('id', 'autre-appareil')->exists())->toBeFalse()
+        ->and(auth()->check())->toBeTrue();
+    Notification::assertSentTo($user, MotDePasseModifie::class);
 });

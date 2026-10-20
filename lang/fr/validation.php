@@ -33,6 +33,9 @@ return [
         'string' => 'Le champ :attribute doit contenir au moins :min caractères.',
     ],
     'numeric' => 'Le champ :attribute doit être un nombre.',
+    'password' => [
+        'uncompromised' => 'Ce mot de passe figure dans une fuite de données connue : choisis-en un autre.',
+    ],
     'regex' => 'Le format du champ :attribute n\'est pas valide.',
     'required' => 'Le champ :attribute est obligatoire.',
     'required_with' => 'Le champ :attribute est obligatoire quand :values est renseigné.',

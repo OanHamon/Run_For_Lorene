@@ -50,6 +50,9 @@ new class extends Component {
 
     public ?string $info = null;
 
+    /** Cookie « se souvenir de moi » : à décocher sur un ordinateur partagé. */
+    public bool $resterConnecte = true;
+
     public function mount(?string $destination = null, ?string $mode = null): void
     {
         $this->destination = $destination ?: route('espace');
@@ -178,7 +181,7 @@ new class extends Component {
             'prenom' => 'required|string|max:100',
             'nom' => 'required|string|max:100',
             'email' => 'required|email:rfc|max:254|unique:users,email',
-            'password' => ['required', 'string', Password::min(8)],
+            'password' => ['required', 'string', Password::defaults()],
         ], [
             'email.unique' => 'Un compte existe déjà avec cette adresse.',
         ], [
@@ -301,7 +304,7 @@ new class extends Component {
 
     private function connecter(User $user, bool $parCode = false)
     {
-        Auth::login($user, remember: true);
+        Auth::login($user, remember: $this->resterConnecte);
         session()->regenerate();
         session()->forget('url.intended');
 
@@ -373,6 +376,8 @@ new class extends Component {
 
             <button type="button" wire:click="recevoirCode" class="mt-4 text-sm rfl-lien">Mot de passe oublié ? Recevoir un code par email</button>
 
+            @include('partials.rester-connecte')
+
             <div class="mt-8 flex items-center justify-between">
                 <button type="button" wire:click="changerEmail" class="rfl-lien">Retour</button>
                 <button type="submit" class="rfl-btn" wire:loading.attr="disabled">Se connecter</button>
@@ -430,6 +435,10 @@ new class extends Component {
             @error('code') <p id="code-erreur" class="rfl-erreur">{{ $message }}</p> @enderror
 
             <button type="button" wire:click="renvoyerCode" class="mt-4 text-sm rfl-lien">Je n'ai rien reçu : renvoyer un code</button>
+
+            @unless (auth()->check())
+                @include('partials.rester-connecte')
+            @endunless
 
             <div class="mt-8 flex items-center justify-between">
                 @if (auth()->check())
