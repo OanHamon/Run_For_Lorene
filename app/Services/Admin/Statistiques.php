@@ -174,6 +174,42 @@ class Statistiques
         return Inscription::where('id_evenement', $evenement->id_evenement)->whereIn('statut', self::REGLEES);
     }
 
+    /**
+     * Paiements encaissés qui demandent une action (tous événements confondus) : reçus sur une
+     * commande qui n'est pas « payée » (abandonnée entre-temps, montant insuffisant), ou
+     * doublons sur une même commande. Un paiement entièrement remboursé n'est plus signalé.
+     *
+     * @return Collection<int, object{paiement: Paiement, motif: string}>
+     */
+    public static function paiementsAVerifier(): Collection
+    {
+        $actifs = Paiement::with('commande', 'remboursements')
+            ->where('statut', Paiement::REUSSI)
+            ->where(function ($q) {
+                $q->whereHas('commande', fn ($c) => $c->where('statut', '!=', Commande::PAYEE))
+                    ->orWhereIn('id_commande', Paiement::where('statut', Paiement::REUSSI)
+                        ->groupBy('id_commande')->havingRaw('count(*) > 1')->select('id_commande'));
+            })
+            ->orderByDesc('id_paiement')
+            ->get()
+            ->filter(fn (Paiement $p) => (float) $p->montant - (float) $p->remboursements->sum('montant') > 0.009);
+
+        $parCommande = $actifs->countBy('id_commande');
+
+        return $actifs
+            ->map(fn (Paiement $p) => (object) [
+                'paiement' => $p,
+                'motif' => match (true) {
+                    $p->commande->statut === Commande::PAYEE && $parCommande[$p->id_commande] > 1 => 'commande payée plusieurs fois : rembourse le doublon',
+                    $p->commande->statut === Commande::EN_COURS => 'montant reçu inférieur au total de la commande ('.number_format((float) $p->commande->montant_total, 2, ',', ' ').' €) : commande non confirmée',
+                    $p->commande->statut === Commande::PAYEE => null,
+                    default => 'paiement reçu alors que la commande est '.($p->commande->statut === Commande::ABANDONNEE ? 'abandonnée' : $p->commande->statut).' : rembourse-le ou contacte le payeur',
+                },
+            ])
+            ->filter(fn ($a) => $a->motif !== null)
+            ->values();
+    }
+
     /** Commandes liées à l'événement (par leurs inscriptions ou leur don). */
     public static function commandes(Evenement $evenement): Builder
     {

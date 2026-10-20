@@ -44,7 +44,7 @@ class StripeWebhookController extends Controller
                         ? app(PasserelleStripe::class)->frais((string) $session->payment_intent)
                         : null;
 
-                    $enregistrer->reussi($session->id, $session->amount_total / 100, $frais);
+                    $enregistrer->reussi($session->id, $session->amount_total / 100, $frais, (string) $session->currency);
                 }
                 break;
 

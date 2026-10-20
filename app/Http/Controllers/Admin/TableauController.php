@@ -27,6 +27,7 @@ class TableauController extends Controller
             'inscrits' => $evenement ? $stats->inscrits($evenement) : null,
             'recettes' => $evenement ? $stats->recettes($evenement) : null,
             'courses' => $evenement ? $stats->courses($evenement) : collect(),
+            'paiementsAVerifier' => Statistiques::paiementsAVerifier(),
             // En ligne mais incomplet (trou de tarif, texte manquant) : des personnes ne peuvent pas s'inscrire.
             'bloquants' => $evenement?->statut === Evenement::PUBLIE && $evenement->fermeture->isFuture()
                 ? $preparation->problemes($evenement)

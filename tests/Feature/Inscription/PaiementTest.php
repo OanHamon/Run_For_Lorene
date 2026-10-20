@@ -50,7 +50,7 @@ function webhookStripe(string $type, array $session, string $secret = 'whsec_tes
         'id' => 'evt_'.uniqid(),
         'object' => 'event',
         'type' => $type,
-        'data' => ['object' => array_merge(['object' => 'checkout.session', 'payment_intent' => null], $session)],
+        'data' => ['object' => array_merge(['object' => 'checkout.session', 'payment_intent' => null, 'currency' => 'eur'], $session)],
     ]);
     $t = time();
     $signature = "t={$t},v1=".hash_hmac('sha256', "{$t}.{$payload}", $secret);
@@ -86,6 +86,35 @@ test('webhook : paiement réussi, et un événement reçu deux fois ne change ri
     Notification::assertSentToTimes($this->user, CommandeConfirmee::class, 1);
 });
 
+test("webhook : un montant insuffisant ou une autre devise ne valide pas la commande, l'admin est alerté", function (int $centimes, string $devise) {
+    [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
+
+    webhookStripe('checkout.session.completed', ['id' => $paiement->reference, 'payment_status' => 'paid', 'amount_total' => $centimes, 'currency' => $devise])->assertOk();
+
+    expect($paiement->fresh()->statut)->toBe(Paiement::REUSSI)
+        ->and($commande->fresh()->statut)->toBe(Commande::EN_COURS)
+        ->and(Inscription::sole()->statut)->toBe(Inscription::EN_ATTENTE_PAIEMENT);
+    Notification::assertNothingSentTo($this->user, CommandeConfirmee::class);
+
+    $this->actingAs(admin(1))->get('/admin')->assertOk()
+        ->assertSee('Paiements à vérifier')
+        ->assertSee("Commande n° {$commande->id_commande}");
+})->with([
+    'montant trop bas' => [100, 'eur'],
+    'autre devise' => [1200, 'usd'],
+]);
+
+test("un paiement reçu sur une commande abandonnée est signalé dans le tableau de bord", function () {
+    [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
+    $commande->forceFill(['statut' => Commande::ABANDONNEE])->save();
+
+    app(EnregistrerPaiement::class)->reussi($paiement->reference, 12.0);
+
+    $this->actingAs(admin(1))->get('/admin')->assertOk()
+        ->assertSee('Paiements à vérifier')
+        ->assertSee('abandonnée');
+});
+
 test("webhook : session expirée → l'inscription reste en attente de paiement et la place est libérée", function () {
     $this->marche->update(['quota' => 5]);
     [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
@@ -99,12 +128,16 @@ test("webhook : session expirée → l'inscription reste en attente de paiement 
         ->and($this->marche->placesRestantes())->toBe(5);
 });
 
-test('la place réservée pendant le paiement expire après 30 minutes', function () {
+test('la place réservée pendant le paiement expire avec la session de paiement', function () {
     $this->marche->update(['quota' => 1]);
     commandeEnAttente($this->user, $this->marche);
     expect($this->marche->placesRestantes())->toBe(0);
 
+    // La session Stripe vit 31 minutes : un paiement à la 31e minute garde sa place.
     $this->travel(31)->minutes();
+    expect($this->marche->placesRestantes())->toBe(0);
+
+    $this->travel(33)->minutes();
     expect($this->marche->placesRestantes())->toBe(1);
 });
 
@@ -129,7 +162,7 @@ test('relance impossible si l\'épreuve est devenue complète entre-temps', func
     $this->marche->update(['quota' => 1]);
     [$commande] = commandeEnAttente($this->user, $this->marche);
 
-    $this->travel(31)->minutes();
+    $this->travel(33)->minutes();
     inscriptionPayee(User::factory()->create(), $this->marche);
 
     $this->actingAs($this->user)->post(route('inscription.payer', $commande))

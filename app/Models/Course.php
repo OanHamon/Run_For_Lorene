@@ -60,18 +60,22 @@ class Course extends Model
 
     /**
      * Places occupées : inscriptions payées (validées ou dossier incomplet) et inscriptions
-     * dont une tentative de paiement a démarré il y a moins de 30 minutes (place réservée
-     * pendant le paiement, spec). Une tentative plus ancienne ne bloque plus la place.
+     * dont une tentative de paiement est encore ouverte (place réservée pendant le paiement,
+     * spec : 30 minutes). La place est tenue tant que la session Stripe peut être payée, plus
+     * une minute de marge pour le webhook : sinon un paiement de dernière minute pourrait
+     * dépasser le quota. Une tentative plus ancienne ne bloque plus la place.
      */
     public function placesPrises(?int $saufCommande = null): int
     {
+        $reserveeDepuis = now()->subMinutes(config('paiement.session_minutes') + 1);
+
         return Inscription::whereIn('id_tarif', $this->tarifs()->select('id_tarif'))
             ->when($saufCommande, fn ($q) => $q->where(fn ($q2) => $q2->whereNull('id_commande')->orWhere('id_commande', '!=', $saufCommande)))
-            ->where(function ($q) {
+            ->where(function ($q) use ($reserveeDepuis) {
                 $q->whereIn('statut', [Inscription::VALIDEE, Inscription::DOSSIER_INCOMPLET])
                     ->orWhere(fn ($q2) => $q2->where('statut', Inscription::EN_ATTENTE_PAIEMENT)
-                        ->whereHas('commande.paiements', fn ($p) => $p->where('statut', 'en_attente')
-                            ->where('created_at', '>', now()->subMinutes(config('paiement.reservation_minutes')))));
+                        ->whereHas('commande.paiements', fn ($p) => $p->where('statut', Paiement::EN_ATTENTE)
+                            ->where('created_at', '>', $reserveeDepuis)));
             })
             ->count();
     }

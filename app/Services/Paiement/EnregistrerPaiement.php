@@ -17,9 +17,14 @@ class EnregistrerPaiement
 {
     public function __construct(private ConfirmerCommande $confirmerCommande) {}
 
-    public function reussi(string $reference, ?float $montant = null, ?float $frais = null): ?Paiement
+    /**
+     * Paiement encaissé. La commande n'est confirmée que si le montant reçu, en euros, couvre
+     * son total : sinon le paiement est enregistré (l'argent est là) et signalé à l'admin
+     * dans le tableau de bord (Statistiques::paiementsAVerifier).
+     */
+    public function reussi(string $reference, ?float $montant = null, ?float $frais = null, string $devise = 'eur'): ?Paiement
     {
-        $paiement = DB::transaction(function () use ($reference, $montant, $frais) {
+        $paiement = DB::transaction(function () use ($reference, $montant, $frais, $devise) {
             $paiement = Paiement::where('reference', $reference)->lockForUpdate()->first();
 
             if (! $paiement) {
@@ -53,6 +58,12 @@ class EnregistrerPaiement
         }
 
         $commande = $paiement->commande;
+
+        if (strtolower($devise) !== 'eur' || (float) $paiement->montant + 0.009 < (float) $commande->montant_total) {
+            Log::error("Paiement {$reference} : {$paiement->montant} {$devise} ne couvre pas la commande {$commande->id_commande} ({$commande->montant_total} €), commande non confirmée.");
+
+            return $paiement;
+        }
 
         match ($commande->statut) {
             Commande::EN_COURS => ($this->confirmerCommande)($commande),

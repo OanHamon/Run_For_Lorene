@@ -52,8 +52,8 @@ class PasserelleStripe implements Passerelle
             ],
             'success_url' => route('inscription.confirmation', $commande).'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('inscription.echec', $commande),
-            // Stripe impose au moins 30 minutes : c'est aussi la durée de réservation de la place.
-            'expires_at' => now()->addMinutes(config('paiement.reservation_minutes'))->addMinute()->getTimestamp(),
+            // La place reste réservée tant que la session peut être payée (Course::placesPrises).
+            'expires_at' => now()->addMinutes(config('paiement.session_minutes'))->getTimestamp(),
         ], [
             'idempotency_key' => 'rfl-paiement-'.$paiement->id_paiement,
         ]);
