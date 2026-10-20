@@ -98,6 +98,12 @@ class Inscription extends Model
     /** Même règle que documentsManquants() : décharge absente, ou questionnaire de santé absent pour un mineur. */
     public function scopeAvecDocumentsManquants(Builder $query, Evenement $evenement): void
     {
+        if ($evenement->documents_purges_le !== null) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
         $query->where(function ($q) use ($evenement) {
             self::questionsDechargeActives()
                 ? $q->whereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::DECHARGE))
@@ -124,6 +130,10 @@ class Inscription extends Model
     /** Règlement et RGPD acceptés : exigés dans le tunnel avant de payer. */
     public function consentementsAcceptes(): bool
     {
+        if ($this->documentsPurges()) {
+            return true;
+        }
+
         $types = $this->typesConsentis();
 
         return collect(TexteLegal::AVANT_PAIEMENT)->every(fn ($type) => in_array($type, $types, true));
@@ -142,6 +152,10 @@ class Inscription extends Model
      */
     public function dechargeManquante(): bool
     {
+        if ($this->documentsPurges()) {
+            return false;
+        }
+
         if (self::questionsDechargeActives()) {
             return ! $this->aRempli(QuestionSante::DECHARGE);
         }
@@ -187,7 +201,16 @@ class Inscription extends Model
     /** Questionnaire de santé demandé (participant mineur) et pas encore rempli. */
     public function questionnaireManquant(): bool
     {
-        return $this->santeRequise() && ! $this->aRempli(QuestionSante::SANTE);
+        return ! $this->documentsPurges() && $this->santeRequise() && ! $this->aRempli(QuestionSante::SANTE);
+    }
+
+    /**
+     * Documents purgés 12 mois après l'événement (PurgerDocuments) : plus rien n'est « manquant »,
+     * l'inscription garde le statut qu'elle avait.
+     */
+    public function documentsPurges(): bool
+    {
+        return $this->evenement?->documents_purges_le !== null;
     }
 
     private function aRempli(string $type): bool

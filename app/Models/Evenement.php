@@ -38,6 +38,7 @@ class Evenement extends Model
             'date_evenement' => 'date',
             'ouverture' => 'datetime',
             'fermeture' => 'datetime',
+            'documents_purges_le' => 'datetime',
         ];
     }
 
