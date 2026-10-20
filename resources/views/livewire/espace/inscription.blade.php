@@ -6,6 +6,7 @@ use App\Models\Paiement;
 use App\Models\QuestionnaireSante;
 use App\Models\QuestionSante;
 use App\Models\TexteLegal;
+use App\Services\Inscriptions\ChangementDateNaissance;
 use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\MettreAJourStatut;
 use App\Services\Inscriptions\Questionnaires;
@@ -273,17 +274,12 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
 
         $i = $this->inscription;
         $participant = $i->participant;
-        $course = $i->tarif->course;
 
-        // Une nouvelle date de naissance ne doit pas sortir le participant de la tranche d'âge de son épreuve.
-        if ($this->dateNaissance !== $participant->date_naissance->format('Y-m-d')) {
-            $age = (int) \Illuminate\Support\Carbon::parse($this->dateNaissance)->diffInYears($i->evenement->date_evenement);
+        // Même règle que la correction admin : tranches d'âge de la course et du tarif, majorité inchangée.
+        if ($erreur = app(ChangementDateNaissance::class)->erreur($i, $this->dateNaissance, trim($this->prenom))) {
+            $this->addError('dateNaissance', "{$erreur} Si c'est bien la bonne date, contacte l'association.");
 
-            if (! $course->accepteAge($age)) {
-                $this->addError('dateNaissance', "Avec cette date, {$this->prenom} aurait {$age} ans le jour J : ce n'est pas compatible avec {$course->nom}. Si c'est bien la bonne date, contacte l'association.");
-
-                return;
-            }
+            return;
         }
 
         DB::transaction(function () use ($i, $participant) {

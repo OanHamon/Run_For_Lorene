@@ -127,6 +127,18 @@ test('formats invalides et date de naissance incompatible avec l\'épreuve refus
     expect($inscription->participant->fresh()->date_naissance->format('Y-m-d'))->toBe('1985-06-01');
 });
 
+test('une nouvelle date de naissance ne fait pas passer de majeur à mineur (questionnaire de santé)', function () {
+    [$inscription] = panier([['moi', 'Sam', '1985-06-01']], $this->marche);
+
+    Volt::test('espace.inscription', ['inscription' => $inscription])
+        ->call('modifier')
+        ->set('dateNaissance', '2012-01-01') // 15 ans le jour J, la marche est ouverte à tous
+        ->call('enregistrer')
+        ->assertHasErrors('dateNaissance');
+
+    expect($inscription->participant->fresh()->date_naissance->format('Y-m-d'))->toBe('1985-06-01');
+});
+
 test("le droit à l'image se modifie et chaque réponse est historisée", function () {
     [$inscription] = panier([['moi', 'Sam', '1985-06-01']], $this->marche);
     $documents = $inscription->documents()->count();

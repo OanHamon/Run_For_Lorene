@@ -539,7 +539,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $telephone = $this->telephone ?: null;
         $email = $this->email ?: null;
 
-        $participant = DB::transaction(function () use ($user, $prenom, $nom, $telephone, $email) {
+        $enregistrer = function () use ($user, $prenom, $nom, $telephone, $email) {
             if ($this->choix === 'moi') {
                 $user->fill(['prenom' => $prenom, 'nom' => $nom, 'telephone' => $telephone])->save();
 
@@ -586,16 +586,32 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             $gere->save();
 
             return $gere;
-        });
+        };
+
+        // Participant déjà inscrit : rien n'est enregistré. Sa date de naissance, qui fixe son
+        // épreuve, son tarif et le questionnaire de santé, ne se change pas par le tunnel.
+        DB::beginTransaction();
+
+        try {
+            $participant = $enregistrer();
+
+            if (app(Eligibilite::class)->dejaInscrit($participant, $this->evenement)) {
+                DB::rollBack();
+                $user->refresh();
+                $this->addError('choix', "{$participant->user->prenom} est déjà inscrit(e) à Run For Lorène. Retrouve son inscription dans ton espace.");
+
+                return;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            throw $e;
+        }
 
         $participant->load('user');
         $this->telephone = Telephone::lisible($telephone);
-
-        if (app(Eligibilite::class)->dejaInscrit($participant, $this->evenement)) {
-            $this->addError('choix', "{$participant->user->prenom} est déjà inscrit(e) à Run For Lorène. Retrouve son inscription dans ton espace.");
-
-            return;
-        }
 
         $this->participantId = $participant->id_user;
         $this->choix = $participant->id_user === $user->id_user ? 'moi' : (string) $participant->id_user;

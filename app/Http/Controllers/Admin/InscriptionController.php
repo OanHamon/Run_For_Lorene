@@ -12,6 +12,7 @@ use App\Notifications\RelanceInscription;
 use App\Services\Admin\AnnulerInscription;
 use App\Services\Admin\Journal;
 use App\Services\Inscriptions\AttribuerDossard;
+use App\Services\Inscriptions\ChangementDateNaissance;
 use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\Questionnaires;
 use App\Support\Csv;
@@ -20,7 +21,6 @@ use App\Support\Telephone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -148,11 +148,10 @@ class InscriptionController extends Controller
 
     /**
      * Correction des informations du participant par un super admin (faute de frappe signalée
-     * par téléphone…), avec les mêmes règles que l'espace participant. Une nouvelle date de
-     * naissance ne doit ni sortir le participant de la tranche d'âge de sa course, ni le faire
-     * passer de mineur à majeur (ou l'inverse) : le questionnaire de santé en dépend.
+     * par téléphone…), avec les mêmes règles que l'espace participant pour la date de
+     * naissance (voir ChangementDateNaissance).
      */
-    public function participant(Request $request, Inscription $inscription): RedirectResponse
+    public function participant(Request $request, Inscription $inscription, ChangementDateNaissance $dates): RedirectResponse
     {
         $request->merge([
             'telephone' => Telephone::normaliser((string) $request->input('telephone')),
@@ -184,20 +183,9 @@ class InscriptionController extends Controller
         ]);
 
         $participant = $inscription->participant;
-        $jourJ = $inscription->evenement->date_evenement;
 
-        if ($donnees['date_naissance'] !== $participant->date_naissance->toDateString()) {
-            $age = (int) Carbon::parse($donnees['date_naissance'])->diffInYears($jourJ);
-            $course = $inscription->tarif->course;
-            $erreur = match (true) {
-                ! $course->accepteAge($age) => "Avec cette date, le participant aurait {$age} ans le jour J : ce n'est pas compatible avec {$course->nom}.",
-                ($age < 18) !== ($participant->ageAu($jourJ) < 18) => "Avec cette date, le participant passerait de ".($age < 18 ? 'majeur à mineur' : 'mineur à majeur').' le jour J : le questionnaire de santé en dépend. Annule et refais l\'inscription si c\'est bien la bonne date.',
-                default => null,
-            };
-
-            if ($erreur) {
-                throw ValidationException::withMessages(['date_naissance' => $erreur])->errorBag('participant');
-            }
+        if ($erreur = $dates->erreur($inscription, $donnees['date_naissance'], 'le participant')) {
+            throw ValidationException::withMessages(['date_naissance' => "{$erreur} Annule et refais l'inscription si c'est bien la bonne date."])->errorBag('participant');
         }
 
         $avant = [

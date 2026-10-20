@@ -229,6 +229,22 @@ test('un participant déjà inscrit ne peut pas être réinscrit (unicité par �
         ->assertSet('etape', 'participant');
 });
 
+test("un participant déjà inscrit ne change ni de nom ni de date de naissance par le tunnel", function () {
+    $this->actingAs($this->parent);
+    $inscription = inscriptionPayee($this->parent, ($this->course)('Marche 5 km'));
+    $naissance = $inscription->participant->date_naissance->toDateString();
+
+    Volt::test('inscription.tunnel')
+        ->call('choisirParticipant', 'moi')
+        ->set('prenom', 'Autre')
+        ->set('dateNaissance', '2012-01-01') // deviendrait mineur : questionnaire de santé contourné
+        ->call('participantSuivant')
+        ->assertHasErrors('choix');
+
+    expect($inscription->participant->fresh()->date_naissance->toDateString())->toBe($naissance)
+        ->and($this->parent->fresh()->prenom)->toBe('Sam');
+});
+
 test('le brouillon est repris là où on s\'était arrêté', function () {
     $this->actingAs($this->parent);
 
