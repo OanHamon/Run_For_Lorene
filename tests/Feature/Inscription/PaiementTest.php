@@ -7,7 +7,11 @@ use App\Models\Paiement;
 use App\Models\User;
 use App\Notifications\CommandeConfirmee;
 use App\Services\Inscriptions\AttribuerDossard;
+use App\Services\Inscriptions\ConfirmerCommande;
+use App\Services\Inscriptions\MettreAJourStatut;
 use App\Services\Paiement\EnregistrerPaiement;
+use App\Services\Paiement\Passerelle;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
 
@@ -104,7 +108,66 @@ test("webhook : un montant insuffisant ou une autre devise ne valide pas la comm
     'autre devise' => [1200, 'usd'],
 ]);
 
-test("un paiement reçu sur une commande abandonnée est signalé dans le tableau de bord", function () {
+test('webhook rejoué après une confirmation interrompue : la commande payée finit confirmée', function () {
+    [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
+
+    // La confirmation échoue une fois (blocage de la base pendant le rush de l'ouverture…).
+    app()->instance(ConfirmerCommande::class, new class(app(MettreAJourStatut::class)) extends ConfirmerCommande
+    {
+        public int $appels = 0;
+
+        public function __invoke(Commande $commande): Commande
+        {
+            if ($this->appels++ === 0) {
+                throw new RuntimeException('Lock wait timeout exceeded');
+            }
+
+            return parent::__invoke($commande);
+        }
+    });
+
+    $session = ['id' => $paiement->reference, 'payment_status' => 'paid', 'amount_total' => 1200];
+    webhookStripe('checkout.session.completed', $session)->assertStatus(500);
+
+    expect($paiement->fresh()->statut)->toBe(Paiement::REUSSI)
+        ->and($commande->fresh()->statut)->toBe(Commande::EN_COURS);
+
+    // Stripe renvoie l'événement : cette fois la commande est confirmée.
+    webhookStripe('checkout.session.completed', $session)->assertOk();
+
+    expect($commande->fresh()->statut)->toBe(Commande::PAYEE)
+        ->and(Inscription::sole()->statut)->toBe(Inscription::VALIDEE)
+        ->and(Inscription::sole()->dossard)->not->toBeNull();
+    Notification::assertSentToTimes($this->user, CommandeConfirmee::class, 1);
+});
+
+test('commande payée restée en attente : signalée au tableau de bord, confirmée à la main par un super admin', function () {
+    [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
+    $paiement->forceFill(['statut' => Paiement::REUSSI, 'montant' => 12, 'date_paiement' => now()])->save();
+
+    $this->actingAs(admin(1))->get('/admin')->assertOk()
+        ->assertSee('commande restée en attente');
+
+    $this->actingAs(admin(2))->post(route('admin.commandes.confirmer', $commande))->assertForbidden();
+    expect($commande->fresh()->statut)->toBe(Commande::EN_COURS);
+
+    $this->actingAs(admin(3))->get(route('admin.commandes.show', $commande))->assertSee('Confirmer la commande');
+    $this->post(route('admin.commandes.confirmer', $commande))->assertRedirect();
+
+    expect($commande->fresh()->statut)->toBe(Commande::PAYEE)
+        ->and(Inscription::sole()->statut)->toBe(Inscription::VALIDEE);
+    $this->assertDatabaseHas('journal_admins', ['action' => 'commande.confirmation', 'cible_id' => $commande->id_commande]);
+});
+
+test('un super admin ne peut pas confirmer une commande sans paiement qui la couvre', function () {
+    [$commande] = commandeEnAttente($this->user, $this->marche);
+
+    $this->actingAs(admin(3))->post(route('admin.commandes.confirmer', $commande))->assertSessionHas('erreur');
+
+    expect($commande->fresh()->statut)->toBe(Commande::EN_COURS);
+});
+
+test('un paiement reçu sur une commande abandonnée est signalé dans le tableau de bord', function () {
     [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
     $commande->forceFill(['statut' => Commande::ABANDONNEE])->save();
 
@@ -118,13 +181,13 @@ test("un paiement reçu sur une commande abandonnée est signalé dans le tablea
 test("la simulation de paiement n'existe qu'en local : refusée sur un serveur de recette", function () {
     [, $paiement] = commandeEnAttente($this->user, $this->marche);
     app()->detectEnvironment(fn () => 'staging');
-    $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+    $this->withoutMiddleware(ValidateCsrfToken::class);
 
     $this->get(route('paiement.simulation', $paiement))->assertNotFound();
     $this->post(route('paiement.simuler', [$paiement, 'reussi']))->assertNotFound();
 
     expect($paiement->fresh()->statut)->toBe(Paiement::EN_ATTENTE);
-    expect(fn () => app(\App\Services\Paiement\Passerelle::class))->toThrow(RuntimeException::class);
+    expect(fn () => app(Passerelle::class))->toThrow(RuntimeException::class);
 });
 
 test("webhook : session expirée → l'inscription reste en attente de paiement et la place est libérée", function () {

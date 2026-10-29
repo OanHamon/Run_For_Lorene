@@ -38,6 +38,7 @@ class JournalAdmin extends Model
         'document.consultation' => 'Questionnaire de santé consulté',
         'document.verification' => 'Questionnaire vérifié',
         'paiement.remboursement' => 'Remboursement',
+        'commande.confirmation' => 'Commande confirmée à la main',
         'admin.niveau' => 'Niveau d\'accès modifié',
         'admin.retrait' => 'Accès admin retiré',
         'user.reinitialisation' => 'Accès réinitialisé',

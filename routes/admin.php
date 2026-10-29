@@ -62,6 +62,7 @@ Route::middleware('admin:2')->group(function () {
 // Commandes et paiements : consultation pour tous, remboursements au niveau 3.
 Route::get('commandes', [CommandeController::class, 'index'])->name('commandes.index');
 Route::get('commandes/{commande}', [CommandeController::class, 'show'])->name('commandes.show');
+Route::post('commandes/{commande}/confirmer', [CommandeController::class, 'confirmer'])->middleware('admin:3')->name('commandes.confirmer');
 Route::post('paiements/{paiement}/rembourser', [CommandeController::class, 'rembourser'])->middleware('admin:3')->name('paiements.rembourser');
 
 Route::get('dons', [DonController::class, 'index'])->name('dons.index');

@@ -20,6 +20,20 @@
         <p class="mb-6 rfl-alerte-erreur" role="alert">{{ $message }}</p>
     @enderror
 
+    @if ($commande->statut === \App\Models\Commande::EN_COURS && $commande->paiements->contains(fn ($p) => \App\Services\Admin\Statistiques::couvre($p)))
+        <div class="mb-6 rfl-alerte-erreur" role="alert">
+            <p>Un paiement réussi couvre cette commande, mais elle est restée en attente : sa confirmation a été interrompue.</p>
+            @if ($peutRembourser)
+                <form method="POST" action="{{ route('admin.commandes.confirmer', $commande) }}" class="mt-3">
+                    @csrf
+                    <button type="submit" class="rfl-btn px-5 py-2 text-sm">Confirmer la commande</button>
+                </form>
+            @else
+                <p class="mt-1">Un super admin peut la confirmer depuis cette page.</p>
+            @endif
+        </div>
+    @endif
+
     <div class="grid gap-6 xl:grid-cols-2">
         <section class="rfl-carte overflow-hidden">
             <h2 class="px-6 py-4 font-display text-vert">Contenu</h2>

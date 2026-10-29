@@ -8,6 +8,7 @@ use App\Models\Evenement;
 use App\Models\Paiement;
 use App\Services\Admin\Journal;
 use App\Services\Admin\Statistiques;
+use App\Services\Inscriptions\ConfirmerCommande;
 use App\Services\Paiement\Rembourser;
 use App\Support\EvenementAdmin;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,24 @@ class CommandeController extends Controller
             'commande' => $commande,
             'stripeTest' => str_starts_with((string) config('services.stripe.secret'), 'sk_test'),
         ]);
+    }
+
+    /**
+     * Commande restée « en attente » alors qu'un paiement réussi la couvre (confirmation
+     * interrompue et webhook plus renvoyé par Stripe) : un super admin la confirme à la main.
+     */
+    public function confirmer(Commande $commande, ConfirmerCommande $confirmer, Journal $journal): RedirectResponse
+    {
+        $paiement = $commande->paiements()->where('statut', Paiement::REUSSI)->get()->first(fn (Paiement $p) => Statistiques::couvre($p));
+
+        if ($commande->statut !== Commande::EN_COURS || ! $paiement) {
+            return back()->with('erreur', 'Cette commande ne peut pas être confirmée : aucun paiement réussi ne couvre son total, ou elle n\'est plus en attente.');
+        }
+
+        $confirmer($commande);
+        $journal->noter('commande.confirmation', $commande, ['paiement' => $paiement->reference]);
+
+        return back()->with('statut', 'Commande confirmée : les inscriptions sont validées (ou en dossier incomplet) et le payeur reçoit son récapitulatif.');
     }
 
     public function rembourser(Request $request, Paiement $paiement, Rembourser $rembourser, Journal $journal): RedirectResponse

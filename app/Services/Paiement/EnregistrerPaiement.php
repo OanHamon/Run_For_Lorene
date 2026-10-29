@@ -24,7 +24,9 @@ class EnregistrerPaiement
      */
     public function reussi(string $reference, ?float $montant = null, ?float $frais = null, string $devise = 'eur'): ?Paiement
     {
-        $paiement = DB::transaction(function () use ($reference, $montant, $frais, $devise) {
+        $dejaEnregistre = false;
+
+        $paiement = DB::transaction(function () use ($reference, $montant, $frais, &$dejaEnregistre) {
             $paiement = Paiement::where('reference', $reference)->lockForUpdate()->first();
 
             if (! $paiement) {
@@ -34,7 +36,9 @@ class EnregistrerPaiement
             }
 
             if ($paiement->statut === Paiement::REUSSI) {
-                return null; // déjà traité
+                $dejaEnregistre = true;
+
+                return $paiement;
             }
 
             // Même une tentative marquée « échouée » (fermée par une relance) peut avoir été payée
@@ -59,7 +63,18 @@ class EnregistrerPaiement
 
         $commande = $paiement->commande;
 
-        if (strtolower($devise) !== 'eur' || (float) $paiement->montant + 0.009 < (float) $commande->montant_total) {
+        // Événement reçu une seconde fois (webhook rejoué par Stripe). Si la commande n'a pas
+        // été confirmée la première fois (erreur pendant la confirmation, après l'enregistrement
+        // du paiement), on la confirme maintenant : sinon elle resterait payée mais en attente.
+        if ($dejaEnregistre) {
+            if ($commande->statut === Commande::EN_COURS && $this->couvre($paiement, $commande, $devise)) {
+                ($this->confirmerCommande)($commande);
+            }
+
+            return null;
+        }
+
+        if (! $this->couvre($paiement, $commande, $devise)) {
             Log::error("Paiement {$reference} : {$paiement->montant} {$devise} ne couvre pas la commande {$commande->id_commande} ({$commande->montant_total} €), commande non confirmée.");
 
             return $paiement;
@@ -72,6 +87,12 @@ class EnregistrerPaiement
         };
 
         return $paiement;
+    }
+
+    /** Le paiement, en euros, couvre-t-il le total de la commande ? */
+    private function couvre(Paiement $paiement, Commande $commande, string $devise): bool
+    {
+        return strtolower($devise) === 'eur' && (float) $paiement->montant + 0.009 >= (float) $commande->montant_total;
     }
 
     public function echoue(string $reference): void

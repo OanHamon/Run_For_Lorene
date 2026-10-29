@@ -201,6 +201,7 @@ class Statistiques
                 'paiement' => $p,
                 'motif' => match (true) {
                     $p->commande->statut === Commande::PAYEE && $parCommande[$p->id_commande] > 1 => 'commande payée plusieurs fois : rembourse le doublon',
+                    $p->commande->statut === Commande::EN_COURS && self::couvre($p) => 'paiement encaissé mais commande restée en attente : confirme-la depuis sa fiche',
                     $p->commande->statut === Commande::EN_COURS => 'montant reçu inférieur au total de la commande ('.number_format((float) $p->commande->montant_total, 2, ',', ' ').' €) : commande non confirmée',
                     $p->commande->statut === Commande::PAYEE => null,
                     default => 'paiement reçu alors que la commande est '.($p->commande->statut === Commande::ABANDONNEE ? 'abandonnée' : $p->commande->statut).' : rembourse-le ou contacte le payeur',
@@ -208,6 +209,16 @@ class Statistiques
             ])
             ->filter(fn ($a) => $a->motif !== null)
             ->values();
+    }
+
+    /**
+     * Paiement réussi qui couvre le total de sa commande : la commande aurait dû être confirmée.
+     * La devise n'est pas gardée en base ; Checkout est toujours créé en euros.
+     */
+    public static function couvre(Paiement $paiement): bool
+    {
+        return $paiement->statut === Paiement::REUSSI
+            && (float) $paiement->montant + 0.009 >= (float) $paiement->commande->montant_total;
     }
 
     /** Commandes liées à l'événement (par leurs inscriptions ou leur don). */
