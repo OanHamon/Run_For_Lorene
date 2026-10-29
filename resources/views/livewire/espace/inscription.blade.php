@@ -511,7 +511,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                 </dl>
 
                 @if ($etapes['paiement'] === 'en_cours')
-                    <form method="POST" action="{{ route('inscription.payer', $i->commande) }}" class="border-t border-bordure p-4">
+                    <form method="POST" action="{{ route('inscription.payer', $i->commande) }}" data-envoi-unique class="border-t border-bordure p-4">
                         @csrf
                         <button type="submit" class="{{ $bouton }} w-full">Payer {{ $this->euros((float) $i->commande->montant_total) }}</button>
                     </form>

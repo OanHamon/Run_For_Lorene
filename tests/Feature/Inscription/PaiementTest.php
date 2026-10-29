@@ -9,11 +9,14 @@ use App\Notifications\CommandeConfirmee;
 use App\Services\Inscriptions\AttribuerDossard;
 use App\Services\Inscriptions\ConfirmerCommande;
 use App\Services\Inscriptions\MettreAJourStatut;
+use App\Services\Paiement\DemarrerPaiement;
 use App\Services\Paiement\EnregistrerPaiement;
 use App\Services\Paiement\Passerelle;
+use App\Services\Paiement\PasserelleStripe;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
+use Stripe\StripeClient;
 
 beforeEach(function () {
     Notification::fake();
@@ -243,6 +246,29 @@ test('relance impossible si l\'épreuve est devenue complète entre-temps', func
     $this->actingAs($this->user)->post(route('inscription.payer', $commande))
         ->assertRedirect(route('inscription.echec', $commande))
         ->assertSessionHas('erreur');
+});
+
+test('double-clic sur « Payer » : la tentative dont la session Stripe est en cours de création ne bloque pas le second clic', function () {
+    [$commande, $premier] = commandeEnAttente($this->user, $this->marche);
+
+    // Premier clic encore en cours : sa session Stripe n'existe pas, la référence est provisoire.
+    $premier->forceFill(['reference' => DemarrerPaiement::REFERENCE_PROVISOIRE.'abc'])->save();
+
+    $stripe = Mockery::mock(PasserelleStripe::class, [new StripeClient('sk_test_x')])->makePartial();
+    $stripe->shouldReceive('creerSession')->once()->andReturn(['reference' => 'cs_test_second', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_second']);
+    app()->instance(Passerelle::class, $stripe);
+
+    $this->post(route('inscription.payer', $commande))->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_second');
+
+    expect($premier->fresh()->statut)->toBe(Paiement::ECHOUE)
+        ->and($commande->paiements()->where('statut', Paiement::EN_ATTENTE)->sole()->reference)->toBe('cs_test_second');
+});
+
+test('les boutons « Payer » sont protégés contre le double envoi', function () {
+    [$commande] = commandeEnAttente($this->user, $this->marche);
+
+    $this->get(route('espace'))->assertSee('data-envoi-unique', false);
+    $this->get(route('inscription.echec', $commande))->assertSee('data-envoi-unique', false);
 });
 
 test('« Modifier ma commande » remet les inscriptions en brouillon et garde le don', function () {

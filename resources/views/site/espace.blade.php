@@ -49,7 +49,7 @@
                                 @csrf
                                 <button type="submit" class="rfl-btn-secondaire px-5 py-2 text-sm">Modifier</button>
                             </form>
-                            <form method="POST" action="{{ route('inscription.payer', $commande) }}">
+                            <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
                                 @csrf
                                 <button type="submit" class="rfl-btn px-5 py-2.5 text-sm">Payer {{ $euros($commande->montant_total) }}</button>
                             </form>

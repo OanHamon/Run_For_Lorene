@@ -1024,7 +1024,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription Â· Run For LorÃ
                 @csrf
                 <button type="submit" class="rfl-lien">Modifier ma commande</button>
             </form>
-            <form method="POST" action="{{ route('inscription.payer', $commande) }}">
+            <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
                 @csrf
                 <button type="submit" class="rfl-btn w-full sm:w-auto">Payer {{ $this->euros((float) $commande->montant_total) }}</button>
             </form>

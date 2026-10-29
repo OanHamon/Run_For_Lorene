@@ -63,6 +63,12 @@ class PasserelleStripe implements Passerelle
 
     public function annuler(Paiement $paiement): bool
     {
+        // Référence provisoire : la session Stripe n'existe pas encore (requête concurrente, par
+        // un double-clic, ou création échouée). Rien à fermer chez Stripe : on ne bloque pas.
+        if (str_starts_with($paiement->reference, DemarrerPaiement::REFERENCE_PROVISOIRE)) {
+            return true;
+        }
+
         try {
             $session = $this->stripe->checkout->sessions->retrieve($paiement->reference);
 

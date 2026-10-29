@@ -18,7 +18,7 @@
 
         <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             @if ($commande->statut === \App\Models\Commande::EN_COURS)
-                <form method="POST" action="{{ route('inscription.payer', $commande) }}">
+                <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
                     @csrf
                     <button type="submit" class="rfl-btn w-full sm:w-auto">Réessayer · {{ number_format((float) $commande->montant_total, fmod((float) $commande->montant_total, 1.0) == 0.0 ? 0 : 2, ',', ' ') }} €</button>
                 </form>

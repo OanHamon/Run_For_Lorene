@@ -17,6 +17,9 @@ use Illuminate\Validation\ValidationException;
  */
 class DemarrerPaiement
 {
+    /** Préfixe de la référence d'une tentative dont la session de paiement est en cours de création. */
+    public const REFERENCE_PROVISOIRE = 'tmp_';
+
     public function __construct(private Passerelle $passerelle) {}
 
     /**
@@ -64,7 +67,7 @@ class DemarrerPaiement
 
             return Paiement::create([
                 'prestataire' => config('paiement.passerelle'),
-                'reference' => 'tmp_'.Str::uuid(),
+                'reference' => self::REFERENCE_PROVISOIRE.Str::uuid(),
                 'montant' => $commande->montant_total,
                 'statut' => Paiement::EN_ATTENTE,
                 'id_commande' => $commande->id_commande,
