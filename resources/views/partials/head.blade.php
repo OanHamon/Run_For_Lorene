@@ -10,4 +10,3 @@
 <link href="https://fonts.bunny.net/css?family=varela-round:400|carlito:400,400i,700,700i" rel="stylesheet" />
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-@fluxAppearance

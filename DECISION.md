@@ -442,3 +442,38 @@ l'identification. C'est le principe « façon Google » voulu par le spec (écra
 
 **Tests.** `SecuriteTest` (étape verrouillée, activation, limite du mot de passe actuel),
 `ConfirmationAdminTest` (un code de connexion est refusé à l'entrée de l'admin).
+
+---
+
+## 13. 🟡 Couleurs hors charte et restes du starter kit
+
+**Problème.** Les messages d'erreur du tunnel et de la page 09b utilisaient `bg-rose-50 text-rose-700`
+en dur (au lieu de la classe partagée `rfl-alerte-erreur`), l'espace participant un hex en dur
+`text-[#8A6A0B]`, et les boutons « Supprimer » des teintes `rose-*` variées. Le starter kit
+avait laissé des vues mortes (layouts Flux, logo, en-têtes d'authentification…), des tokens
+`zinc`, un mode sombre jamais utilisé, et la bibliothèque Flux chargeait 290 kB de CSS pour
+rien (aucune page n'utilise ses composants).
+
+**Solutions envisagées.**
+1. Erreurs en couleurs de la charte (moutarde ou vert sombre). *Écarté :* une erreur doit se
+   distinguer d'une information ou d'un « à faire » (la moutarde est déjà l'accent « à faire »).
+2. Garder un rouge, mais une seule teinte, en tokens nommés, et des classes partagées. **Retenu.**
+
+**Choix.**
+- Tokens dérivés ajoutés dans `app.css` : `erreur` (#9F1239), `erreur-fond`, `erreur-bord` pour
+  les erreurs et les actions destructrices, `moutarde-texte` (#8A6A0B, moutarde lisible en texte
+  sur blanc, AA). `rfl-alerte-erreur` et `rfl-erreur` passent par eux ; toutes les vues aussi.
+  Plus aucun `rose-*` ni hex en dur dans les vues. CLAUDE.md mis à jour.
+- Suppression de Flux (`composer remove livewire/flux`), de `@fluxAppearance` / `@fluxScripts`, des
+  vues mortes du starter kit, des tokens `zinc`, du mode sombre et des règles `data-flux-*`.
+  Le CSS passe de 346 kB à 57 kB (10 kB compressé). Le layout Livewire par défaut (filet de
+  sécurité) devient l'espace participant.
+
+**❓ À valider avec Pop Com / l'association.** La teinte d'erreur (#9F1239) n'est pas dans la
+charte : à confirmer, ou à remplacer en changeant les trois tokens `erreur*`.
+
+**Fichiers.** `resources/css/app.css`, vues du tunnel, de l'espace et de l'admin, `config/livewire.php`,
+`composer.json`, `CLAUDE.md` ; vues supprimées sous `resources/views/components/` et `resources/views/flux/`.
+
+**Vérification.** Suite de tests complète, et rendu des pages publiques, du tunnel et de la
+connexion contrôlé sur un serveur local.

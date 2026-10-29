@@ -9,7 +9,7 @@
         <h1 class="font-display text-2xl text-vert">Le paiement n'a pas abouti</h1>
 
         @if (session('erreur'))
-            <p class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ session('erreur') }}</p>
+            <p class="mt-4 rfl-alerte-erreur" role="alert">{{ session('erreur') }}</p>
         @endif
 
         <p class="mt-3 text-sm text-gris-texte">

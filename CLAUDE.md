@@ -60,7 +60,7 @@ Esprit : « élan collectif ». Positif sans naïveté, humain, clair, accessibl
 
 - Proportions : le vert profond structure, le vert doux apporte la profondeur, la moutarde reste un accent.
 - La moutarde n'est pas lisible en texte sur fond blanc (contraste AA non atteint) : la réserver aux fonds, pastilles, soulignements, ou au texte sur fond vert profond / sombre.
-- Tokens Tailwind dans `resources/css/app.css` (`@theme`), aux noms de la charte : `vert`, `vert-doux`, `moutarde`, `vert-sombre`, `vert-clair`, plus trois dérivés : `gris-texte` (texte secondaire), `fond` (fond de page), `bordure` (traits). Toujours passer par eux, jamais de hex en dur dans les vues.
+- Tokens Tailwind dans `resources/css/app.css` (`@theme`), aux noms de la charte : `vert`, `vert-doux`, `moutarde`, `vert-sombre`, `vert-clair`, plus des dérivés : `gris-texte` (texte secondaire), `fond` (fond de page), `fond-admin` (fond du back-office), `bordure` (traits), `moutarde-texte` (moutarde lisible en texte sur blanc) et `erreur`, `erreur-fond`, `erreur-bord` (erreurs et actions destructrices, voir DECISION.md n° 13). Toujours passer par eux, jamais de hex en dur dans les vues.
 - Titres en `text-vert`, texte courant en `text-vert-sombre`. Chiffre clé ou date en moutarde : uniquement sur fond `bg-vert` (voir le dossard dans l'espace, la date du héro).
 
 ### Composants

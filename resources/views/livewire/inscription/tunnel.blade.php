@@ -1207,7 +1207,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         <h1 class="font-display text-2xl text-vert">{{ $this->estMoi ? 'Choisis ton épreuve' : 'Quelle épreuve pour '.$this->participant->user->prenom.' ?' }}</h1>
         <p class="mt-1 mb-6 text-sm text-gris-texte">{{ $this->evenement->nom }} &middot; {{ $this->evenement->date_evenement->translatedFormat('l j F Y') }}</p>
 
-        @error('courseId') <p class="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+        @error('courseId') <p class="mb-4 rfl-alerte-erreur" role="alert">{{ $message }}</p> @enderror
 
         @if ($this->courses->isEmpty())
             <p class="rounded-2xl bg-moutarde/15 px-4 py-3 text-sm text-vert-sombre">Aucune épreuve n'est ouverte à l'âge de {{ $this->estMoi ? 'ce participant' : $this->participant->user->prenom }} ({{ $this->participant->ageAu($this->evenement->date_evenement) }} ans le jour J). Vérifie la date de naissance.</p>
@@ -1270,7 +1270,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             <x-questionnaire-decharge class="mt-6" :questions="$this->questionsDecharge" :evenement="$this->evenement" :signataire="auth()->user()->nom.' '.auth()->user()->prenom" />
 
             @if ($errors->has('reponsesDecharge.*'))
-                <p class="mt-6 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des cases à cocher : elles sont signalées plus haut.</p>
+                <p class="mt-6 rfl-alerte-erreur" role="alert">Il manque des cases à cocher : elles sont signalées plus haut.</p>
             @endif
 
             <div class="mt-8 flex items-center justify-between">
@@ -1293,7 +1293,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             </x-questionnaire-sante>
 
             @if ($errors->has('reponsesSante.*'))
-                <p class="mt-6 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
+                <p class="mt-6 rfl-alerte-erreur" role="alert">Il manque des réponses : elles sont signalées plus haut.</p>
             @endif
 
             <div class="mt-8">
@@ -1395,9 +1395,9 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         <h1 class="font-display text-2xl text-vert">On vérifie ensemble ?</h1>
 
         @if (session('erreur'))
-            <p class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ session('erreur') }}</p>
+            <p class="mt-4 rfl-alerte-erreur" role="alert">{{ session('erreur') }}</p>
         @endif
-        @error('commande') <p class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+        @error('commande') <p class="mt-4 rfl-alerte-erreur" role="alert">{{ $message }}</p> @enderror
 
         <div class="mt-4 divide-y divide-bordure">
             @foreach ($this->panier as $i)
@@ -1413,13 +1413,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                         <p class="mt-2 text-sm text-gris-texte">{{ $i->santeRequise() ? 'Décharge, questionnaire de santé et conditions remplis' : 'Décharge et conditions remplies' }}</p>
                     @endif
                     @isset($this->alertesPanier[$i->id_inscription])
-                        <p class="mt-2 rounded-2xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ $this->alertesPanier[$i->id_inscription] }}</p>
+                        <p class="mt-2 rfl-alerte-erreur">{{ $this->alertesPanier[$i->id_inscription] }}</p>
                     @endisset
                     <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         <button type="button" wire:click="modifier({{ $i->id_inscription }}, 'participant')" class="rfl-lien">Participant</button>
                         <button type="button" wire:click="modifier({{ $i->id_inscription }}, 'epreuve')" class="rfl-lien">Épreuve</button>
                         <button type="button" wire:click="modifier({{ $i->id_inscription }}, 'documents')" class="rfl-lien">Documents</button>
-                        <button type="button" wire:click="retirer({{ $i->id_inscription }})" wire:confirm="Retirer {{ $i->participant->user->prenom }} de la commande ?" class="font-bold text-rose-700 hover:underline">Retirer</button>
+                        <button type="button" wire:click="retirer({{ $i->id_inscription }})" wire:confirm="Retirer {{ $i->participant->user->prenom }} de la commande ?" class="font-bold text-erreur hover:underline">Retirer</button>
                     </div>
                 </div>
             @endforeach

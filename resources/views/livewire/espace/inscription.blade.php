@@ -434,8 +434,8 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
     $etatLibelle = ['fait' => 'Fait', 'en_cours' => 'En attente', 'a_faire' => 'À faire', 'non_requis' => 'Non requis'];
     $etatTexte = [
         'fait' => 'text-vert',
-        'en_cours' => 'text-[#8A6A0B]',
-        'a_faire' => 'text-[#8A6A0B]',
+        'en_cours' => 'text-moutarde-texte',
+        'a_faire' => 'text-moutarde-texte',
         'non_requis' => 'text-gris-texte',
     ];
     $sexes = ['femme' => 'Femme', 'homme' => 'Homme', 'autre' => 'Autre'];
@@ -667,12 +667,12 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                     @php($c = $this->historique->first(fn ($h) => $h->type_texte === $type && $h->accepte))
                                     <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
                                         <a href="{{ route('textes.show', $type) }}" target="_blank" rel="noopener" class="text-vert-sombre underline decoration-bordure underline-offset-4 hover:text-vert hover:decoration-vert">{{ $libellesTextes[$type] }}</a>
-                                        <span class="{{ $c ? 'text-gris-texte' : 'font-bold text-[#8A6A0B]' }}">{{ $c ? 'Acceptée le '.\Illuminate\Support\Carbon::parse($c->date_depot)->translatedFormat('j F Y').' · v'.$c->version : 'À accepter' }}</span>
+                                        <span class="{{ $c ? 'text-gris-texte' : 'font-bold text-moutarde-texte' }}">{{ $c ? 'Acceptée le '.\Illuminate\Support\Carbon::parse($c->date_depot)->translatedFormat('j F Y').' · v'.$c->version : 'À accepter' }}</span>
                                     </li>
                                 @endforeach
                                 <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
                                     <span class="text-vert-sombre">Questionnaire de décharge</span>
-                                    <span class="{{ $this->questionnaireDecharge ? 'text-gris-texte' : 'font-bold text-[#8A6A0B]' }}">{{ $this->questionnaireDecharge ? 'Rempli le '.$this->questionnaireDecharge->document->date_depot->translatedFormat('j F Y') : 'À remplir' }}</span>
+                                    <span class="{{ $this->questionnaireDecharge ? 'text-gris-texte' : 'font-bold text-moutarde-texte' }}">{{ $this->questionnaireDecharge ? 'Rempli le '.$this->questionnaireDecharge->document->date_depot->translatedFormat('j F Y') : 'À remplir' }}</span>
                                 </li>
                             </ul>
 
@@ -778,7 +778,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                         </p>
                         @error('suppression') <p class="mt-3 rfl-alerte-erreur" role="alert">{{ $message }}</p> @enderror
                     </div>
-                    <button type="button" wire:click="supprimer" wire:confirm="Supprimer l'inscription de {{ $p->user->prenom }} ? Cette action est définitive." class="inline-flex items-center rounded-full border-2 border-rose-200 bg-white px-5 py-2 font-display text-sm text-rose-700 hover:border-rose-300 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700">Supprimer</button>
+                    <button type="button" wire:click="supprimer" wire:confirm="Supprimer l'inscription de {{ $p->user->prenom }} ? Cette action est définitive." class="inline-flex items-center rounded-full border-2 border-erreur-bord bg-white px-5 py-2 font-display text-sm text-erreur hover:border-erreur hover:bg-erreur-fond focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-erreur">Supprimer</button>
                 </section>
             @elseif ($i->statut !== Inscription::ANNULEE)
                 <p class="text-sm text-gris-texte">Besoin d'annuler cette inscription ? Elle est déjà réglée : écris à l'association à <a href="mailto:contact@effervescence-jeunes.fr" class="rfl-lien">contact@effervescence-jeunes.fr</a>, on regarde ta situation au cas par cas.</p>

@@ -151,7 +151,7 @@
             @endunless
 
             @unless ($moi)
-                <section class="rounded-3xl border border-rose-200/70 bg-white p-6">
+                <section class="rounded-3xl border border-erreur-bord bg-white p-6">
                     <h2 class="mb-1 font-display text-vert">Supprimer le compte</h2>
                     @if ($obstaclesSuppression)
                         <p class="text-sm text-gris-texte">Impossible pour ce compte :</p>
@@ -165,7 +165,7 @@
                         <form method="POST" action="{{ route('admin.utilisateurs.destroy', $u) }}" onsubmit="return confirm('Supprimer définitivement le compte de {{ addslashes($u->name) }} ?')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="rfl-btn-secondaire w-full border-rose-300 px-5 py-2.5 text-sm text-rose-800 hover:border-rose-500">Supprimer le compte</button>
+                            <button type="submit" class="rfl-btn-secondaire w-full border-erreur-bord px-5 py-2.5 text-sm text-erreur hover:border-erreur">Supprimer le compte</button>
                         </form>
                     @endif
                 </section>

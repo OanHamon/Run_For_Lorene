@@ -136,7 +136,7 @@
                         </div>
                         <button type="submit" class="rounded-full bg-white px-5 py-2.5 font-display text-sm text-vert hover:bg-vert-clair">Enregistrer</button>
                     </form>
-                    @error('dossard')<p class="mt-2 rounded-xl bg-white px-3 py-2 text-sm text-rose-800">{{ $message }}</p>@enderror
+                    @error('dossard')<p class="mt-2 rounded-xl bg-white px-3 py-2 text-sm text-erreur">{{ $message }}</p>@enderror
                     @if ($i->dossard === null)
                         <form method="POST" action="{{ route('admin.inscriptions.attribuer-dossard', $i) }}" class="mt-3">
                             @csrf
