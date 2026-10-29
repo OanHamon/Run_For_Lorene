@@ -6,6 +6,25 @@ Si une décision ne te convient pas, la section « Pour revenir en arrière » d
 
 Légende : 🔴 élevé · 🟠 moyen · 🟡 faible · ❓ question à trancher par l'association
 
+## Sommaire
+
+| N° | Problème | État |
+|---|---|---|
+| 1 | Commande payée bloquée « en attente » | Corrigé |
+| 2 | Double-clic sur « Payer » | Corrigé |
+| 3 | Réinscription après annulation efface l'historique | Corrigé (règle prudente) · ❓ |
+| 4 | Liens légaux morts | Branchés · ❓ textes à fournir |
+| 5 | Don seul impossible | Corrigé |
+| 6 | Fonctions du spec absentes | Emails et relances faits · ❓ QR, reçu fiscal, refus |
+| 7 | Règlement accepté sans PDF | Corrigé |
+| 8 | Confirmation qui se recharge sans fin | Corrigé |
+| 9 | Panneaux du tunnel : défilement, focus, « précédent » | Corrigé (à vérifier sur téléphone) |
+| 10 | Remboursement concurrent du webhook | Corrigé |
+| 11 | Frais Stripe vides | Corrigé · ⚠️ événements Stripe à activer |
+| 12 | Petits points de sécurité | Corrigés |
+| 13 | Couleurs hors charte, starter kit | Corrigé · ❓ teinte d'erreur |
+| 14 | Règles métier absentes du spec | ❓ questions listées |
+
 ---
 
 ## 1. 🔴 Commande payée bloquée « en attente » après un webhook rejoué
@@ -477,3 +496,21 @@ charte : à confirmer, ou à remplacer en changeant les trois tokens `erreur*`.
 
 **Vérification.** Suite de tests complète, et rendu des pages publiques, du tunnel et de la
 connexion contrôlé sur un serveur local.
+
+---
+
+## 14. ❓ Points de l'audit laissés en l'état : décision de l'association
+
+Ces points ne sont pas des bugs : ce sont des règles métier absentes du spec. Rien n'a été changé.
+
+| Point | État actuel | Question |
+|---|---|---|
+| Export des inscrits par un admin de niveau 1 (lecture) | Autorisé, tracé au journal. Contient les mineurs et les contacts d'urgence. | Le niveau 1 doit-il pouvoir exporter ? (minimisation RGPD : on peut réserver l'export au niveau 2) |
+| Suppression de compte et export de ses données par la personne elle-même | Pas de libre-service : la personne écrit à l'association. | Suffit-il de l'indiquer dans la politique de protection des données, ou faut-il un bouton dans « Mon compte » ? |
+| Format des exports CSV | Windows-1252 avec `sep=;` (s'ouvre bien dans Excel quel que soit le réglage régional). Le spec demande UTF-8 avec BOM. | Garder ce choix (testé sur Excel) ou revenir à la lettre du spec ? |
+| Même enfant inscrit par deux parents (deux comptes) | Deux participants distincts, deux inscriptions : rien ne détecte le doublon. | Faut-il une alerte (même nom, prénom, date de naissance) dans l'admin ? |
+| Adulte inscrit par un proche (« Une autre personne ») | Participant géré par le proche, sans accès à sa propre inscription. | Faut-il permettre à cet adulte de récupérer son inscription sur son propre compte ? |
+| Réinscription après annulation | Voir n° 3. | Voir n° 3. |
+| Mentions légales, CGV, FAQ | Voir n° 4. | Textes à fournir. |
+| Billet QR, reçu fiscal, document refusé | Voir n° 6. | Voir n° 6. |
+| Teinte d'erreur | Voir n° 13. | Voir n° 13. |
