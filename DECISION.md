@@ -371,3 +371,52 @@ remboursement, rétractation), et le contenu d'une FAQ si elle est voulue. Il su
 
 **Tests.** `SecuriteTest` : plus aucun `href="#"` sur la page de l'événement, page cookies servie,
 page manquante → « pas encore en ligne ».
+
+---
+
+## 6. 🟠 Fonctions du spec absentes (emails, relances, billet, reçu fiscal)
+
+**Problème.** Plusieurs éléments du spec n'existaient pas : email « inscription validée » (avec
+dossard), relance des documents 15 jours avant l'événement, rappel 24 h après un paiement non
+abouti, billet QR, reçu fiscal PDF, email « document refusé ».
+
+**Tri fait.** Je n'ai construit que ce dont la règle est déjà fixée par le spec ; le reste
+demande des décisions de l'association.
+
+### Fait
+
+- **Email « Inscription validée »** (`InscriptionValidee`) quand une inscription passe de
+  « dossier incomplet » à « validée » (documents complétés depuis l'espace) : dossard dans
+  l'objet et le message. Pas d'email en double à la commande : le récapitulatif
+  `CommandeConfirmee` donne déjà les dossards des inscriptions validées d'emblée.
+- **Relance documents à J-15** (`rfl:relancer-documents`, chaque jour à 10 h) : chaque inscription
+  en « dossier incomplet » d'un événement publié qui a lieu dans 15 jours ou moins. Une seule
+  relance par inscription. *Choix :* « dans 15 jours ou moins » plutôt que « exactement à J-15 »,
+  pour ne pas rater la relance si le planificateur était arrêté ce jour-là.
+- **Rappel paiement 24 h après l'abandon** (`rfl:relancer-paiements`, toutes les heures) :
+  commande toujours en attente, dernière tentative fermée depuis 24 h (ou commande sans
+  tentative), une seule fois. *Choix :* pas de rappel si une tentative est en cours ; pas de
+  rappel au-delà de 7 jours (commande laissée de côté) ; **pas de rappel pour un don seul**
+  (un don reste un geste libre, ton de la charte : pas de culpabilisation).
+- Les deux relances réutilisent l'email existant `RelanceInscription` (celui du bouton « Relancer »
+  de l'admin). « Une seule fois » est gardé en cache (base de données), 60 et 30 jours.
+
+**Prérequis production.** Le cron du planificateur (`* * * * * php artisan schedule:run`) et un
+worker de file, déjà notés dans `.env.example`.
+
+### Pas fait : ❓ à décider avec l'association
+
+- **Billet QR** : que contient le QR et qui le scanne le jour J (retrait des dossards, outil de
+  pointage) ? Sans ça, impossible de choisir le contenu ni la sécurité du code.
+- **Reçu fiscal PDF** : il faut les mentions légales du reçu (Cerfa n° 11580, numéro et objet de
+  l'association, article du CGI, signataire) et la règle de numérotation. Ajoute aussi une
+  dépendance PDF (dompdf).
+- **Email « document refusé »** : le back-office ne sait que marquer un questionnaire « vérifié » ;
+  le spec ne dit pas qui peut refuser, pour quels motifs, ni ce que devient l'inscription.
+
+**Fichiers.** `app/Notifications/InscriptionValidee.php`, `app/Services/Inscriptions/MettreAJourStatut.php`,
+`app/Services/Inscriptions/Relances.php`, `routes/console.php`.
+
+**Tests.** `tests/Feature/Relances/RelancesTest.php` : J-20 rien, J-15 une relance, seulement les
+dossiers incomplets ; paiement : rien avant 24 h ni pendant une tentative ouverte, une seule
+relance ensuite ; email de validation avec le dossard.

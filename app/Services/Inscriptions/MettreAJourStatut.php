@@ -3,6 +3,7 @@
 namespace App\Services\Inscriptions;
 
 use App\Models\Inscription;
+use App\Notifications\InscriptionValidee;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,7 +21,9 @@ class MettreAJourStatut
             return $inscription;
         }
 
-        return DB::transaction(function () use ($inscription) {
+        $avant = $inscription->statut;
+
+        $inscription = DB::transaction(function () use ($inscription) {
             $complet = $inscription->consentementsComplets() && ! $inscription->questionnaireManquant();
 
             $inscription->statut = $complet ? Inscription::VALIDEE : Inscription::DOSSIER_INCOMPLET;
@@ -32,5 +35,13 @@ class MettreAJourStatut
 
             return $inscription->refresh();
         });
+
+        // Dossier complété après le paiement : le titulaire reçoit son dossard (spec, « Inscription
+        // validée »). À la commande, le récapitulatif CommandeConfirmee le donne déjà.
+        if ($avant === Inscription::DOSSIER_INCOMPLET && $inscription->statut === Inscription::VALIDEE) {
+            $inscription->titulaire()?->notify(new InscriptionValidee($inscription));
+        }
+
+        return $inscription;
     }
 }
