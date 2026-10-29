@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\EspaceController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaiementController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TexteLegalController;
@@ -11,6 +12,7 @@ use Livewire\Volt\Volt;
 
 Route::get('/', AccueilController::class)->name('home');
 Route::get('textes/{type}', TexteLegalController::class)->name('textes.show');
+Route::get('infos/{page}', PageController::class)->name('pages.show');
 
 // Compte créé par l'association : la personne choisit son mot de passe depuis le lien reçu par email.
 Route::get('activation/{user}', [ActivationController::class, 'show'])->middleware('throttle:30,1')->name('compte.activation');

@@ -329,3 +329,45 @@ inscription, et le bouton « Faire un don » de la section « La cause » pointa
 
 **Tests.** `TunnelTest` : don seul inscriptions fermées → payé, confirmé, email et page adaptés ;
 commande don seul en attente reprise et « Modifier » → don ; lien de la page de l'événement.
+
+---
+
+## 4. 🟠 Liens légaux morts dans le pied de page
+
+**Problème.** Mentions légales, CGV, Confidentialité, Cookies et Questions fréquentes pointaient
+sur `#`. Les mentions légales et des CGV sont obligatoires pour un site qui encaisse des paiements :
+bloquant pour la mise en production.
+
+**Ce que je n'ai pas fait.** Rédiger les mentions légales et les CGV. Elles contiennent des
+informations que seule l'association a (responsable de publication, adresse du siège, hébergeur
+exact, statut fiscal) et des règles métier (conditions d'annulation et de remboursement, droit de
+rétractation) : CLAUDE.md interdit de les inventer.
+
+**Solutions envisagées.**
+1. Pages avec des « [à compléter] » visibles. *Écarté :* risque de partir en ligne tel quel.
+2. Retirer les liens jusqu'à ce que les textes existent. *Écarté pour les mentions légales et les
+   CGV :* leur absence se remarquerait moins, alors qu'elles bloquent la mise en ligne.
+3. Une page par texte, qui affiche « pas encore en ligne » (comme les PDF légaux manquants) tant
+   que l'association n'a pas fourni le contenu ; relier ce qui existe déjà. **Retenu.**
+
+**Choix.**
+- Route `/infos/{page}` (`PageController`) : `mentions-legales`, `cgv`, `cookies`. Le texte est une
+  vue `resources/views/site/pages/{page}.blade.php` ; sans vue, page « Ce document n'est pas encore
+  en ligne… » (statut 404, comme un texte légal absent).
+- **Confidentialité** → le PDF « Politique de protection des données » déjà publié par l'admin.
+- **Cookies** → page rédigée, uniquement factuelle : le site ne pose que des cookies nécessaires
+  (session 2 h, jeton anti-falsification, « Rester connecté » 400 jours si coché), donc pas de
+  bandeau de consentement ; Stripe pose les siens sur sa page de paiement. *À relire par
+  l'association.*
+- **Questions fréquentes** : lien retiré tant qu'il n'y a pas de contenu.
+
+**❓ À fournir par l'association avant la mise en ligne.** Texte des mentions légales (éditeur,
+responsable de publication, siège, hébergeur OVH exact) et des CGV (prix, paiement, annulation,
+remboursement, rétractation), et le contenu d'une FAQ si elle est voulue. Il suffira de créer
+`site/pages/mentions-legales.blade.php` et `site/pages/cgv.blade.php`.
+
+**Fichiers.** `app/Http/Controllers/PageController.php`, `routes/web.php`,
+`resources/views/site/pages/cookies.blade.php`, `resources/views/site/evenement.blade.php`.
+
+**Tests.** `SecuriteTest` : plus aucun `href="#"` sur la page de l'événement, page cookies servie,
+page manquante → « pas encore en ligne ».

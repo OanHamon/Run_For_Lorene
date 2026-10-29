@@ -215,7 +215,6 @@
                     <ul class="space-y-2">
                         <li><a href="#epreuves" class="hover:text-white hover:underline">Les épreuves</a></li>
                         <li id="reglement"><a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="hover:text-white hover:underline">Règlement</a></li>
-                        <li><a href="#" class="hover:text-white hover:underline">Questions fréquentes</a></li>
                     </ul>
                 </div>
                 <div>
@@ -236,10 +235,10 @@
 
             <div class="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/15 pt-6 text-sm text-white/70">
                 <span>N° RNA W442030950</span>
-                <a href="#" class="hover:text-white">Mentions légales</a>
-                <a href="#" class="hover:text-white">CGV</a>
-                <a href="#" class="hover:text-white">Confidentialité</a>
-                <a href="#" class="hover:text-white">Cookies</a>
+                <a href="{{ route('pages.show', 'mentions-legales') }}" class="hover:text-white">Mentions légales</a>
+                <a href="{{ route('pages.show', 'cgv') }}" class="hover:text-white">CGV</a>
+                <a href="{{ route('textes.show', 'rgpd') }}" target="_blank" rel="noopener" class="hover:text-white">Confidentialité</a>
+                <a href="{{ route('pages.show', 'cookies') }}" class="hover:text-white">Cookies</a>
                 <a href="https://effervescence-jeunes.fr/" class="ml-auto p-1" title="Effervescence Jeunes">
                     <img src="/images/pastille-ej.png" alt="Effervescence Jeunes" class="h-12 w-12">
                 </a>
