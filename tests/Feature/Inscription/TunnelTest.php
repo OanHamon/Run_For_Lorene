@@ -11,6 +11,7 @@ use App\Notifications\CommandeConfirmee;
 use App\Services\Admin\AnnulerInscription;
 use App\Services\Paiement\EnregistrerPaiement;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 
 beforeEach(function () {
@@ -392,4 +393,24 @@ test('inscription annulée avant tout paiement : la réinscription en ligne rest
     inscrire(Volt::test('inscription.tunnel', ['nouveau' => 1]), 'moi', 'Sam', '1985-06-01', ($this->course)('Marche 5 km')->id_course);
 
     expect(Inscription::sole()->statut)->toBe(Inscription::BROUILLON);
+});
+
+test("règlement publié en base mais PDF absent du serveur : on ne le fait pas accepter, l'admin est prévenu", function () {
+    $evenement = Evenement::courant();
+    $reglement = $evenement->texteLegals()->where('type_texte', 'reglement')->latest('version')->first();
+    Storage::disk('local')->delete($reglement->fichier);
+    $this->actingAs($this->parent);
+
+    Volt::test('inscription.tunnel')
+        ->call('choisirParticipant', 'moi')
+        ->set('dateNaissance', '1985-06-01')
+        ->call('participantSuivant')
+        ->call('choisirCourse', ($this->course)('Marche 5 km')->id_course)
+        ->call('epreuveSuivant')
+        ->remplirDocuments()
+        ->assertHasErrors('accepteReglement')
+        ->assertSet('etape', 'documents');
+
+    $this->actingAs(admin(1))->get(route('admin.evenements.show', $evenement))
+        ->assertSee('PDF introuvable sur le serveur : Règlement');
 });

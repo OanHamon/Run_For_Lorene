@@ -100,13 +100,14 @@ class DatabaseSeeder extends Seeder
         }
 
         foreach (['reglement', 'decharge', 'rgpd', 'droit_image'] as $type) {
-            TexteLegal::create([
+            $texte = TexteLegal::create([
                 'type_texte' => $type,
                 'version' => 1,
                 'date_publication' => now()->toDateString(),
-                'fichier' => "textes-legaux/{$type}-rfl3-v1.pdf",
+                'fichier' => TexteLegal::chemin($evenement, $type, 1),
                 'id_evenement' => $evenement->id_evenement,
             ]);
+            PdfProvisoire::ecrire($texte->fichier, "{$evenement->nom} · {$type} · version 1");
         }
 
         $this->call(QuestionnairesSeeder::class);

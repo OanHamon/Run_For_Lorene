@@ -775,7 +775,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     private function textesPublies(string $champ): bool
     {
         $textes = app(Consentements::class)->textes($this->evenement);
-        $manquants = collect(TexteLegal::OBLIGATOIRES)->reject(fn ($t) => $textes->has($t));
+        // Publié en base ne suffit pas : le PDF doit être lisible (lien « Lire le règlement »).
+        $manquants = collect(TexteLegal::OBLIGATOIRES)->reject(fn ($t) => $textes->get($t)?->fichierPresent());
 
         if ($manquants->isNotEmpty()) {
             report(new RuntimeException('Textes légaux manquants : '.$manquants->implode(', ')));

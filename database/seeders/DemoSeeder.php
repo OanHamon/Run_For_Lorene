@@ -13,13 +13,14 @@ use App\Models\InscriptionDeclinaison;
 use App\Models\JournalAdmin;
 use App\Models\Paiement;
 use App\Models\Participant;
-use App\Models\QuestionnaireSante;
 use App\Models\Remboursement;
 use App\Models\Tarif;
 use App\Models\TexteLegal;
 use App\Models\User;
 use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\Questionnaires;
+use Faker\Factory;
+use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,7 @@ use Illuminate\Support\Str;
  */
 class DemoSeeder extends Seeder
 {
-    private \Faker\Generator $faker;
+    private Generator $faker;
 
     private Consentements $consentements;
 
@@ -69,7 +70,7 @@ class DemoSeeder extends Seeder
 
     private function remplir(): void
     {
-        $this->faker = \Faker\Factory::create('fr_FR');
+        $this->faker = Factory::create('fr_FR');
         $this->faker->seed(2027);
         mt_srand(2027);
         $this->consentements = app(Consentements::class);
@@ -98,6 +99,7 @@ class DemoSeeder extends Seeder
             'fichier' => TexteLegal::chemin($rfl3, 'reglement', 2),
             'id_evenement' => $rfl3->id_evenement,
         ]);
+        PdfProvisoire::ecrire(TexteLegal::chemin($rfl3, 'reglement', 2), "{$rfl3->nom} · reglement · version 2");
     }
 
     /** Un admin par niveau, en plus du super admin du DatabaseSeeder. */
@@ -160,6 +162,7 @@ class DemoSeeder extends Seeder
 
         foreach (['reglement', 'decharge', 'rgpd', 'droit_image'] as $type) {
             TexteLegal::create(['type_texte' => $type, 'version' => 1, 'date_publication' => '2025-09-01', 'fichier' => TexteLegal::chemin($rfl2, $type, 1), 'id_evenement' => $rfl2->id_evenement]);
+            PdfProvisoire::ecrire(TexteLegal::chemin($rfl2, $type, 1), "{$rfl2->nom} · {$type} · version 1");
         }
 
         return $rfl2;

@@ -3,7 +3,10 @@
 use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Tarif;
+use App\Models\TexteLegal;
 use App\Services\Admin\ControleTarifs;
+use Database\Seeders\QuestionnairesSeeder;
+use Illuminate\Support\Facades\Storage;
 
 /*
  * Garde-fous des tarifs : période dans celle des inscriptions, pas de recouvrement
@@ -35,9 +38,10 @@ beforeEach(function () {
     ];
     // Affirmations de décharge en ligne et textes obligatoires publiés : seuls les tarifs
     // peuvent bloquer la publication ici.
-    $this->seed(Database\Seeders\QuestionnairesSeeder::class);
-    foreach (App\Models\TexteLegal::OBLIGATOIRES as $type) {
-        App\Models\TexteLegal::create(['type_texte' => $type, 'version' => 1, 'date_publication' => today(), 'fichier' => "textes/{$type}.pdf", 'id_evenement' => $this->evenement->id_evenement]);
+    $this->seed(QuestionnairesSeeder::class);
+    foreach (TexteLegal::OBLIGATOIRES as $type) {
+        TexteLegal::create(['type_texte' => $type, 'version' => 1, 'date_publication' => today(), 'fichier' => "textes/{$type}.pdf", 'id_evenement' => $this->evenement->id_evenement]);
+        Storage::disk('local')->put("textes/{$type}.pdf", '%PDF-1.4');
     }
     $this->actingAs(admin(3));
 });
@@ -79,7 +83,7 @@ test('deux tarifs qui visent les mêmes âges les mêmes jours sont refusés', f
     $this->post($url, ($this->tarif)(['libelle' => 'Adulte', 'age_min' => '18', 'valide_du' => ($this->jour)(20)]))->assertSessionHasErrorsIn('tarif', 'valide_du');
 });
 
-test("modifier un tarif ne le compare pas à lui-même", function () {
+test('modifier un tarif ne le compare pas à lui-même', function () {
     $tarif = $this->course->tarifs()->create(($this->tarif)(['age_min' => null, 'age_max' => null]));
 
     $this->put("/admin/tarifs/{$tarif->id_tarif}", ($this->tarif)(['montant' => '12']))->assertSessionHasNoErrors();
@@ -129,7 +133,7 @@ test('publier exige un tarif pour chaque jour et chaque âge', function () {
     expect($this->evenement->fresh()->statut)->toBe(Evenement::PUBLIE);
 });
 
-test("un événement publié avec des trous est signalé sur le tableau de bord", function () {
+test('un événement publié avec des trous est signalé sur le tableau de bord', function () {
     $this->evenement->update(['statut' => Evenement::PUBLIE]);
     $this->course->tarifs()->create(($this->tarif)(['valide_au' => ($this->jour)(19), 'age_min' => null, 'age_max' => null]));
 
@@ -140,7 +144,7 @@ test("un événement publié avec des trous est signalé sur le tableau de bord"
 
 test('publier exige le règlement et la RGPD ; décharge (affirmations en ligne) et droit à l\'image en PDF facultatifs', function () {
     $this->course->tarifs()->create(($this->tarif)(['age_min' => null, 'age_max' => null]));
-    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'rgpd')->delete();
+    TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'rgpd')->delete();
     $champs = [
         'nom' => 'Édition test',
         'date_evenement' => $this->evenement->date_evenement->toDateString(),
@@ -152,14 +156,15 @@ test('publier exige le règlement et la RGPD ; décharge (affirmations en ligne)
     $this->put("/admin/evenements/{$this->evenement->id_evenement}", $champs)->assertSessionHasErrors('statut');
     expect(session('errors')->first('statut'))->toContain('il manque : politique de protection des données');
 
-    App\Models\TexteLegal::create(['type_texte' => 'rgpd', 'version' => 1, 'date_publication' => today(), 'fichier' => 'textes/rgpd.pdf', 'id_evenement' => $this->evenement->id_evenement]);
+    TexteLegal::create(['type_texte' => 'rgpd', 'version' => 1, 'date_publication' => today(), 'fichier' => 'textes/rgpd.pdf', 'id_evenement' => $this->evenement->id_evenement]);
+    Storage::disk('local')->put('textes/rgpd.pdf', '%PDF-1.4');
     // Sans PDF de décharge : publiable, la décharge se fait par les affirmations du tunnel.
-    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'decharge')->delete();
+    TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'decharge')->delete();
     $this->put("/admin/evenements/{$this->evenement->id_evenement}", $champs)->assertSessionHasNoErrors();
 });
 
 test('la checklist « Prêt à publier ? » liste ce qui manque, seulement en brouillon', function () {
-    App\Models\TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'rgpd')->delete();
+    TexteLegal::where('id_evenement', $this->evenement->id_evenement)->where('type_texte', 'rgpd')->delete();
 
     $this->get("/admin/evenements/{$this->evenement->id_evenement}")
         ->assertSee('Prêt à publier ?')

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class TexteLegal extends Model
 {
@@ -44,6 +45,12 @@ class TexteLegal extends Model
     public static function chemin(Evenement $evenement, string $type, int $version): string
     {
         return "textes-legaux/evenement-{$evenement->id_evenement}/{$type}-v{$version}.pdf";
+    }
+
+    /** Le PDF est-il bien sur le disque ? Sans lui, on ferait accepter un texte illisible. */
+    public function fichierPresent(): bool
+    {
+        return $this->fichier !== null && Storage::disk('local')->exists($this->fichier);
     }
 
     public function evenement(): BelongsTo

@@ -59,10 +59,11 @@ class PreparationEvenement
 
             $etapes->push($this->etape(
                 $libelle.($obligatoire ? '' : ' (facultatif)'),
-                $texte !== null,
+                $texte !== null && $texte->fichierPresent(),
                 obligatoire: $obligatoire,
                 onglet: 'textes',
                 detail: match (true) {
+                    $texte !== null && ! $texte->fichierPresent() => "Version {$texte->version} : le PDF est introuvable sur le serveur, publie-le à nouveau.",
                     $texte !== null => "Version {$texte->version} du {$texte->date_publication->format('d/m/Y')}.",
                     $dechargeEnLigne => 'Pas de PDF : la décharge se fait par les affirmations à cocher du tunnel.',
                     default => 'Aucun PDF publié.',

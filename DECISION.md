@@ -138,3 +138,42 @@ paiement → réinscription possible. `InscriptionGratuiteTest` : reprise admin 
 
 **Pour revenir en arrière.** Faire renvoyer `false` à `annuleeApresReglement()` : on retrouve
 l'ancien comportement (le journal admin reste).
+
+---
+
+## 7. 🟠 Règlement « accepté » alors que son PDF n'existe pas
+
+*(Traité avant les points 4 à 6 : 4 attend des textes de l'association et 5-6 sont des
+fonctionnalités, voir plus bas.)*
+
+**Problème.** Le tunnel vérifiait seulement qu'une ligne « texte légal » existait en base, pas que
+le PDF était sur le disque. On pouvait donc faire accepter un règlement impossible à ouvrir (lien
+« Lire le règlement » en 404). C'était le cas en local : les seeders créaient les lignes sans
+fichier (5 PDF sur 6 absents).
+
+**Solutions envisagées.**
+1. Vérifier le fichier seulement à l'affichage du lien. *Écarté :* on continuerait d'enregistrer
+   un consentement à un texte illisible.
+2. Vérifier le fichier avant d'enregistrer l'acceptation, et prévenir l'admin. **Retenu.**
+3. Stocker le PDF en base. *Écarté :* hors spec (fichiers privés sur disque).
+
+**Choix.**
+- `TexteLegal::fichierPresent()`.
+- Tunnel (`textesPublies`) : un texte obligatoire sans PDF bloque le volet comme un texte non
+  publié (« Un document légal n'est pas encore publié… »), et l'erreur part dans les logs.
+- Admin : la checklist « Prêt à publier ? » ne compte plus un texte sans fichier ; la fiche de
+  l'événement affiche une alerte « PDF introuvable sur le serveur » (même publié) et le tableau
+  des versions montre « PDF introuvable » au lieu du lien.
+- Seeders : un PDF provisoire d'une page (« Document provisoire de développement ») est écrit pour
+  chaque texte (`database/seeders/PdfProvisoire.php`). Les tests utilisent un disque factice
+  (`tests/TestCase.php`), jamais le vrai dossier `storage`.
+
+**À faire de ton côté.** Ta base locale garde des lignes sans fichier : `php artisan migrate:fresh --seed`
+(efface les données locales) ou republie les PDF depuis l'admin.
+
+**Fichiers.** `app/Models/TexteLegal.php`, `resources/views/livewire/inscription/tunnel.blade.php`,
+`app/Services/Admin/PreparationEvenement.php`, `resources/views/admin/evenements/show.blade.php`,
+`database/seeders/*`, `tests/TestCase.php`.
+
+**Tests.** `TunnelTest` : PDF supprimé → volet Conditions bloqué, alerte sur la fiche admin.
+`TarifsTest` mis à jour (les textes créés ont maintenant un fichier).

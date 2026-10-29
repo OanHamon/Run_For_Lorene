@@ -22,6 +22,14 @@
         @endif
     </x-admin.titre>
 
+    @php($pdfIntrouvables = $textesEnVigueur->reject(fn ($t) => $t->fichierPresent()))
+    @if ($pdfIntrouvables->isNotEmpty())
+        <div class="mb-6 rfl-alerte-erreur" role="alert">
+            PDF introuvable sur le serveur : {{ $pdfIntrouvables->map(fn ($t) => \App\Http\Controllers\TexteLegalController::LIBELLES[$t->type_texte] ?? $t->type_texte)->join(', ') }}.
+            Publie-le à nouveau dans l'onglet Textes légaux : tant qu'il manque, les participants ne peuvent pas le lire{{ $pdfIntrouvables->whereIn('type_texte', \App\Models\TexteLegal::OBLIGATOIRES)->isNotEmpty() ? ' et le tunnel bloque l\'étape Conditions' : '' }}.
+        </div>
+    @endif
+
     @if ($evenement->statut === \App\Models\Evenement::PUBLIE && $evenement->date_evenement->lt(today()))
         <div class="mb-6 rfl-alerte">
             <p class="font-display text-vert">Cette édition est terminée</p>
@@ -169,7 +177,13 @@
                                         @if ($enVigueur)<span class="ml-1 rfl-badge bg-vert-clair text-vert">en vigueur</span>@endif
                                     </td>
                                     <td class="text-gris-texte">{{ $texte->date_publication->format('d/m/Y') }}</td>
-                                    <td class="text-right"><a href="{{ route('admin.textes.show', $texte) }}" target="_blank" rel="noopener" class="rfl-lien">PDF</a></td>
+                                    <td class="text-right">
+                                        @if ($texte->fichierPresent())
+                                            <a href="{{ route('admin.textes.show', $texte) }}" target="_blank" rel="noopener" class="rfl-lien">PDF</a>
+                                        @else
+                                            <span class="rfl-badge bg-moutarde/20 text-vert-sombre">PDF introuvable</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="4" class="text-center text-gris-texte">Aucun texte publié.</td></tr>
