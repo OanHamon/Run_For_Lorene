@@ -5,6 +5,7 @@ use App\Support\Telephone;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
@@ -59,6 +60,18 @@ new #[Layout('components.espace-shell', ['title' => 'Mon compte'])] class extend
     public function enregistrerMotDePasse(): void
     {
         $user = Auth::user();
+
+        // Mot de passe actuel : 5 essais par minute, comme à la connexion.
+        $cle = 'mdp-compte:'.$user->id_user;
+        if (RateLimiter::tooManyAttempts($cle, 5)) {
+            $this->resetErrorBag();
+            $this->addError('actuel', 'Trop d\'essais. Réessaie dans '.RateLimiter::availableIn($cle).' secondes.');
+
+            return;
+        }
+        if ($user->doitConfirmerMotDePasse()) {
+            RateLimiter::hit($cle, 60);
+        }
 
         $this->validate([
             // Pas de mot de passe actuel à saisir si le compte n'en a pas, ou juste après une connexion par code.

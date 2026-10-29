@@ -55,6 +55,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         'reponsesDecharge', 'reponsesSante', 'attestationSante', 'volet',
     ];
 
+    /** Changée seulement par les actions du serveur : sinon on pourrait sauter une étape. */
+    #[Locked]
     public string $etape = 'compte';
 
     /** 'avant' ou 'arriere' : sens de glissement du panneau. */

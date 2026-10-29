@@ -25,7 +25,7 @@ class ConfirmationController extends Controller
         }
 
         $user = $request->user();
-        $attente = $this->codes->aUnCodeActif($user) ? null : $this->envoyer($request);
+        $attente = $this->codes->aUnCodeActif($user, CodeEmail::ADMIN) ? null : $this->envoyer($request);
 
         return view('admin.confirmation.show', ['email' => $user->email, 'attente' => $attente]);
     }
@@ -45,7 +45,7 @@ class ConfirmationController extends Controller
         }
         RateLimiter::hit($cleIp, 60);
 
-        $resultat = $this->codes->verifier($request->user(), $request->input('code'));
+        $resultat = $this->codes->verifier($request->user(), $request->input('code'), CodeEmail::ADMIN);
 
         if ($resultat === 'invalide') {
             return back()->withErrors(['code' => 'Ce code ne correspond pas. Vérifie-le et réessaie.']);
@@ -75,13 +75,13 @@ class ConfirmationController extends Controller
     {
         $user = $request->user();
 
-        if ($this->codes->envoyer($user)) {
+        if ($this->codes->envoyer($user, CodeEmail::ADMIN)) {
             return null;
         }
 
-        $attente = $this->codes->secondesAvantRenvoi($user);
+        $attente = $this->codes->secondesAvantRenvoi($user, CodeEmail::ADMIN);
 
-        return $this->codes->aUnCodeActif($user)
+        return $this->codes->aUnCodeActif($user, CodeEmail::ADMIN)
             ? "Patiente encore {$attente} s avant de redemander un code."
             : 'Trop de codes demandés. Réessaie dans '.(int) ceil($attente / 60).' min.';
     }

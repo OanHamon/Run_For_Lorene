@@ -12,7 +12,7 @@ class CodeEmailNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly string $code) {}
+    public function __construct(public readonly string $code, public readonly string $usage = CodeEmail::CONNEXION) {}
 
     /** @return list<string> */
     public function via(object $notifiable): array
@@ -25,7 +25,9 @@ class CodeEmailNotification extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("Ton code Run For Lorène : {$this->code}")
             ->greeting("Bonjour {$notifiable->prenom},")
-            ->line('Voici ton code pour confirmer ton adresse email et te connecter :')
+            ->line($this->usage === CodeEmail::ADMIN
+                ? "Voici ton code pour entrer dans l'espace d'administration :"
+                : 'Voici ton code pour confirmer ton adresse email et te connecter :')
             ->line("**{$this->code}**")
             ->line('Il est valable '.CodeEmail::VALIDITE_MINUTES.' minutes.')
             ->line("Si tu n'es pas à l'origine de cette demande, tu peux ignorer cet email.")

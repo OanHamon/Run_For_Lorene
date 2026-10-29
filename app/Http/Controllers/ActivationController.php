@@ -20,19 +20,28 @@ use Illuminate\View\View;
  */
 class ActivationController extends Controller
 {
-    public function show(Request $request, User $user): View
+    /*
+     * Le compte est cherché à la main, sans liaison de route : un identifiant inconnu donne la
+     * même page « lien invalide » qu'un lien faux, et ne révèle pas quels comptes existent.
+     */
+
+    public function show(Request $request, string $user): View
     {
-        if (! $this->lienValable($request, $user)) {
-            return view('auth.activation-invalide', ['dejaActive' => $user->mot_de_passe !== null && $request->hasValidSignature()]);
+        $user = User::find((int) $user);
+
+        if (! $user || ! $this->lienValable($request, $user)) {
+            return view('auth.activation-invalide', ['dejaActive' => $user?->mot_de_passe !== null && $request->hasValidSignature()]);
         }
 
         return view('auth.activation', ['user' => $user]);
     }
 
-    public function store(Request $request, User $user): RedirectResponse|View
+    public function store(Request $request, string $user): RedirectResponse|View
     {
-        if (! $this->lienValable($request, $user)) {
-            return view('auth.activation-invalide', ['dejaActive' => $user->mot_de_passe !== null]);
+        $user = User::find((int) $user);
+
+        if (! $user || ! $this->lienValable($request, $user)) {
+            return view('auth.activation-invalide', ['dejaActive' => $user?->mot_de_passe !== null && $request->hasValidSignature()]);
         }
 
         $request->validate([

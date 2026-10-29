@@ -420,3 +420,25 @@ worker de file, déjà notés dans `.env.example`.
 **Tests.** `tests/Feature/Relances/RelancesTest.php` : J-20 rien, J-15 une relance, seulement les
 dossiers incomplets ; paiement : rien avant 24 h ni pendant une tentative ouverte, une seule
 relance ensuite ; email de validation avec le dossard.
+
+---
+
+## 12. 🟡 Petits points de sécurité
+
+| Point | Choix | Pourquoi |
+|---|---|---|
+| `etape` du tunnel modifiable depuis le navigateur (pouvait provoquer une erreur 500) | `#[Locked]` : seules les actions du serveur la changent | Aucun champ ne la lie ; on ferme la porte au lieu de valider chaque valeur. |
+| Code de connexion et code d'entrée dans l'admin partageaient la même clé : l'un valait l'autre | Usages séparés dans `CodeEmail` (`CONNEXION`, `ADMIN`) : clés, essais et délai de renvoi distincts ; quota horaire commun ; l'email dit à quoi sert le code | La confirmation admin doit être une étape à part entière. Le quota commun protège la boîte mail. |
+| `/activation/{id}` révélait quels identifiants de compte existent (404 ou page « lien invalide ») | Compte cherché à la main : même page « lien invalide » pour un identifiant inconnu | Rien à gagner à distinguer les cas pour un lien d'activation. |
+| « Mot de passe actuel » de « Mon compte » sans limite d'essais | 5 essais par minute et par compte, comme à la connexion | Une session volée ne doit pas permettre de deviner le mot de passe. |
+
+Écartés : faire disparaître la différence entre « compte existant » et « nouveau compte » à
+l'identification. C'est le principe « façon Google » voulu par le spec (écran 03), déjà limité à
+30 essais par minute et par adresse IP.
+
+**Fichiers.** `resources/views/livewire/inscription/tunnel.blade.php`, `app/Services/Auth/CodeEmail.php`,
+`app/Http/Controllers/Admin/ConfirmationController.php`, `app/Notifications/CodeEmailNotification.php`,
+`app/Http/Controllers/ActivationController.php`, `resources/views/livewire/espace/compte.blade.php`.
+
+**Tests.** `SecuriteTest` (étape verrouillée, activation, limite du mot de passe actuel),
+`ConfirmationAdminTest` (un code de connexion est refusé à l'entrée de l'admin).

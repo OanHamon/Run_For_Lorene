@@ -3,6 +3,7 @@
 use App\Http\Middleware\ConfirmationAdmin;
 use App\Models\User;
 use App\Notifications\CodeEmailNotification;
+use App\Services\Auth\CodeEmail;
 use Illuminate\Support\Facades\Notification;
 
 beforeEach(fn () => Notification::fake());
@@ -102,4 +103,17 @@ test('un non-admin reçoit une 403 et aucun code', function () {
     $this->post('/admin/confirmation/renvoyer')->assertForbidden();
 
     Notification::assertNothingSentTo($user);
+});
+
+test('un code de connexion ne vaut pas confirmation admin', function () {
+    $admin = admin(3, confirme: false);
+    app(CodeEmail::class)->envoyer($admin); // code de connexion
+    $codeConnexion = dernierCode($admin);
+
+    $this->actingAs($admin)->get('/admin')->assertRedirect(route('admin.confirmation'));
+    $this->get(route('admin.confirmation'));
+    expect(Notification::sent($admin, CodeEmailNotification::class)->last()->usage)->toBe(CodeEmail::ADMIN);
+
+    $this->post(route('admin.confirmation.valider'), ['code' => $codeConnexion])->assertSessionHasErrors('code');
+    $this->get('/admin')->assertRedirect(route('admin.confirmation'));
 });
