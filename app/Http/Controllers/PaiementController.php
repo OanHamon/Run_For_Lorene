@@ -16,6 +16,9 @@ use Illuminate\View\View;
 /** Écrans 09 (paiement), 09b (paiement non abouti) et 10 (confirmation). */
 class PaiementController extends Controller
 {
+    /** Rechargements automatiques de la page d'attente du webhook (toutes les 3 secondes). */
+    public const RECHARGEMENTS_MAX = 20;
+
     public function payer(Request $request, Commande $commande, DemarrerPaiement $demarrer): RedirectResponse
     {
         $this->autoriser($request, $commande);
@@ -42,9 +45,15 @@ class PaiementController extends Controller
 
         $commande->load('inscriptions.participant.user', 'inscriptions.tarif.course', 'inscriptions.evenement', 'don');
 
+        // Le webhook arrive en général en quelques secondes : la page se recharge toute seule,
+        // une minute au plus (20 × 3 s), puis propose de vérifier à la main.
+        $essai = min(max($request->integer('essai'), 0), self::RECHARGEMENTS_MAX);
+
         return view('inscription.confirmation', [
             'commande' => $commande,
             'enAttente' => $commande->statut === Commande::EN_COURS,
+            'essai' => $essai,
+            'rechargerAuto' => $essai < self::RECHARGEMENTS_MAX,
         ]);
     }
 

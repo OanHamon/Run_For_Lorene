@@ -352,3 +352,15 @@ test('la page de simulation est inaccessible quand Stripe est configuré', funct
 
     $this->get(route('paiement.simulation', $paiement))->assertNotFound();
 });
+
+test("page d'attente du webhook : rechargement automatique pendant une minute, puis message et vérification à la main", function () {
+    [$commande] = commandeEnAttente($this->user, $this->marche);
+
+    $this->get(route('inscription.confirmation', $commande))->assertOk()
+        ->assertSee('http-equiv="refresh"', false)
+        ->assertSee('essai=1', false);
+
+    $this->get(route('inscription.confirmation', ['commande' => $commande, 'essai' => 20]))->assertOk()
+        ->assertDontSee('http-equiv="refresh"', false)
+        ->assertSee('Ne repaie pas');
+});

@@ -5,19 +5,30 @@
 @endphp
 
 <x-tunnel-shell :title="($enAttente ? 'Paiement en cours' : 'Confirmation').' · Run For Lorène'">
-    @if ($enAttente)
+    @if ($enAttente && $rechargerAuto)
         <x-slot:head>
-            {{-- Le webhook Stripe fait foi : on recharge tant qu'il n'est pas arrivé. --}}
-            <meta http-equiv="refresh" content="3">
+            {{-- Le webhook Stripe fait foi : on recharge tant qu'il n'est pas arrivé, une minute au plus. --}}
+            <meta http-equiv="refresh" content="3;url={{ route('inscription.confirmation', ['commande' => $commande, 'essai' => $essai + 1]) }}">
         </x-slot:head>
 
-        <div class="flex flex-col items-center py-6 text-center" role="status">
+        <div class="flex flex-col items-center py-6 text-center">
             <svg class="mb-6 h-14 w-14 animate-spin text-vert" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
             </svg>
-            <h1 class="font-display text-2xl text-vert">On confirme ton paiement…</h1>
+            {{-- Annoncé une seule fois au lecteur d'écran, pas à chaque rechargement. --}}
+            <h1 class="font-display text-2xl text-vert" @if ($essai === 0) role="status" @endif>On confirme ton paiement…</h1>
             <p class="mt-3 text-sm text-gris-texte">Cela ne prend que quelques secondes. Cette page se met à jour toute seule.</p>
             <p class="mt-6 text-xs text-gris-texte">Si rien ne bouge d'ici une minute, retrouve ta commande dans <a href="{{ route('espace') }}" class="rfl-lien">ton espace</a>.</p>
+        </div>
+    @elseif ($enAttente)
+        <div class="py-2" role="status">
+            <h1 class="font-display text-2xl text-vert">Ton paiement est en cours de vérification</h1>
+            <p class="mt-3 text-sm text-gris-texte">La confirmation prend plus de temps que d'habitude. Rien n'est perdu : si ton paiement a abouti, ton inscription sera validée dès qu'on aura la réponse de la banque, et tu recevras un email.</p>
+            <p class="mt-3 text-sm text-gris-texte">Ne repaie pas : ta commande est gardée dans ton espace.</p>
+            <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <a href="{{ route('inscription.confirmation', $commande) }}" class="rfl-lien">Vérifier à nouveau</a>
+                <a href="{{ route('espace') }}" class="rfl-btn">Aller à mon espace</a>
+            </div>
         </div>
     @elseif ($commande->statut === \App\Models\Commande::PAYEE)
         <div class="py-2">

@@ -177,3 +177,30 @@ fichier (5 PDF sur 6 absents).
 
 **Tests.** `TunnelTest` : PDF supprimé → volet Conditions bloqué, alerte sur la fiche admin.
 `TarifsTest` mis à jour (les textes créés ont maintenant un fichier).
+
+---
+
+## 8. 🟠 Page de confirmation qui se recharge sans fin
+
+**Problème.** Tant que le webhook Stripe n'était pas arrivé, la page de confirmation se
+rechargeait toutes les 3 secondes, sans limite (webhook mal configuré, commande bloquée…). Le
+lecteur d'écran relisait le message à chaque fois.
+
+**Solutions envisagées.**
+1. Interroger Stripe depuis la page de retour (`session_id`) pour confirmer sans attendre le
+   webhook. *Écarté :* le spec dit que le retour sur la page de succès n'est qu'un affichage,
+   seul le webhook fait foi.
+2. Remplacer le rechargement par un appel JavaScript périodique. *Écarté :* plus de code pour le
+   même résultat ; le rechargement simple marche sans JS.
+3. Limiter les rechargements (compteur dans l'adresse), puis afficher un message clair. **Retenu.**
+
+**Choix.** 20 rechargements de 3 s (une minute), compteur `?essai=` dans l'URL
+(`PaiementController::RECHARGEMENTS_MAX`). Ensuite : « Ton paiement est en cours de vérification…
+Ne repaie pas : ta commande est gardée dans ton espace », avec « Vérifier à nouveau » et « Aller à
+mon espace ». Le message d'attente n'est annoncé au lecteur d'écran qu'au premier affichage.
+Si la personne clique malgré tout sur « Payer » dans son espace, le paiement déjà abouti chez
+Stripe bloque la nouvelle tentative (comportement existant).
+
+**Fichiers.** `app/Http/Controllers/PaiementController.php`, `resources/views/inscription/confirmation.blade.php`.
+
+**Tests.** `PaiementTest` : rechargement au début, plus de rechargement et message au 20e essai.
