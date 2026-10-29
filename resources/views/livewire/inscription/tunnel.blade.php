@@ -386,8 +386,16 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         $this->resetErrorBag();
     }
 
-    public function retour(): void
+    /**
+     * Panneau précédent. Aussi appelé par le bouton « précédent » du navigateur : faux quand il
+     * n'y a pas de panneau précédent dans le tunnel, le navigateur quitte alors la page.
+     */
+    public function retour(): bool
     {
+        if (! in_array($this->etape, ['epreuve', 'documents', 'don', 'recap', 'participant'], true)) {
+            return false;
+        }
+
         match ($this->etape) {
             'epreuve' => $this->aller('participant', 'arriere'),
             'documents' => ($precedent = $this->volets[array_search($this->volet, $this->volets, true) - 1] ?? null)
@@ -396,8 +404,9 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             'don' => $this->inscriptionId ? $this->allerVolet('conditions', 'arriere') : $this->aller('recap', 'arriere'),
             'recap' => $this->aller('don', 'arriere'),
             'participant' => $this->panier->isNotEmpty() ? $this->aller('recap', 'arriere') : $this->redirectRoute('home'),
-            default => null,
         };
+
+        return true;
     }
 
     private function allerVolet(string $volet, string $sens = 'avant'): void
@@ -981,7 +990,23 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     }
 }; ?>
 
-<div>
+{{--
+    Bouton « précédent » du navigateur : le tunnel tient sur une seule adresse, il ferait donc
+    quitter l'inscription. Une entrée d'historique est ajoutée ; « précédent » appelle alors le
+    panneau précédent, puis quitte la page quand il n'y en a plus.
+--}}
+<div @auth x-data="{
+        init() {
+            history.pushState({ rflTunnel: true }, '');
+            window.addEventListener('popstate', async () => {
+                if (await $wire.retour()) {
+                    history.pushState({ rflTunnel: true }, '');
+                } else {
+                    history.back();
+                }
+            });
+        },
+    }" @endauth>
     @php
         [$numero, $libelle] = $this::ETAPES[$etape] ?? [null, null];
     @endphp
@@ -995,7 +1020,19 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         </div>
     @endif
 
-    <div wire:key="panneau-{{ $etape }}-{{ $participantId }}" class="{{ $sens === 'avant' ? 'rfl-glisse-avant' : 'rfl-glisse-arriere' }}">
+    {{--
+        Nouveau panneau (étape ou volet) : retour en haut de page, focus sur son titre pour le
+        clavier et les lecteurs d'écran. Rien au premier affichage (les champs ont leur autofocus).
+    --}}
+    <div wire:key="panneau-{{ $etape }}-{{ $volet }}-{{ $participantId }}" class="{{ $sens === 'avant' ? 'rfl-glisse-avant' : 'rfl-glisse-arriere' }}"
+        x-data x-init="
+            if (! window.rflPanneauVu) { window.rflPanneauVu = true; return; }
+            window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+            $nextTick(() => {
+                const titre = $el.querySelector('h1, h2');
+                if (titre) { titre.setAttribute('tabindex', '-1'); titre.classList.add('outline-none'); titre.focus({ preventScroll: true }); }
+            });
+        ">
 
     {{-- Inscriptions fermées --}}
     @if ($etape === 'ferme')

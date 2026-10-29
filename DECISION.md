@@ -204,3 +204,33 @@ Stripe bloque la nouvelle tentative (comportement existant).
 **Fichiers.** `app/Http/Controllers/PaiementController.php`, `resources/views/inscription/confirmation.blade.php`.
 
 **Tests.** `PaiementTest` : rechargement au début, plus de rechargement et message au 20e essai.
+
+---
+
+## 9. 🟠 Tunnel : panneau suivant hors écran, focus perdu, « précédent » qui fait sortir
+
+**Problème.** Au changement de panneau (« Continuer »), la page restait à la même hauteur : sur
+mobile, après le long questionnaire de santé, le panneau suivant s'affichait hors écran. Le focus
+clavier restait sur un bouton disparu (le lecteur d'écran ne savait pas qu'une nouvelle étape
+s'affichait). Et le tunnel tenant sur une seule adresse, le bouton « précédent » du navigateur
+faisait quitter l'inscription au lieu de revenir au panneau précédent.
+
+**Solutions envisagées.**
+1. Une adresse par étape (`?etape=…` synchronisée avec Livewire). *Écarté :* l'étape deviendrait
+   modifiable depuis l'adresse, contournant l'ordre du tunnel (décharge avant paiement…).
+2. Script léger : au nouveau panneau, remonter en haut et donner le focus au titre ; « précédent »
+   du navigateur branché sur le bouton « Retour » du tunnel. **Retenu.**
+
+**Choix.**
+- Chaque panneau (étape **et** volet de l'étape Documents, la clé inclut maintenant le volet) remonte
+  en haut de page (sans animation si « réduire les animations » est activé) et place le focus sur
+  son titre. Rien au premier affichage, pour ne pas voler l'autofocus des champs.
+- Une entrée d'historique est ajoutée à l'ouverture du tunnel (connecté) ; « précédent » appelle
+  `retour()`. `retour()` renvoie maintenant vrai/faux : faux quand il n'y a pas de panneau
+  précédent (paiement en attente, inscriptions fermées), et le navigateur quitte alors la page
+  normalement. Au premier panneau sans commande, « Retour » ramène à la page de l'événement.
+
+**Limite.** Pas de test automatique du comportement navigateur (pas d'outil de test navigateur
+dans le projet) : à vérifier à la main sur téléphone pendant la recette (lot 7).
+
+**Fichiers.** `resources/views/livewire/inscription/tunnel.blade.php`.
