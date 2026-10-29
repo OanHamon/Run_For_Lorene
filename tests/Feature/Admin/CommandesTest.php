@@ -6,6 +6,7 @@ use App\Models\JournalAdmin;
 use App\Models\Paiement;
 use App\Models\Remboursement;
 use App\Models\User;
+use App\Services\Paiement\Passerelle;
 use App\Services\Paiement\PasserelleStripe;
 
 beforeEach(function () {
@@ -57,7 +58,7 @@ test('un super admin rembourse en partie, puis le reste', function () {
     $this->get("/admin/commandes/{$this->inscription->id_commande}")->assertSee('Remboursé');
 });
 
-test("un paiement non réussi ne se rembourse pas", function () {
+test('un paiement non réussi ne se rembourse pas', function () {
     $this->paiement->update(['statut' => Paiement::ECHOUE]);
 
     $this->actingAs(admin(3))->post("/admin/paiements/{$this->paiement->id_paiement}/rembourser", ['montant' => '5'])
@@ -103,4 +104,67 @@ test('webhook charge.refunded : remboursement fait dans Stripe enregistré une s
         ->and((float) $remboursement->montant)->toBe(8.0)
         ->and($remboursement->id_paiement)->toBe($this->paiement->id_paiement)
         ->and($remboursement->id_admin)->toBeNull();
+});
+
+test('remboursement admin et webhook charge.refunded en même temps : une seule ligne, avec son auteur', function () {
+    // La passerelle répond, mais le webhook a déjà enregistré le remboursement (sans auteur).
+    $passerelle = new class implements Passerelle
+    {
+        public function creerSession(Commande $commande, Paiement $paiement): array
+        {
+            return [];
+        }
+
+        public function annuler(Paiement $paiement): bool
+        {
+            return true;
+        }
+
+        public function rembourser(Paiement $paiement, float $montant, ?string $motif): string
+        {
+            Remboursement::create(['reference' => 're_concurrent', 'id_paiement' => $paiement->id_paiement, 'montant' => $montant, 'motif' => 'Remboursement Stripe', 'date_remboursement' => now()]);
+
+            return 're_concurrent';
+        }
+    };
+    app()->instance(Passerelle::class, $passerelle);
+
+    $this->actingAs($admin = admin(3));
+    $this->post("/admin/paiements/{$this->paiement->id_paiement}/rembourser", ['montant' => '10', 'motif' => 'Blessure'])
+        ->assertSessionHasNoErrors();
+
+    $remboursement = Remboursement::sole();
+    expect($remboursement->reference)->toBe('re_concurrent')
+        ->and($remboursement->id_admin)->toBe($admin->id_user)
+        ->and($remboursement->motif)->toBe('Blessure')
+        ->and($this->paiement->remboursable())->toBe(15.0);
+});
+
+test('webhook charge.updated : les frais Stripe manquants sont complétés, sans écraser des frais connus', function () {
+    $this->paiement->update(['prestataire' => 'stripe', 'reference' => 'cs_test_123', 'frais' => null]);
+
+    $this->mock(PasserelleStripe::class, function ($mock) {
+        $mock->shouldReceive('sessionDuPaiement')->with('pi_123')->andReturn('cs_test_123');
+        $mock->shouldReceive('fraisTransaction')->with('txn_123')->once()->andReturn(0.63);
+    });
+
+    $envoyer = function () {
+        $payload = json_encode([
+            'id' => 'evt_'.uniqid(),
+            'object' => 'event',
+            'type' => 'charge.updated',
+            'data' => ['object' => ['object' => 'charge', 'id' => 'ch_123', 'payment_intent' => 'pi_123', 'balance_transaction' => 'txn_123']],
+        ]);
+        $t = time();
+
+        return $this->call('POST', '/stripe/webhook', [], [], [], [
+            'HTTP_STRIPE_SIGNATURE' => "t={$t},v1=".hash_hmac('sha256', "{$t}.{$payload}", 'whsec_test'),
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload);
+    };
+
+    $envoyer()->assertOk();
+    $envoyer()->assertOk(); // frais déjà connus : pas de second appel à Stripe
+
+    expect((float) $this->paiement->fresh()->frais)->toBe(0.63);
 });

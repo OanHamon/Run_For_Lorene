@@ -56,6 +56,13 @@ class StripeWebhookController extends Controller
             case 'charge.refunded':
                 app(Rembourser::class)->depuisStripe($event->data->object, app(PasserelleStripe::class));
                 break;
+
+                // Les frais ne sont connus qu'une fois la transaction de solde créée, parfois après
+                // checkout.session.completed : Stripe l'annonce par charge.updated.
+            case 'charge.succeeded':
+            case 'charge.updated':
+                $enregistrer->completerFrais($event->data->object, app(PasserelleStripe::class));
+                break;
         }
 
         return response('ok');

@@ -234,3 +234,57 @@ faisait quitter l'inscription au lieu de revenir au panneau précédent.
 dans le projet) : à vérifier à la main sur téléphone pendant la recette (lot 7).
 
 **Fichiers.** `resources/views/livewire/inscription/tunnel.blade.php`.
+
+---
+
+## 10. 🟠 Remboursement admin en même temps que le webhook `charge.refunded`
+
+**Problème.** L'admin rembourse : on appelle Stripe, puis on enregistre la ligne de remboursement
+(référence unique). Si le webhook `charge.refunded` arrivait entre les deux, il enregistrait la
+même référence ; l'insertion de l'admin tombait sur la contrainte UNIQUE et l'admin voyait une
+erreur 500, alors que le remboursement était bien parti chez Stripe (risque de le refaire).
+
+**Solutions envisagées.**
+1. Ignorer `charge.refunded` pour les remboursements faits depuis l'admin (métadonnée).
+   *Écarté :* si la réponse de l'API se perd, c'est justement le webhook qui rattrape la ligne.
+2. Rendre l'enregistrement sûr en concurrence : lecture verrouillante, insertion, et en cas de
+   doublon, relire la ligne de l'autre chemin. **Retenu.**
+
+**Choix.** `Rembourser::enregistrer()` lit avec verrou (elle voit la dernière version validée,
+même dans la transaction de l'admin), insère, et si la contrainte UNIQUE se déclenche, relit la
+ligne existante. Si la ligne vient du webhook (sans auteur), l'admin la complète avec son nom et
+son motif. Le premier `firstOrCreate` de Laravel n'était pas suffisant : dans une transaction,
+sa relecture ne voit pas la ligne insérée par l'autre requête.
+
+**Fichiers.** `app/Services/Paiement/Rembourser.php`.
+
+**Tests.** `CommandesTest` : webhook enregistré pendant l'appel admin → une seule ligne, auteur et
+motif de l'admin, montant remboursable juste.
+
+---
+
+## 11. 🟠 Frais Stripe souvent vides
+
+**Problème.** Les frais étaient lus une seule fois, à `checkout.session.completed`. À ce moment la
+transaction de solde Stripe n'existe pas toujours : les frais restaient vides pour toujours et le
+tableau de bord sous-estimait les frais.
+
+**Solutions envisagées.**
+1. Relire les frais à l'affichage de la commande dans l'admin. *Écarté :* appel Stripe à chaque
+   affichage, et le tableau de bord (somme des frais) resterait faux.
+2. Tâche planifiée qui complète les frais manquants. *Possible plus tard*, plus lourd.
+3. Écouter `charge.succeeded` et `charge.updated`, que Stripe envoie quand la transaction de solde
+   est prête, et compléter les frais manquants. **Retenu.**
+
+**Choix.** Solution 3 (`EnregistrerPaiement::completerFrais`, `PasserelleStripe::fraisTransaction`).
+On ne touche qu'à un paiement dont les frais sont vides ; et `checkout.session.completed`
+n'efface plus des frais déjà complétés si l'ordre d'arrivée est inversé.
+
+**⚠️ À faire dans le tableau de bord Stripe.** Ajouter les événements `charge.succeeded` et
+`charge.updated` au point de terminaison du webhook (en plus de `checkout.session.*` et
+`charge.refunded`). Sans ça, rien ne change, mais rien ne casse.
+
+**Fichiers.** `app/Http/Controllers/StripeWebhookController.php`, `app/Services/Paiement/EnregistrerPaiement.php`,
+`app/Services/Paiement/PasserelleStripe.php`.
+
+**Tests.** `CommandesTest` : `charge.updated` complète les frais, reçu deux fois → un seul appel Stripe.

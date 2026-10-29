@@ -164,6 +164,18 @@ class PasserelleStripe implements Passerelle
         }
     }
 
+    /** Frais d'une transaction de solde (txn_…), en euros (null si indisponibles). */
+    public function fraisTransaction(string $balanceTransactionId): ?float
+    {
+        try {
+            return $this->stripe->balanceTransactions->retrieve($balanceTransactionId)->fee / 100;
+        } catch (ApiErrorException $e) {
+            Log::warning("Stripe : frais indisponibles pour {$balanceTransactionId} : {$e->getMessage()}");
+
+            return null;
+        }
+    }
+
     /** @return array<string, mixed> */
     private function ligne(string $libelle, float $montant): array
     {

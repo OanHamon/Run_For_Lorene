@@ -46,7 +46,7 @@ class EnregistrerPaiement
             $paiement->forceFill([
                 'statut' => Paiement::REUSSI,
                 'montant' => $montant ?? $paiement->montant,
-                'frais' => $frais,
+                'frais' => $frais ?? $paiement->frais, // déjà complétés par charge.updated
                 'date_paiement' => now(),
             ])->save();
 
@@ -87,6 +87,32 @@ class EnregistrerPaiement
         };
 
         return $paiement;
+    }
+
+    /**
+     * Frais Stripe d'un paiement, quand ils manquaient (webhooks charge.succeeded / charge.updated,
+     * qui arrivent dans n'importe quel ordre avec checkout.session.completed).
+     */
+    public function completerFrais(object $charge, PasserelleStripe $stripe): void
+    {
+        $transaction = $charge->balance_transaction ?? null;
+
+        if (! $transaction || empty($charge->payment_intent)) {
+            return;
+        }
+
+        $session = $stripe->sessionDuPaiement((string) $charge->payment_intent);
+        $paiement = $session ? Paiement::where('reference', $session)->whereNull('frais')->first() : null;
+
+        if (! $paiement) {
+            return;
+        }
+
+        $frais = $stripe->fraisTransaction(is_string($transaction) ? $transaction : $transaction->id);
+
+        if ($frais !== null) {
+            $paiement->forceFill(['frais' => $frais])->save();
+        }
     }
 
     /** Le paiement, en euros, couvre-t-il le total de la commande ? */

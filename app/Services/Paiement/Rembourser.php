@@ -4,6 +4,7 @@ namespace App\Services\Paiement;
 
 use App\Models\Paiement;
 use App\Models\Remboursement;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -39,20 +40,43 @@ class Rembourser
                 throw ValidationException::withMessages(['montant' => $e->getMessage()]);
             }
 
-            return $this->enregistrer($paiement, $reference, $montant, $motif, Auth::id());
+            $remboursement = $this->enregistrer($paiement, $reference, $montant, $motif, Auth::id());
+
+            // Le webhook charge.refunded a pu l'enregistrer juste avant (sans auteur) : on le complète.
+            if ($remboursement->id_admin === null) {
+                $remboursement->forceFill(['id_admin' => Auth::id(), 'motif' => $motif ? mb_substr($motif, 0, 255) : $remboursement->motif])->save();
+            }
+
+            return $remboursement;
         });
     }
 
-    /** Enregistre un remboursement, sauf s'il l'est déjà (même référence). */
+    /**
+     * Enregistre un remboursement, sauf s'il l'est déjà (même référence). L'admin et le webhook
+     * charge.refunded peuvent arriver en même temps : lectures verrouillantes (elles voient la
+     * dernière version validée, même dans une transaction), et si l'autre chemin insère entre
+     * la lecture et l'écriture, la contrainte UNIQUE tranche et on relit sa ligne.
+     */
     public function enregistrer(Paiement $paiement, string $reference, float $montant, ?string $motif = null, ?int $idAdmin = null, ?\DateTimeInterface $date = null): Remboursement
     {
-        return Remboursement::firstOrCreate(['reference' => $reference], [
-            'id_paiement' => $paiement->id_paiement,
-            'montant' => $montant,
-            'motif' => $motif ? mb_substr($motif, 0, 255) : null,
-            'id_admin' => $idAdmin,
-            'date_remboursement' => $date ?? now(),
-        ]);
+        $existant = Remboursement::where('reference', $reference)->lockForUpdate()->first();
+
+        if ($existant) {
+            return $existant;
+        }
+
+        try {
+            return Remboursement::create([
+                'reference' => $reference,
+                'id_paiement' => $paiement->id_paiement,
+                'montant' => $montant,
+                'motif' => $motif ? mb_substr($motif, 0, 255) : null,
+                'id_admin' => $idAdmin,
+                'date_remboursement' => $date ?? now(),
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            return Remboursement::where('reference', $reference)->lockForUpdate()->firstOrFail();
+        }
     }
 
     /**
