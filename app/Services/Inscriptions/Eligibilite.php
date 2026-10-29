@@ -2,6 +2,7 @@
 
 namespace App\Services\Inscriptions;
 
+use App\Models\Commande;
 use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Inscription;
@@ -57,6 +58,20 @@ class Eligibilite
         return Inscription::where('id_evenement', $evenement->id_evenement)
             ->where('id_participant', $participant->id_user)
             ->whereNotIn('statut', [Inscription::BROUILLON, Inscription::ANNULEE])
+            ->exists();
+    }
+
+    /**
+     * Inscription réglée (payée ou offerte) puis annulée par l'association. Elle ne se refait pas
+     * en ligne : la reprendre effacerait son lien avec la commande payée (et ses remboursements).
+     * La réinscription passe par l'association (DECISION.md, n° 3).
+     */
+    public function annuleeApresReglement(Participant $participant, Evenement $evenement): bool
+    {
+        return Inscription::where('id_evenement', $evenement->id_evenement)
+            ->where('id_participant', $participant->id_user)
+            ->where('statut', Inscription::ANNULEE)
+            ->whereHas('commande', fn ($q) => $q->whereIn('statut', [Commande::PAYEE, Commande::GRATUITE]))
             ->exists();
     }
 }

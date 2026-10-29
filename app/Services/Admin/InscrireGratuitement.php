@@ -33,6 +33,7 @@ class InscrireGratuitement
     public function __construct(
         private Consentements $consentements,
         private MettreAJourStatut $mettreAJourStatut,
+        private Journal $journal,
     ) {}
 
     /**
@@ -80,6 +81,16 @@ class InscrireGratuitement
                 'statut' => Commande::GRATUITE,
                 'id_user' => $titulaire->id_user,
             ]);
+
+            // Inscription annulée reprise : son lien vers l'ancienne commande va être remplacé.
+            // On le note d'abord au journal, pour retrouver le paiement et les remboursements.
+            if ($inscription?->statut === Inscription::ANNULEE && $inscription->id_commande) {
+                $this->journal->noter('inscription.reprise', $inscription, [
+                    'commande précédente' => $inscription->id_commande,
+                    'statut de la commande' => $inscription->commande?->statut,
+                    'prix payé' => (string) $inscription->prix_paye,
+                ]);
+            }
 
             $inscription ??= new Inscription;
             $inscription->forceFill([

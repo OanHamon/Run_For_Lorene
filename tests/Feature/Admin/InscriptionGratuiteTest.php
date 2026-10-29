@@ -7,10 +7,13 @@ use App\Models\Inscription;
 use App\Models\JournalAdmin;
 use App\Models\Participant;
 use App\Models\User;
+use App\Notifications\CompteCree;
 use App\Notifications\InscriptionOfferte;
+use App\Services\Admin\AnnulerInscription;
 use App\Services\Inscriptions\MettreAJourStatut;
 use App\Services\Inscriptions\Questionnaires;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Livewire\Volt\Volt;
 
 /*
@@ -25,7 +28,7 @@ beforeEach(function () {
 
     // Compte créé par l'association, pas encore activé (pas de mot de passe).
     $this->parent = User::create(['prenom' => 'Paul', 'nom' => 'Petit', 'email' => 'parent@exemple.fr']);
-    $this->parent->forceFill(['remember_token' => Illuminate\Support\Str::random(60)])->save();
+    $this->parent->forceFill(['remember_token' => Str::random(60)])->save();
 });
 
 /** Nouvelle personne (Lina, 10 ans) rattachée au compte parent@exemple.fr. */
@@ -74,7 +77,7 @@ test("étape 1 : l'email retrouve le compte et ses participants, ou prévient qu
         ->assertDontSee('2. Qui participe ?');
 });
 
-test("nouvelle personne sur un compte pas encore activé : commande gratuite, invitation avec lien de mot de passe", function () {
+test('nouvelle personne sur un compte pas encore activé : commande gratuite, invitation avec lien de mot de passe', function () {
     $this->actingAs($admin = admin(2));
     $this->post('/admin/inscriptions/gratuite', gratuite())->assertRedirect()->assertSessionHasNoErrors();
 
@@ -140,7 +143,7 @@ test('un participant déjà rattaché au compte se choisit dans la liste, sans d
         ->and($marie->participantsGeres()->count())->toBe(1);
 });
 
-test("une « nouvelle personne » qui ressemble à un participant existant est refusée", function () {
+test('une « nouvelle personne » qui ressemble à un participant existant est refusée', function () {
     [$marie] = familleDupont();
 
     // « Lea » sans accent, même date de naissance que Léa : c'est elle.
@@ -219,7 +222,7 @@ test("le super admin corrige l'email d'un compte qui ne s'est jamais connecté, 
     expect($parent->fresh()->email)->toBe('paul.petit@exemple.fr')
         ->and(JournalAdmin::where('action', 'user.email')->sole()->details)->toBe(['avant' => 'paul.petti@exemple.fr', 'après' => 'paul.petit@exemple.fr']);
     // Un nouveau lien part vers la bonne adresse.
-    Notification::assertSentTo($parent->fresh(), App\Notifications\CompteCree::class);
+    Notification::assertSentTo($parent->fresh(), CompteCree::class);
 
     // Une fois connecté (email vérifié), l'email ne se change plus ici.
     $parent->markEmailAsVerified();
@@ -227,7 +230,7 @@ test("le super admin corrige l'email d'un compte qui ne s'est jamais connecté, 
     expect($parent->fresh()->email)->toBe('paul.petit@exemple.fr');
 });
 
-test("« Mon compte » : modifier ses informations et choisir un mot de passe facultatif", function () {
+test('« Mon compte » : modifier ses informations et choisir un mot de passe facultatif', function () {
     $user = User::factory()->create(['mot_de_passe' => null, 'telephone' => null]);
     $this->actingAs($user);
 
@@ -249,4 +252,23 @@ test("« Mon compte » : modifier ses informations et choisir un mot de passe fa
 
     expect($user->fresh()->telephone)->toBe('0611223344')
         ->and(Hash::check('un-bon-mot-de-passe', $user->fresh()->mot_de_passe))->toBeTrue();
+});
+
+test("reprise par l'admin d'une inscription payée puis annulée : l'ancienne commande est notée au journal", function () {
+    [$marie] = familleDupont();
+    $ancienne = inscriptionPayee($marie, ($this->course)('Marche 5 km'));
+    app(AnnulerInscription::class)($ancienne);
+    $commandePayee = $ancienne->id_commande;
+
+    $this->actingAs(admin(2));
+    $this->post('/admin/inscriptions/gratuite', gratuite([
+        'email' => 'marie.dupont@exemple.fr',
+        'participant' => (string) $marie->id_user,
+        'id_course' => ($this->course)('Marche 5 km')->id_course,
+    ]))->assertSessionHasNoErrors();
+
+    $reprise = JournalAdmin::where('action', 'inscription.reprise')->sole();
+    expect($reprise->cible_id)->toBe($ancienne->id_inscription)
+        ->and($reprise->details['commande précédente'])->toBe($commandePayee)
+        ->and($ancienne->fresh()->id_commande)->not->toBe($commandePayee);
 });

@@ -8,6 +8,7 @@ use App\Models\Paiement;
 use App\Models\Participant;
 use App\Models\User;
 use App\Notifications\CommandeConfirmee;
+use App\Services\Admin\AnnulerInscription;
 use App\Services\Paiement\EnregistrerPaiement;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
@@ -229,7 +230,7 @@ test('un participant déjà inscrit ne peut pas être réinscrit (unicité par �
         ->assertSet('etape', 'participant');
 });
 
-test("un participant déjà inscrit ne change ni de nom ni de date de naissance par le tunnel", function () {
+test('un participant déjà inscrit ne change ni de nom ni de date de naissance par le tunnel', function () {
     $this->actingAs($this->parent);
     $inscription = inscriptionPayee($this->parent, ($this->course)('Marche 5 km'));
     $naissance = $inscription->participant->date_naissance->toDateString();
@@ -296,7 +297,7 @@ test("inscriptions fermées pendant le parcours : aucun participant n'est créé
     expect(Participant::where('id_responsable', $this->parent->id_user)->exists())->toBeFalse();
 });
 
-test("les actions du tunnel sont refusées sans compte vérifié", function () {
+test('les actions du tunnel sont refusées sans compte vérifié', function () {
     $avant = Participant::count();
 
     Volt::test('inscription.tunnel')->assertSet('etape', 'compte')->call('participantSuivant')->assertForbidden();
@@ -357,4 +358,38 @@ test("on ne peut pas modifier le participant géré d'un autre compte", function
     Volt::test('inscription.tunnel')
         ->call('choisirParticipant', (string) $enfant->id_user)
         ->assertSet('choix', '');
+});
+
+test("inscription réglée puis annulée par l'association : pas de réinscription en ligne, la commande payée garde son lien", function () {
+    $inscription = inscriptionPayee($this->parent, ($this->course)('Marche 5 km'));
+    app(AnnulerInscription::class)($inscription);
+    $this->actingAs($this->parent);
+
+    $tunnel = Volt::test('inscription.tunnel', ['nouveau' => 1]);
+    expect($tunnel->get('choixParticipants')->firstWhere('cle', 'moi')->annulee)->toBeTrue();
+    $tunnel->assertSee('Inscription annulée');
+
+    $tunnel->call('choisirParticipant', 'moi')
+        ->set('dateNaissance', '1980-01-01')
+        ->call('participantSuivant')
+        ->assertHasErrors('choix')
+        ->assertSee("a été annulée par l'association");
+
+    expect($inscription->fresh())
+        ->statut->toBe(Inscription::ANNULEE)
+        ->id_commande->not->toBeNull()
+        ->and((float) $inscription->fresh()->prix_paye)->toBe(10.0);
+});
+
+test('inscription annulée avant tout paiement : la réinscription en ligne reste possible', function () {
+    $this->actingAs($this->parent);
+    $tunnel = inscrire(Volt::test('inscription.tunnel'), 'moi', 'Sam', '1985-06-01', ($this->course)('Marche 5 km')->id_course)
+        ->call('donPasser')
+        ->call('payer');
+    app(AnnulerInscription::class)(Inscription::sole());
+    expect(Inscription::sole()->statut)->toBe(Inscription::ANNULEE);
+
+    inscrire(Volt::test('inscription.tunnel', ['nouveau' => 1]), 'moi', 'Sam', '1985-06-01', ($this->course)('Marche 5 km')->id_course);
+
+    expect(Inscription::sole()->statut)->toBe(Inscription::BROUILLON);
 });

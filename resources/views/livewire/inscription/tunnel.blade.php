@@ -234,6 +234,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             'libelle' => 'Moi-même',
             'detail' => trim($user->prenom.' '.$user->nom),
             'inscrit' => $moi && $eligibilite->dejaInscrit($moi, $this->evenement),
+            'annulee' => $moi && $eligibilite->annuleeApresReglement($moi, $this->evenement),
         ]);
 
         foreach ($participants->except($user->id_user)->sortBy('user.prenom') as $p) {
@@ -242,6 +243,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 'libelle' => trim($p->user->prenom.' '.$p->user->nom),
                 'detail' => $p->ageAu($this->evenement->date_evenement).' ans le jour J',
                 'inscrit' => $eligibilite->dejaInscrit($p, $this->evenement),
+                'annulee' => $eligibilite->annuleeApresReglement($p, $this->evenement),
             ]);
         }
 
@@ -250,6 +252,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             'libelle' => 'Une autre personne',
             'detail' => 'Un enfant, un proche… sans compte à créer',
             'inscrit' => false,
+            'annulee' => false,
         ]);
 
         $dansPanier = $this->panier->pluck('id_participant')->map(fn ($id) => $id === $user->id_user ? 'moi' : (string) $id)->all();
@@ -619,6 +622,14 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 return;
             }
 
+            if (app(Eligibilite::class)->annuleeApresReglement($participant, $this->evenement)) {
+                DB::rollBack();
+                $user->refresh();
+                $this->addError('choix', $this->messageAnnulee($participant->user->prenom));
+
+                return;
+            }
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -694,6 +705,10 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                 return null;
             }
 
+            if ($inscription && app(Eligibilite::class)->annuleeApresReglement($participant, $evenement)) {
+                return false;
+            }
+
             $inscription ??= new Inscription([
                 'id_evenement' => $evenement->id_evenement,
                 'id_participant' => $participant->id_user,
@@ -710,6 +725,12 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             return $inscription;
         });
 
+        if ($inscription === false) {
+            $this->addError('courseId', $this->messageAnnulee($participant->user->prenom));
+
+            return;
+        }
+
         if (! $inscription) {
             $this->addError('courseId', "{$participant->user->prenom} est déjà inscrit(e) à cet événement.");
 
@@ -725,6 +746,11 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     // ------------------------------------------------------------------
     // Étape Documents (écran 06) : décharge, santé (mineurs), conditions
     // ------------------------------------------------------------------
+
+    private function messageAnnulee(string $prenom): string
+    {
+        return "L'inscription de {$prenom} à Run For Lorène a été annulée par l'association. Pour la refaire, contacte l'association.";
+    }
 
     /** Premier volet encore à remplir pour cette inscription, ou null si tout est fait. */
     private function voletManquant(Inscription $inscription): ?string
@@ -1043,15 +1069,17 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
                     @foreach ($this->choixParticipants as $option)
                         <button type="button"
                             wire:click="choisirParticipant('{{ $option->cle }}')"
-                            @disabled($option->inscrit)
+                            @disabled($option->inscrit || $option->annulee)
                             aria-pressed="{{ $choix === $option->cle ? 'true' : 'false' }}"
-                            class="flex w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-vert {{ $option->inscrit ? 'cursor-not-allowed border-bordure opacity-50' : ($choix === $option->cle ? 'border-vert bg-vert-clair' : 'border-bordure hover:border-vert/50') }}">
+                            class="flex w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-vert {{ $option->inscrit || $option->annulee ? 'cursor-not-allowed border-bordure opacity-50' : ($choix === $option->cle ? 'border-vert bg-vert-clair' : 'border-bordure hover:border-vert/50') }}">
                             <span>
                                 <span class="block font-bold text-vert-sombre">{{ $option->libelle }}</span>
                                 <span class="block text-sm text-gris-texte">{{ $option->detail }}</span>
                             </span>
                             @if ($option->inscrit)
                                 <span class="shrink-0 rounded-full bg-vert-clair px-3 py-1 text-xs font-bold text-vert">Déjà inscrit(e)</span>
+                            @elseif ($option->annulee)
+                                <span class="shrink-0 rounded-full bg-bordure px-3 py-1 text-xs font-bold text-gris-texte">Inscription annulée</span>
                             @elseif ($option->dansPanier)
                                 <span class="shrink-0 rounded-full bg-moutarde/20 px-3 py-1 text-xs font-bold text-vert-sombre">Dans ta commande</span>
                             @endif

@@ -35,6 +35,7 @@ class JournalAdmin extends Model
         'inscription.relance' => 'Relance envoyée',
         'inscription.participant' => 'Informations du participant corrigées',
         'inscription.gratuite' => 'Inscription gratuite créée',
+        'inscription.reprise' => 'Inscription annulée reprise (ancienne commande notée)',
         'document.consultation' => 'Questionnaire de santé consulté',
         'document.verification' => 'Questionnaire vérifié',
         'paiement.remboursement' => 'Remboursement',

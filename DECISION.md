@@ -89,3 +89,52 @@ les deux (deux onglets), le second paiement est enregistré et signalé au table
 
 **Tests.** `PaiementTest` : second clic pendant la création de la première session → redirection
 vers Stripe, première tentative fermée ; présence de `data-envoi-unique` sur les pages.
+
+---
+
+## 3. 🔴 Réinscription après annulation : l'historique de la commande payée était effacé
+
+**Problème.** Une seule inscription par participant et par événement (contrainte UNIQUE voulue
+par le spec). Quand une inscription annulée était refaite (tunnel ou inscription gratuite admin),
+la même ligne était réutilisée : son lien vers la commande (`id_commande`) et son prix payé
+étaient remis à zéro. La commande payée, avec ses paiements et ses remboursements, ne disait plus
+pour qui elle avait été payée. Et si la personne « retirait » ensuite ce brouillon du panier, la
+ligne était supprimée avec tous ses documents (suppression en cascade).
+
+**Solutions envisagées.**
+1. Supprimer la contrainte UNIQUE et créer une nouvelle ligne à chaque réinscription.
+   *Écarté :* contraire au spec et à CLAUDE.md (unicité garantie en base).
+2. Ajouter une table ou une colonne d'historique (`commande précédente`).
+   *Écarté pour l'instant :* change le modèle de données du spec, à décider avec l'association.
+3. Ne plus permettre en ligne la réinscription d'une inscription **réglée** (payée ou offerte)
+   puis annulée ; la laisser possible quand l'annulation a eu lieu avant tout paiement (rien
+   d'encaissé, rien à perdre). Côté admin, garder la reprise mais noter l'ancienne commande au
+   journal avant de la détacher. **Retenu.**
+
+**Choix.** Solution 3.
+- `Eligibilite::annuleeApresReglement()` : inscription annulée dont la commande est payée ou
+  gratuite.
+- Tunnel : la personne apparaît grisée avec le badge « Inscription annulée » dans « Pour qui ? » ;
+  si on force, message « L'inscription de X a été annulée par l'association. Pour la refaire,
+  contacte l'association. » (vérifié aussi à l'étape Épreuve). La ligne n'est donc jamais
+  réutilisée ni supprimée par le tunnel dans ce cas.
+- Inscription gratuite admin : la reprise reste possible ; avant de détacher l'ancienne commande,
+  une entrée `inscription.reprise` est écrite au journal (commande précédente, son statut, prix
+  payé), visible sur la fiche de l'inscription.
+
+**Pourquoi.** C'est la règle la plus prudente sans toucher au modèle de données : aucun lien
+avec de l'argent encaissé ne disparaît sans trace, et la personne n'est jamais bloquée sans
+explication (elle sait qui contacter).
+
+**❓ Question pour l'association.** Une personne dont l'inscription a été annulée par
+l'association (après paiement) a-t-elle le droit de se réinscrire seule en ligne ? Si oui, il
+faudra la solution 2 (historique en base) pour ne pas perdre le lien avec la commande payée.
+
+**Fichiers.** `app/Services/Inscriptions/Eligibilite.php`, `resources/views/livewire/inscription/tunnel.blade.php`,
+`app/Services/Admin/InscrireGratuitement.php`, `app/Models/JournalAdmin.php`.
+
+**Tests.** `TunnelTest` : réglée puis annulée → bloquée, commande intacte ; annulée avant
+paiement → réinscription possible. `InscriptionGratuiteTest` : reprise admin notée au journal.
+
+**Pour revenir en arrière.** Faire renvoyer `false` à `annuleeApresReglement()` : on retrouve
+l'ancien comportement (le journal admin reste).
