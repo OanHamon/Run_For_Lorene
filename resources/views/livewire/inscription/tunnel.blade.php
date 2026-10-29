@@ -105,6 +105,10 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     public bool $anonyme = false;
 
+    /** Don seul, sans inscription (bouton « Faire un don » de la page de l'événement, spec). */
+    #[Locked]
+    public bool $donSeul = false;
+
     // Résolus côté serveur, jamais modifiables depuis le navigateur.
     #[Locked]
     public ?int $participantId = null;
@@ -116,14 +120,17 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {
         $evenement = $this->evenement;
 
+        // Le don reste possible quand les inscriptions sont fermées (« Tu peux toujours soutenir la cause »).
+        $this->donSeul = request()->boolean('don') && $evenement !== null;
+
         if (! Auth::check()) {
-            $this->etape = $evenement?->inscriptionsOuvertes() ? 'compte' : 'ferme';
+            $this->etape = $this->donSeul || $evenement?->inscriptionsOuvertes() ? 'compte' : 'ferme';
 
             return;
         }
 
         if (! Auth::user()->hasVerifiedEmail()) {
-            session(['url.intended' => route('inscription.tunnel')]);
+            session(['url.intended' => route('inscription.tunnel', $this->donSeul ? ['don' => 1] : [])]);
             $this->redirectRoute('verification.notice');
 
             return;
@@ -135,15 +142,25 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             return;
         }
 
+        $this->don = (string) session('tunnel.don', '');
+        $this->recuFiscal = (bool) session('tunnel.recu', false);
+        $this->anonyme = (bool) session('tunnel.anonyme', false);
+
+        // Don seul : directement au panneau Don. Avec des inscriptions en cours, le don rejoint
+        // simplement leur commande (parcours habituel).
+        if ($this->donSeul && $this->panier->isEmpty()) {
+            $this->etape = 'don';
+
+            return;
+        }
+
+        $this->donSeul = false;
+
         if (! $evenement?->inscriptionsOuvertes()) {
             $this->etape = 'ferme';
 
             return;
         }
-
-        $this->don = (string) session('tunnel.don', '');
-        $this->recuFiscal = (bool) session('tunnel.recu', false);
-        $this->anonyme = (bool) session('tunnel.anonyme', false);
 
         if (request()->boolean('nouveau')) {
             $this->allerParticipant();
@@ -190,7 +207,8 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {
         return Commande::where('id_user', Auth::id())
             ->where('statut', Commande::EN_COURS)
-            ->whereHas('inscriptions', fn ($q) => $q->where('id_evenement', $this->evenement?->id_evenement))
+            ->where(fn ($q) => $q->whereHas('inscriptions', fn ($i) => $i->where('id_evenement', $this->evenement?->id_evenement))
+                ->orWhereDoesntHave('inscriptions')) // don seul
             ->with('inscriptions.participant.user', 'inscriptions.tarif.course', 'don')
             ->latest('id_commande')
             ->first();
@@ -401,7 +419,11 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             'documents' => ($precedent = $this->volets[array_search($this->volet, $this->volets, true) - 1] ?? null)
                 ? $this->allerVolet($precedent, 'arriere')
                 : $this->aller('epreuve', 'arriere'),
-            'don' => $this->inscriptionId ? $this->allerVolet('conditions', 'arriere') : $this->aller('recap', 'arriere'),
+            'don' => match (true) {
+                (bool) $this->inscriptionId => $this->allerVolet('conditions', 'arriere'),
+                $this->donSeul && $this->panier->isEmpty() => $this->redirectRoute('home'),
+                default => $this->aller('recap', 'arriere'),
+            },
             'recap' => $this->aller('don', 'arriere'),
             'participant' => $this->panier->isNotEmpty() ? $this->aller('recap', 'arriere') : $this->redirectRoute('home'),
         };
@@ -1008,7 +1030,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         },
     }" @endauth>
     @php
-        [$numero, $libelle] = $this::ETAPES[$etape] ?? [null, null];
+        [$numero, $libelle] = $donSeul ? [null, null] : ($this::ETAPES[$etape] ?? [null, null]);
     @endphp
 
     @if ($numero)
@@ -1054,7 +1076,11 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
     {{-- Compte (écrans 03-04) --}}
     @if ($etape === 'compte')
-        <livewire:auth.identification :destination="route('inscription.tunnel')" />
+        @if ($donSeul)
+            <h1 class="font-display text-2xl text-vert">Soutenir Run For Lorène</h1>
+            <p class="mt-1 mb-6 text-sm text-gris-texte">Identifie-toi d'abord : ton don est rattaché à ton compte, pour ton reçu fiscal et ton historique.</p>
+        @endif
+        <livewire:auth.identification :destination="route('inscription.tunnel', $donSeul ? ['don' => 1] : [])" />
     @endif
 
     {{-- Paiement en attente --}}
@@ -1317,8 +1343,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
     {{-- Don (écran 07) --}}
     @if ($etape === 'don')
         <form wire:submit="donSuivant" novalidate>
-            <h1 class="font-display text-2xl text-vert">Un coup de pouce en plus ?</h1>
-            <p class="mt-1 mb-6 text-sm text-gris-texte">Facultatif. Chaque euro va à la cause de Run For Lorène : la santé mentale des jeunes.</p>
+            @if ($donSeul && $this->panier->isEmpty())
+                <h1 class="font-display text-2xl text-vert">Faire un don</h1>
+                <p class="mt-1 mb-6 text-sm text-gris-texte">Chaque euro va à la cause de Run For Lorène : la santé mentale des jeunes.</p>
+            @else
+                <h1 class="font-display text-2xl text-vert">Un coup de pouce en plus ?</h1>
+                <p class="mt-1 mb-6 text-sm text-gris-texte">Facultatif. Chaque euro va à la cause de Run For Lorène : la santé mentale des jeunes.</p>
+            @endif
 
             <div class="flex flex-wrap gap-2">
                 @foreach ([5, 10, 20, 50] as $montant)
@@ -1348,8 +1379,10 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             <div class="mt-8 flex items-center justify-between">
                 <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
                 <div class="flex items-center gap-4">
-                    <button type="button" wire:click="donPasser" class="rfl-lien">Passer</button>
-                    <button type="submit" class="rfl-btn" @disabled($this->montantDon() <= 0)>Ajouter {{ $this->euros($this->montantDon()) }}</button>
+                    @unless ($donSeul && $this->panier->isEmpty())
+                        <button type="button" wire:click="donPasser" class="rfl-lien">Passer</button>
+                    @endunless
+                    <button type="submit" class="rfl-btn" @disabled($this->montantDon() <= 0)>{{ $donSeul && $this->panier->isEmpty() ? 'Continuer' : 'Ajouter' }} {{ $this->euros($this->montantDon()) }}</button>
                 </div>
             </div>
         </form>
@@ -1399,7 +1432,9 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             </div>
         </div>
 
-        <button type="button" wire:click="ajouterParticipant" class="mt-2 w-full rounded-2xl border-2 border-dashed border-bordure px-4 py-3 text-sm font-bold text-vert hover:border-vert/50">+ Inscrire une autre personne</button>
+        @if ($this->evenement->inscriptionsOuvertes())
+            <button type="button" wire:click="ajouterParticipant" class="mt-2 w-full rounded-2xl border-2 border-dashed border-bordure px-4 py-3 text-sm font-bold text-vert hover:border-vert/50">{{ $this->panier->isEmpty() ? '+ Inscrire quelqu\'un à la course' : '+ Inscrire une autre personne' }}</button>
+        @endif
 
         <div class="mt-6 flex items-center justify-between border-t border-bordure pt-4">
             <p class="font-display text-lg text-vert">Total</p>
@@ -1408,13 +1443,13 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
 
         <div class="mt-8 flex items-center justify-between">
             <button type="button" wire:click="retour" class="rfl-lien">Retour</button>
-            <button type="button" wire:click="payer" wire:loading.attr="disabled" @disabled($this->alertesPanier || $this->panier->isEmpty()) class="rfl-btn">
+            <button type="button" wire:click="payer" wire:loading.attr="disabled" @disabled($this->alertesPanier || ($this->panier->isEmpty() && $this->montantDon() <= 0)) class="rfl-btn">
                 <span wire:loading.remove wire:target="payer">{{ $this->totalPanier > 0 ? 'Payer '.$this->euros($this->totalPanier) : 'Valider mon inscription' }}</span>
                 <span wire:loading wire:target="payer">Un instant…</span>
             </button>
         </div>
         @if ($this->totalPanier > 0)
-            <p class="mt-4 text-center text-xs text-gris-texte">Paiement sécurisé par carte, Apple Pay ou Google Pay. Ta place est réservée 30 minutes pendant le paiement.</p>
+            <p class="mt-4 text-center text-xs text-gris-texte">Paiement sécurisé par carte, Apple Pay ou Google Pay.{{ $this->panier->isNotEmpty() ? ' Ta place est réservée 30 minutes pendant le paiement.' : '' }}</p>
         @endif
     @endif
 

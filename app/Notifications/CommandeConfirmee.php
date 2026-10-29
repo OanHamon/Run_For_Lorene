@@ -27,8 +27,10 @@ class CommandeConfirmee extends Notification implements ShouldQueue
         $commande = $this->commande->load('inscriptions.participant.user', 'inscriptions.tarif.course', 'don');
         $euros = fn ($m) => number_format((float) $m, 2, ',', ' ').' €';
 
+        $donSeul = $commande->inscriptions->isEmpty();
+
         $mail = (new MailMessage)
-            ->subject('Ton inscription à Run For Lorène est enregistrée')
+            ->subject($donSeul ? 'Merci pour ton don à Run For Lorène' : 'Ton inscription à Run For Lorène est enregistrée')
             ->greeting("Merci {$notifiable->prenom} !")
             ->line("Ta commande n° {$commande->id_commande} de {$euros($commande->montant_total)} est bien réglée.");
 
@@ -50,6 +52,6 @@ class CommandeConfirmee extends Notification implements ShouldQueue
 
         return $mail
             ->action('Voir mon espace', route('espace'))
-            ->salutation("À très vite sur la ligne de départ,\nL'équipe Run For Lorène");
+            ->salutation($donSeul ? "Merci pour ton soutien,\nL'équipe Run For Lorène" : "À très vite sur la ligne de départ,\nL'équipe Run For Lorène");
     }
 }

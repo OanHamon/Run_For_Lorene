@@ -414,3 +414,48 @@ test("règlement publié en base mais PDF absent du serveur : on ne le fait pas 
     $this->actingAs(admin(1))->get(route('admin.evenements.show', $evenement))
         ->assertSee('PDF introuvable sur le serveur : Règlement');
 });
+
+test('don seul depuis « Faire un don » : sans inscription, même inscriptions fermées, payé et confirmé', function () {
+    Evenement::courant()->update(['fermeture' => now()->subDay()]);
+    $this->actingAs($this->parent);
+
+    $tunnel = Livewire\Livewire::withQueryParams(['don' => 1])->test('inscription.tunnel')
+        ->assertSet('etape', 'don')
+        ->assertSee('Faire un don')
+        ->assertDontSee('Étape 5 sur 7')
+        ->set('don', '15')
+        ->set('recuFiscal', true)
+        ->call('donSuivant')
+        ->assertSet('etape', 'recap')
+        ->assertSee('Payer 15 €')
+        ->assertDontSee('Inscrire');
+
+    $tunnel->call('payer')->assertHasNoErrors();
+
+    $commande = Commande::where('id_user', $this->parent->id_user)->sole();
+    expect($commande->inscriptions()->count())->toBe(0)
+        ->and((float) $commande->montant_total)->toBe(15.0)
+        ->and($commande->don->recu_fiscal_demande)->toBeTrue();
+
+    app(EnregistrerPaiement::class)->reussi(Paiement::sole()->reference, 15.0);
+
+    expect($commande->fresh()->statut)->toBe(Commande::PAYEE);
+    Notification::assertSentTo($this->parent, CommandeConfirmee::class, fn ($n) => $n->toMail($this->parent)->subject === 'Merci pour ton don à Run For Lorène');
+    $this->get(route('inscription.confirmation', $commande))->assertSee('Merci pour ton don !');
+});
+
+test('don seul en attente de paiement : retrouvé dans le tunnel, « Modifier » ramène au don', function () {
+    $this->actingAs($this->parent);
+    Livewire\Livewire::withQueryParams(['don' => 1])->test('inscription.tunnel')
+        ->set('don', '20')->call('donSuivant')->call('payer');
+    $commande = Commande::sole();
+
+    Volt::test('inscription.tunnel')->assertSet('etape', 'attente');
+
+    $this->post(route('inscription.modifier', $commande))->assertRedirect(route('inscription.tunnel', ['don' => 1]));
+    expect($commande->fresh()->statut)->toBe(Commande::ABANDONNEE);
+});
+
+test("le bouton « Faire un don » de la page de l'événement mène au don", function () {
+    $this->get('/')->assertSee(route('inscription.tunnel', ['don' => 1]), false);
+});

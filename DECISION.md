@@ -288,3 +288,44 @@ n'efface plus des frais déjà complétés si l'ordre d'arrivée est inversé.
 `app/Services/Paiement/PasserelleStripe.php`.
 
 **Tests.** `CommandesTest` : `charge.updated` complète les frais, reçu deux fois → un seul appel Stripe.
+
+---
+
+## 5. 🟠 « Faire un don » ne menait nulle part, pas de don seul
+
+**Problème.** Le spec prévoit qu'un don peut être fait seul, sans inscription. Le service de
+commande savait le traiter, mais le tunnel désactivait « Payer » quand il n'y avait aucune
+inscription, et le bouton « Faire un don » de la section « La cause » pointait sur `#`.
+
+**Solutions envisagées.**
+1. Un formulaire de don à part (page et contrôleur dédiés). *Écarté :* doublon du panneau Don,
+   du récapitulatif et du paiement qui existent déjà.
+2. Don sans compte (email seul). *Écarté :* une commande appartient à un compte (MLD), et le
+   reçu fiscal comme l'historique des dons passent par l'espace.
+3. Entrée « don seul » dans le tunnel existant : `/inscription?don=1`. **Retenu.**
+
+**Choix.**
+- « Faire un don » (section « La cause ») mène à `/inscription?don=1`. Les autres liens « Faire
+  un don » (héro, pied de page) gardent l'ancre `#cause`, qui présente la cause avant le bouton.
+- Non connecté : identification, avec un mot d'explication (« ton don est rattaché à ton compte,
+  pour ton reçu fiscal »), puis retour au don.
+- Connecté : directement au panneau Don (titre « Faire un don », pas de « Passer », pas de barre
+  « Étape x sur 7 »), puis récapitulatif et paiement Stripe.
+- **Le don reste possible quand les inscriptions sont fermées** : la page « Inscriptions fermées »
+  le proposait déjà (« Tu peux toujours soutenir la cause par un don »). Le lien « Inscrire
+  quelqu'un à la course » n'apparaît que si les inscriptions sont ouvertes.
+- Avec des inscriptions déjà dans le panier, `?don=1` reprend le parcours normal : le don rejoint
+  leur commande.
+- Une commande « don seul » en attente de paiement est reprise par le tunnel comme les autres ;
+  « Modifier ma commande » ramène au panneau Don.
+- Confirmation et email adaptés (« Merci pour ton don ! », objet « Merci pour ton don à Run For
+  Lorène »).
+
+**Hors périmètre.** Le reçu fiscal PDF n'existe pas encore (voir n° 6).
+
+**Fichiers.** `resources/views/livewire/inscription/tunnel.blade.php`, `app/Http/Controllers/PaiementController.php`,
+`resources/views/inscription/confirmation.blade.php`, `app/Notifications/CommandeConfirmee.php`,
+`resources/views/site/evenement.blade.php`.
+
+**Tests.** `TunnelTest` : don seul inscriptions fermées → payé, confirmé, email et page adaptés ;
+commande don seul en attente reprise et « Modifier » → don ; lien de la page de l'événement.

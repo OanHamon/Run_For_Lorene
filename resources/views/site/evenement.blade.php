@@ -192,7 +192,7 @@
                 </ul>
 
                 <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
-                    <a href="#" class="rfl-btn">Faire un don</a>
+                    <a href="{{ route('inscription.tunnel', ['don' => 1]) }}" class="rfl-btn">Faire un don</a>
                     <a href="https://effervescence-jeunes.fr/" class="rfl-lien">Découvrir l'association</a>
                 </div>
 

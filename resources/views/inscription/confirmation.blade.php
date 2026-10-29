@@ -35,11 +35,18 @@
             {{-- L'étoile filante de la charte : l'élan, pour le moment où l'inscription est faite. --}}
             <img src="/images/etoile-filante.png" alt="" class="mb-5 -ml-2 w-36" aria-hidden="true">
 
-            <h1 class="font-display text-2xl text-vert">C'est dans la boîte !</h1>
-            <p class="mt-3 text-sm text-gris-texte">
-                {{ $commande->inscriptions->count() > 1 ? 'Les inscriptions sont enregistrées' : 'Ton inscription est enregistrée' }}{{ $evenement ? ' pour '.$evenement->nom.', le '.$evenement->date_evenement->translatedFormat('l j F Y') : '' }}.
-                Un email récapitulatif part vers {{ $commande->user->email }}.
-            </p>
+            @if ($commande->inscriptions->isEmpty())
+                <h1 class="font-display text-2xl text-vert">Merci pour ton don !</h1>
+                <p class="mt-3 text-sm text-gris-texte">
+                    Il va droit à la cause de Run For Lorène : la santé mentale des jeunes. Un email de confirmation part vers {{ $commande->user->email }}.
+                </p>
+            @else
+                <h1 class="font-display text-2xl text-vert">C'est dans la boîte !</h1>
+                <p class="mt-3 text-sm text-gris-texte">
+                    {{ $commande->inscriptions->count() > 1 ? 'Les inscriptions sont enregistrées' : 'Ton inscription est enregistrée' }}{{ $evenement ? ' pour '.$evenement->nom.', le '.$evenement->date_evenement->translatedFormat('l j F Y') : '' }}.
+                    Un email récapitulatif part vers {{ $commande->user->email }}.
+                </p>
+            @endif
 
             <ul class="mt-6 divide-y divide-bordure rounded-2xl border border-bordure">
                 @foreach ($commande->inscriptions as $i)
@@ -75,7 +82,7 @@
             @endif
 
             <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="rfl-lien">Inscrire une autre personne</a>
+                <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="rfl-lien">{{ $commande->inscriptions->isEmpty() ? 'M\'inscrire à la course' : 'Inscrire une autre personne' }}</a>
                 <a href="{{ route('espace') }}" class="rfl-btn">Aller à mon espace</a>
             </div>
         </div>

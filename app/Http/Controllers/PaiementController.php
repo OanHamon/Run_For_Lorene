@@ -72,6 +72,7 @@ class PaiementController extends Controller
     {
         $this->autoriser($request, $commande);
         $don = $commande->don; // lu avant l'abandon, qui supprime le don de la commande
+        $donSeul = $commande->inscriptions()->doesntExist();
 
         if (! $abandonner($commande)) {
             return redirect()->route('espace')
@@ -82,7 +83,7 @@ class PaiementController extends Controller
             session(['tunnel.don' => (string) (float) $don->montant]);
         }
 
-        return redirect()->route('inscription.tunnel');
+        return redirect()->route('inscription.tunnel', $donSeul ? ['don' => 1] : []);
     }
 
     // ------------------------------------------------------------------
