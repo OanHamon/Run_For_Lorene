@@ -64,6 +64,9 @@
                 <p class="mb-4 text-sm text-gris-texte">Actuellement : {{ Admin::LIBELLES[$u->niveauAdmin()] ?? 'aucun (participant)' }}.</p>
                 @if ($moi)
                     <p class="text-sm text-gris-texte">Ton propre niveau se change par un autre super admin.</p>
+                @elseif ($compteParticipant)
+                    <p class="text-sm text-gris-texte">Ce compte sert déjà à des inscriptions : il reste un compte participant. Pour donner un accès admin à {{ $u->prenom }}, crée un compte admin avec une autre adresse.</p>
+                    <a href="{{ route('admin.utilisateurs.create') }}" class="mt-3 inline-block text-sm rfl-lien">Créer un compte admin</a>
                 @else
                     @php
                         $actuel = $u->niveauAdmin();

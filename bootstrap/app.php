@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CompteParticipant;
 use App\Http\Middleware\ConfirmationAdmin;
 use App\Http\Middleware\EntetesSecurite;
 use App\Http\Middleware\NiveauAdmin;
@@ -14,7 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::middleware(['web', 'auth', 'verified', 'admin', 'admin.confirme'])
+            // Back-office : garde « admin », distincte de l'espace participant (garde « web »).
+            Route::middleware('web')
+                ->prefix('admin')
+                ->name('admin.')
+                ->group(base_path('routes/admin-connexion.php'));
+
+            Route::middleware(['web', 'auth:admin', 'admin', 'admin.confirme'])
                 ->prefix('admin')
                 ->name('admin.')
                 ->group(base_path('routes/admin.php'));
@@ -27,9 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->append(EntetesSecurite::class);
+        $middleware->web(append: CompteParticipant::class);
 
-        $middleware->redirectGuestsTo(fn () => route('login'));
-        $middleware->redirectUsersTo(fn () => route('espace'));
+        $estAdmin = fn ($request) => $request->is('admin', 'admin/*');
+        $middleware->redirectGuestsTo(fn ($request) => $estAdmin($request) ? route('admin.connexion') : route('login'));
+        $middleware->redirectUsersTo(fn ($request) => $estAdmin($request) ? route('admin.tableau') : route('espace'));
 
         // Stripe signe ses webhooks : pas de jeton CSRF possible sur cette route.
         $middleware->validateCsrfTokens(except: ['stripe/webhook']);

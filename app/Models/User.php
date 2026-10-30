@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
+use App\Services\Auth\CodeEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, MustVerifyEmailTrait, Notifiable;
 
     protected $primaryKey = 'id_user';
@@ -106,18 +110,18 @@ class User extends Authenticatable implements MustVerifyEmail
         );
     }
 
-    public function participant(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function participant(): HasOne
     {
         return $this->hasOne(Participant::class, 'id_user', 'id_user');
     }
 
     /** Participants gérés (enfants…) : sans email ni mot de passe, rattachés à ce compte. */
-    public function participantsGeres(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function participantsGeres(): HasMany
     {
         return $this->hasMany(Participant::class, 'id_responsable', 'id_user');
     }
 
-    public function commandes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function commandes(): HasMany
     {
         return $this->hasMany(Commande::class, 'id_user', 'id_user');
     }
@@ -127,10 +131,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function sendEmailVerificationNotification(): void
     {
-        app(\App\Services\Auth\CodeEmail::class)->envoyer($this);
+        app(CodeEmail::class)->envoyer($this);
     }
 
-    public function admin(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function admin(): HasOne
     {
         return $this->hasOne(Admin::class, 'id_user', 'id_user');
     }
@@ -146,7 +150,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->niveauAdmin() >= $niveau;
     }
 
-    public function benevole(): \Illuminate\Database\Eloquent\Relations\HasOne
+    /**
+     * Le compte sert-il déjà côté participant (fiche, participants gérés, commandes) ? Un admin
+     * a un compte à part : un tel compte ne devient pas admin, il perdrait son espace.
+     */
+    public function aUneActiviteParticipant(): bool
+    {
+        return $this->participant()->exists()
+            || $this->participantsGeres()->exists()
+            || $this->commandes()->exists();
+    }
+
+    public function benevole(): HasOne
     {
         return $this->hasOne(Benevole::class, 'id_user', 'id_user');
     }

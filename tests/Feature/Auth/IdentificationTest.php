@@ -31,7 +31,7 @@ test('la page de connexion est dans la charte et accessible aux invités', funct
     $this->get('/login')->assertRedirect('/connexion');
 });
 
-test("un invité qui ouvre son espace est renvoyé vers la connexion maison", function () {
+test('un invité qui ouvre son espace est renvoyé vers la connexion maison', function () {
     $this->get('/espace')->assertRedirect(route('login'));
 });
 
@@ -92,7 +92,7 @@ test('mauvais mot de passe refusé, puis blocage après 5 essais', function () {
     $this->assertGuest();
 });
 
-test("un compte non vérifié doit saisir le code même avec le bon mot de passe", function () {
+test('un compte non vérifié doit saisir le code même avec le bon mot de passe', function () {
     $user = User::factory()->create(['email' => 'nouveau@exemple.fr', 'email_verifie_le' => null]);
 
     $composant = Volt::test('auth.identification')
@@ -140,7 +140,7 @@ test('le code est invalidé après 5 essais ratés', function () {
     $this->assertGuest();
 });
 
-test("le renvoi du code est limité dans le temps", function () {
+test('le renvoi du code est limité dans le temps', function () {
     $user = User::factory()->create(['email' => 'camille@exemple.fr']);
 
     Volt::test('auth.identification')
@@ -166,7 +166,7 @@ test('déconnexion', function () {
     $this->assertGuest();
 });
 
-test("après 5 essais ratés, on ne peut pas redemander un code aussitôt (pas de force brute)", function () {
+test('après 5 essais ratés, on ne peut pas redemander un code aussitôt (pas de force brute)', function () {
     $user = User::factory()->create(['email' => 'camille@exemple.fr']);
 
     $composant = Volt::test('auth.identification')
@@ -186,7 +186,7 @@ test("après 5 essais ratés, on ne peut pas redemander un code aussitôt (pas d
     Notification::assertSentToTimes($user, CodeEmailNotification::class, 1);
 });
 
-test("le quota de codes par heure est respecté", function () {
+test('le quota de codes par heure est respecté', function () {
     $user = User::factory()->create(['email' => 'camille@exemple.fr']);
     $codes = app(CodeEmail::class);
 
@@ -248,7 +248,7 @@ test("un compte créé par un tiers avec mon adresse : son mot de passe est effa
     $this->assertGuest();
 });
 
-test("le titulaire qui a créé son compte garde son mot de passe après le code", function () {
+test('le titulaire qui a créé son compte garde son mot de passe après le code', function () {
     $composant = Volt::test('auth.identification')
         ->set('email', 'lea@exemple.fr')->call('continuerEmail')
         ->set('prenom', 'Léa')->set('nom', 'Durand')->set('password', 'motdepasse1')
@@ -260,7 +260,7 @@ test("le titulaire qui a créé son compte garde son mot de passe après le code
     expect(Hash::check('motdepasse1', $user->fresh()->mot_de_passe))->toBeTrue();
 });
 
-test("la page « vérifie ton email » renvoie un compte déjà vérifié vers son espace", function () {
+test('la page « vérifie ton email » renvoie un compte déjà vérifié vers son espace', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->get('/verification-email')->assertRedirect(route('espace'));
@@ -283,7 +283,7 @@ test("mot de passe oublié : après connexion par code, on redéfinit son mot de
     expect(Hash::check('nouveaumotdepasse', $user->fresh()->mot_de_passe))->toBeTrue();
 });
 
-test("après une connexion par mot de passe, le mot de passe actuel reste exigé", function () {
+test('après une connexion par mot de passe, le mot de passe actuel reste exigé', function () {
     $user = User::factory()->create(['email' => 'camille@exemple.fr']);
 
     Volt::test('auth.identification')
@@ -297,7 +297,7 @@ test("après une connexion par mot de passe, le mot de passe actuel reste exigé
         ->assertHasErrors('actuel');
 });
 
-test("« Rester connecté » décoché : pas de cookie de connexion durable", function (bool $coche) {
+test('« Rester connecté » décoché : pas de cookie de connexion durable', function (bool $coche) {
     User::factory()->create(['email' => 'camille@exemple.fr']);
 
     Volt::test('auth.identification')
@@ -326,4 +326,43 @@ test('nouveau mot de passe : autres appareils déconnectés et titulaire préven
         ->and(DB::table('sessions')->where('id', 'autre-appareil')->exists())->toBeFalse()
         ->and(auth()->check())->toBeTrue();
     Notification::assertSentTo($user, MotDePasseModifie::class);
+});
+
+test('la page de connexion propose le lien vers la connexion admin, pas le tunnel', function () {
+    $this->get('/connexion')->assertOk()->assertSee('Tu es admin ?')->assertSee(route('admin.connexion'));
+
+    Volt::test('auth.identification', ['destination' => route('inscription.tunnel')])->assertDontSee('Tu es admin ?');
+});
+
+test("un compte admin ne se connecte pas à l'espace participant", function () {
+    $admin = admin(3, confirme: false);
+
+    Volt::test('auth.identification')
+        ->set('email', $admin->email)
+        ->call('continuerEmail')
+        ->assertSet('mode', 'email')
+        ->assertHasErrors('email')
+        ->assertSee('compte admin');
+
+    // Même en forçant l'écran mot de passe depuis le navigateur.
+    Volt::test('auth.identification')
+        ->set('email', $admin->email)
+        ->set('mode', 'password')
+        ->set('password', 'password')
+        ->call('seConnecter')
+        ->assertHasErrors('email')
+        ->assertNoRedirect();
+
+    $this->assertGuest('web');
+    $this->assertGuest('admin');
+});
+
+test("une session participant d'un compte devenu admin est fermée", function () {
+    $user = User::factory()->create();
+    $this->actingAs($user, 'web')->get('/espace')->assertOk();
+
+    $user->admin()->create(['niveau_acces' => 1]);
+
+    $this->get('/espace')->assertRedirect(route('admin.connexion'));
+    $this->assertGuest('web');
 });

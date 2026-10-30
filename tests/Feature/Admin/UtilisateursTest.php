@@ -1,10 +1,17 @@
 <?php
 
 use App\Models\Admin;
+use App\Models\Course;
+use App\Models\Evenement;
+use App\Models\Inscription;
 use App\Models\JournalAdmin;
 use App\Models\Participant;
 use App\Models\User;
+use App\Notifications\AccesAdminModifie;
+use App\Notifications\CompteCree;
+use App\Support\Activation;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
     $this->super = admin(3);
@@ -33,7 +40,7 @@ test('un super admin promeut un compte, change son niveau puis le retire', funct
     expect(JournalAdmin::where('cible_type', 'user')->pluck('action')->all())->toBe(['admin.niveau', 'admin.retrait']);
 });
 
-test("un admin ne change pas son propre niveau ; un autre super admin le peut", function () {
+test('un admin ne change pas son propre niveau ; un autre super admin le peut', function () {
     $this->actingAs($this->super);
     $this->put("/admin/utilisateurs/{$this->super->id_user}/niveau", ['niveau_acces' => 1])->assertSessionHas('erreur');
     expect($this->super->fresh()->niveauAdmin())->toBe(3);
@@ -73,7 +80,7 @@ test('la gestion des utilisateurs est réservée aux super admins', function () 
 });
 
 test('donner plus de droits demande une confirmation ; super admin, en recopiant l\'email', function () {
-    Illuminate\Support\Facades\Notification::fake();
+    Notification::fake();
     $user = User::factory()->create(['email' => 'lea@exemple.fr']);
     $this->actingAs($this->super);
 
@@ -90,9 +97,9 @@ test('donner plus de droits demande une confirmation ; super admin, en recopiant
     expect($user->fresh()->niveauAdmin())->toBe(3);
 
     // La personne est prévenue ; rétrograder ne demande pas de confirmation, mais prévient aussi.
-    Illuminate\Support\Facades\Notification::assertSentTo($user, App\Notifications\AccesAdminModifie::class, fn ($n) => $n->apres === 3);
+    Notification::assertSentTo($user, AccesAdminModifie::class, fn ($n) => $n->apres === 3);
     $this->put("/admin/utilisateurs/{$user->id_user}/niveau", ['niveau_acces' => 1])->assertSessionHas('statut');
-    Illuminate\Support\Facades\Notification::assertSentToTimes($user, App\Notifications\AccesAdminModifie::class, 2);
+    Notification::assertSentToTimes($user, AccesAdminModifie::class, 2);
 });
 
 test('un compte qui n\'a jamais servi se supprime, avec ses enfants et ses brouillons', function () {
@@ -101,9 +108,9 @@ test('un compte qui n\'a jamais servi se supprime, avec ses enfants et ses broui
     $enfant = User::create(['prenom' => 'Zoé', 'nom' => 'Leroy']);
     Participant::create(['id_user' => $enfant->id_user, 'date_naissance' => '2015-01-01', 'id_responsable' => $parent->id_user]);
     Participant::create(['id_user' => $parent->id_user, 'date_naissance' => '1985-01-01']);
-    $brouillon = App\Models\Inscription::create([
-        'id_participant' => $enfant->id_user, 'id_tarif' => App\Models\Course::first()->tarifs()->first()->id_tarif,
-        'id_evenement' => App\Models\Evenement::first()->id_evenement, 'statut' => App\Models\Inscription::BROUILLON,
+    $brouillon = Inscription::create([
+        'id_participant' => $enfant->id_user, 'id_tarif' => Course::first()->tarifs()->first()->id_tarif,
+        'id_evenement' => Evenement::first()->id_evenement, 'statut' => Inscription::BROUILLON,
     ]);
 
     $this->actingAs($this->super)->get("/admin/utilisateurs/{$parent->id_user}")->assertSee('Supprimer le compte')->assertSee('participants gérés (Zoé)');
@@ -111,14 +118,14 @@ test('un compte qui n\'a jamais servi se supprime, avec ses enfants et ses broui
 
     expect(User::find($parent->id_user))->toBeNull()
         ->and(User::find($enfant->id_user))->toBeNull()
-        ->and(App\Models\Inscription::find($brouillon->id_inscription))->toBeNull()
+        ->and(Inscription::find($brouillon->id_inscription))->toBeNull()
         ->and(JournalAdmin::where('action', 'user.suppression')->sole()->details)->toMatchArray(['nom' => 'Sam Leroy', 'participants gérés supprimés' => 1]);
 });
 
-test("un compte qui a servi (inscription, admin, soi-même) ne se supprime pas", function () {
+test('un compte qui a servi (inscription, admin, soi-même) ne se supprime pas', function () {
     $this->seed();
     $inscrit = User::factory()->create();
-    inscriptionPayee($inscrit, App\Models\Course::first());
+    inscriptionPayee($inscrit, Course::first());
     $admin = admin(1);
 
     $this->actingAs($this->super);
@@ -131,4 +138,46 @@ test("un compte qui a servi (inscription, admin, soi-même) ne se supprime pas",
 
     expect(User::find($inscrit->id_user))->not->toBeNull()
         ->and(User::find($admin->id_user))->not->toBeNull();
+});
+
+test('un compte qui sert déjà à des inscriptions ne devient pas admin', function () {
+    $user = User::factory()->create();
+    Participant::create(['id_user' => $user->id_user, 'date_naissance' => '1990-01-01']);
+
+    $this->actingAs($this->super);
+    $this->get("/admin/utilisateurs/{$user->id_user}")->assertOk()->assertSee('il reste un compte participant');
+
+    $this->put("/admin/utilisateurs/{$user->id_user}/niveau", ['niveau_acces' => 1, 'confirmation' => '1'])->assertSessionHas('erreur');
+    expect($user->fresh()->niveauAdmin())->toBe(0);
+});
+
+test('un super admin crée un compte admin, activé puis connecté par la connexion admin', function () {
+    Notification::fake();
+    $this->actingAs($this->super);
+
+    // Sans la case de confirmation : refusé.
+    $donnees = ['prenom' => 'Noé', 'nom' => 'Benard', 'email' => 'noe@exemple.fr', 'niveau_acces' => 2];
+    $this->post('/admin/utilisateurs', $donnees)->assertSessionHasErrors('confirmation');
+    expect(User::where('email', 'noe@exemple.fr')->exists())->toBeFalse();
+
+    $this->post('/admin/utilisateurs', $donnees + ['confirmation' => '1'])->assertSessionHas('statut');
+    $noe = User::where('email', 'noe@exemple.fr')->firstOrFail();
+    expect($noe->niveauAdmin())->toBe(2);
+    Notification::assertSentTo($noe, CompteCree::class, fn (CompteCree $n) => $n->admin);
+
+    // L'activation ne connecte pas : elle mène à la connexion admin (mot de passe puis code).
+    $this->post('/admin/deconnexion');
+    $this->post(Activation::url($noe), ['mot_de_passe' => 'un-bon-mot', 'mot_de_passe_confirmation' => 'un-bon-mot'])
+        ->assertRedirect(route('admin.connexion'));
+    $this->assertGuest('web');
+    $this->assertGuest('admin');
+    expect($noe->fresh()->hasVerifiedEmail())->toBeTrue();
+});
+
+test('un admin de niveau 2 ne crée pas de compte admin', function () {
+    $this->actingAs(admin(2))
+        ->post('/admin/utilisateurs', ['prenom' => 'Noé', 'nom' => 'Benard', 'email' => 'noe@exemple.fr', 'niveau_acces' => 3, 'confirmation' => '1'])
+        ->assertForbidden();
+
+    expect(User::where('email', 'noe@exemple.fr')->exists())->toBeFalse();
 });

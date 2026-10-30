@@ -25,7 +25,10 @@
     <div class="rounded-b-[28px] bg-vert-sombre px-4 pt-3 pb-4 text-white lg:hidden">
         <div class="flex items-center justify-between">
             <a href="{{ route('admin.tableau') }}" class="rounded-2xl bg-white px-3 py-1.5"><img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-9 w-auto"></a>
-            <a href="{{ route('espace') }}" class="text-sm font-bold underline decoration-vert-doux decoration-2 underline-offset-4 hover:decoration-white">Mon espace</a>
+            <form method="POST" action="{{ route('admin.deconnexion') }}">
+                @csrf
+                <button type="submit" class="text-sm font-bold underline decoration-vert-doux decoration-2 underline-offset-4 hover:decoration-white">Se déconnecter</button>
+            </form>
         </div>
         <nav class="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 text-sm" aria-label="Administration">
             @foreach ($rubriques as [$route, $motif, $libelle])
@@ -57,8 +60,8 @@
                 </nav>
 
                 <div class="mt-10 space-y-1 border-t border-white/20 pt-6 text-sm">
-                    <a href="{{ route('espace') }}" class="block rounded-full px-4 py-2 hover:bg-white/10">Mon espace participant</a>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <a href="{{ route('home') }}" class="block rounded-full px-4 py-2 hover:bg-white/10">Voir le site</a>
+                    <form method="POST" action="{{ route('admin.deconnexion') }}">
                         @csrf
                         <button type="submit" class="block w-full rounded-full px-4 py-2 text-left hover:bg-white/10">Se déconnecter</button>
                     </form>

@@ -30,7 +30,7 @@ class AccesAdminModifie extends Notification implements ShouldQueue
 
         if ($this->apres === 0) {
             return $mail->subject('Ton accès à l\'administration Run For Lorène est retiré')
-                ->line("{$this->auteur} a retiré ton accès à l'administration. Ton espace participant reste disponible.")
+                ->line("{$this->auteur} a retiré ton accès à l'administration. Ton compte redevient un compte participant : tu peux t'en servir pour t'inscrire aux courses.")
                 ->salutation("L'équipe Run For Lorène");
         }
 

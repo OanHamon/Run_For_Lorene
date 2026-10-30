@@ -17,17 +17,16 @@ beforeEach(function () {
     $this->course = fn (string $nom) => Course::where('nom', $nom)->first();
 });
 
-test("le back-office est réservé aux admins", function () {
-    $this->get('/admin')->assertRedirect(route('login'));
+test('le back-office est réservé aux admins, avec sa propre connexion', function () {
+    $this->get('/admin')->assertRedirect(route('admin.connexion'));
 
-    $this->actingAs(User::factory()->create())->get('/admin')->assertForbidden();
+    $this->actingAs(User::factory()->create())->get('/admin')->assertRedirect(route('admin.connexion'));
 
     $this->actingAs(admin(1))->get('/admin')->assertOk()->assertSee('Tableau de bord');
 });
 
-test("un admin trouve le lien vers l'administration dans son espace, pas un participant", function () {
-    $this->actingAs(admin(1))->get('/espace')->assertSee(route('admin.tableau'));
-    $this->actingAs(User::factory()->create())->get('/espace')->assertDontSee(route('admin.tableau'));
+test("l'espace participant n'a pas de lien vers l'administration", function () {
+    $this->actingAs(User::factory()->create())->get('/espace')->assertOk()->assertDontSee(route('admin.tableau'));
 });
 
 test('les chiffres du tableau de bord correspondent aux données', function () {
@@ -91,7 +90,7 @@ test('les chiffres du tableau de bord correspondent aux données', function () {
         ->assertDontSee('Frais Stripe');
 });
 
-test("une plage de dossards pleine déclenche une alerte", function () {
+test('une plage de dossards pleine déclenche une alerte', function () {
     $enfants = ($this->course)('Course enfants');
     $enfants->update(['dossard_debut' => 4000, 'dossard_fin' => 4000]);
 

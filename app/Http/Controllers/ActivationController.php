@@ -16,6 +16,7 @@ use Illuminate\View\View;
  * Activation d'un compte créé par l'association : depuis le lien reçu par email, la personne
  * choisit son mot de passe ; son email est alors vérifié (le lien le prouve) et elle est
  * connectée, puis envoyée vers la page prévue (son inscription, son espace).
+ * Un compte admin n'est pas connecté : il passe par la connexion admin (mot de passe et code).
  * Lien expiré, modifié ou déjà utilisé : page d'explication, connexion par code en secours.
  */
 class ActivationController extends Controller
@@ -61,7 +62,12 @@ class ActivationController extends Controller
             $user->markEmailAsVerified();
         }
 
-        Auth::login($user, remember: true);
+        if ($user->admin) {
+            return redirect()->route('admin.connexion')->withInput(['email' => $user->email])
+                ->with('statut', 'Ton mot de passe est enregistré. Connecte-toi à l\'administration.');
+        }
+
+        Auth::guard('web')->login($user, remember: true);
         $request->session()->regenerate();
         $request->session()->put('auth.password_confirmed_at', time());
 

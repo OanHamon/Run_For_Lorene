@@ -37,7 +37,7 @@ function creerCompte(array $d = []): User
     return User::where('email', 'marie.dupont@exemple.fr')->sole();
 }
 
-test("un admin de niveau 2 crée un compte : sans mot de passe, et la personne reçoit son lien", function () {
+test('un admin de niveau 2 crée un compte : sans mot de passe, et la personne reçoit son lien', function () {
     $this->actingAs($admin = admin(2));
     $this->get('/admin/utilisateurs/nouveau?email=marie.dupont@exemple.fr')->assertOk()->assertSee('value="marie.dupont@exemple.fr"', false);
 
@@ -87,7 +87,7 @@ test("le lien d'activation fait choisir le mot de passe, connecte et mène à la
     $marie = $marie->fresh();
     expect(Hash::check('un-bon-mot', $marie->mot_de_passe))->toBeTrue()
         ->and($marie->hasVerifiedEmail())->toBeTrue()
-        ->and(Auth::id())->toBe($marie->id_user);
+        ->and(Auth::guard('web')->id())->toBe($marie->id_user);
 });
 
 test("le lien ne sert qu'une fois", function () {

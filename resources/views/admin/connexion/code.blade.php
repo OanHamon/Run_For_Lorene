@@ -1,10 +1,11 @@
-<x-tunnel-shell :title="'Confirme ton accès · Admin Run For Lorène'">
+<x-tunnel-shell :title="'Code de connexion · Admin Run For Lorène'">
     <div class="rfl-pastille mb-6">
         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-vert-clair text-sm font-bold text-vert">{{ Str::upper(Str::substr($email, 0, 1)) }}</span>
         <span class="truncate text-sm text-vert-sombre">{{ $email }}</span>
+        <a href="{{ route('admin.connexion') }}" class="ml-1 shrink-0 text-sm rfl-lien">Modifier</a>
     </div>
 
-    <form method="POST" action="{{ route('admin.confirmation.valider') }}" novalidate>
+    <form method="POST" action="{{ route('admin.connexion.valider') }}" novalidate>
         @csrf
         <h1 class="font-display text-2xl text-vert">Confirme ton accès</h1>
         <p class="mt-1 mb-6 text-sm text-gris-texte">Pour entrer dans l'administration, saisis le code à 6 chiffres qu'on vient de t'envoyer par email. Il est valable {{ \App\Services\Auth\CodeEmail::VALIDITE_MINUTES }} minutes. Pense à regarder dans les spams.</p>
@@ -20,15 +21,13 @@
         @endif
 
         <div class="mt-8 flex items-center justify-between">
-            <button type="submit" form="form-deconnexion" class="rfl-lien">Se déconnecter</button>
+            <a href="{{ route('admin.connexion') }}" class="rfl-lien">Retour</a>
             <button type="submit" class="rfl-btn">Valider</button>
         </div>
     </form>
 
-    <form method="POST" action="{{ route('admin.confirmation.renvoyer') }}" class="mt-4">
+    <form method="POST" action="{{ route('admin.connexion.renvoyer') }}" class="mt-4">
         @csrf
         <button type="submit" class="text-sm rfl-lien">Je n'ai rien reçu : renvoyer le code</button>
     </form>
-
-    <form id="form-deconnexion" method="POST" action="{{ route('logout') }}" class="hidden">@csrf</form>
 </x-tunnel-shell>

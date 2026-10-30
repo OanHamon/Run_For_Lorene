@@ -18,6 +18,9 @@ use Livewire\Volt\Component;
  * - creation   : nouveau compte → prénom, nom, mot de passe
  * - code       : code à 6 chiffres reçu par email ; vérifie l'adresse et connecte
  *
+ * Un compte admin ne se connecte pas ici : le back-office a sa propre connexion
+ * (/admin/connexion), l'espace participant ne lui est pas ouvert.
+ *
  * Un compte n'est connecté qu'une fois son adresse vérifiée. Après connexion, la page est
  * réellement rechargée vers $destination : Auth::login() régénère la session et donc le
  * jeton CSRF déjà chargé dans la page.
@@ -28,6 +31,10 @@ use Livewire\Volt\Component;
 new class extends Component {
     #[Locked]
     public string $destination = '';
+
+    /** Lien « Tu es admin ? » sous l'écran email (page de connexion uniquement, pas le tunnel). */
+    #[Locked]
+    public bool $lienAdmin = false;
 
     /**
      * Compte dont le mot de passe a été prouvé dans ce formulaire (connexion ou création).
@@ -97,6 +104,10 @@ new class extends Component {
             return;
         }
 
+        if ($this->refuserAdmin($user)) {
+            return;
+        }
+
         // Compte sans mot de passe (connexion par code uniquement) : inutile de le demander.
         if (! $user->mot_de_passe) {
             $this->recevoirCode();
@@ -161,6 +172,10 @@ new class extends Component {
         if (! $user) {
             $this->mode = 'creation';
 
+            return;
+        }
+
+        if ($this->refuserAdmin($user)) {
             return;
         }
 
@@ -304,7 +319,12 @@ new class extends Component {
 
     private function connecter(User $user, bool $parCode = false)
     {
-        Auth::login($user, remember: $this->resterConnecte);
+        // Dernier verrou : les propriétés du composant viennent du navigateur.
+        if ($this->refuserAdmin($user)) {
+            return null;
+        }
+
+        Auth::guard('web')->login($user, remember: $this->resterConnecte);
         session()->regenerate();
         session()->forget('url.intended');
 
@@ -315,6 +335,20 @@ new class extends Component {
         }
 
         return $this->redirect($this->destination);
+    }
+
+    /** Vrai (et retour à l'écran email, message posé) si l'adresse est celle d'un compte admin. */
+    private function refuserAdmin(User $user): bool
+    {
+        if (! $user->admin) {
+            return false;
+        }
+
+        $this->reset('password', 'code', 'info', 'motDePasseProuvePour');
+        $this->mode = 'email';
+        $this->addError('email', 'Cette adresse est celle d\'un compte admin : connecte-toi depuis l\'accès admin.');
+
+        return true;
     }
 
     /**
@@ -351,6 +385,12 @@ new class extends Component {
                 <a href="{{ route('home') }}" class="rfl-lien">Retour</a>
                 <button type="submit" class="rfl-btn" wire:loading.attr="disabled">Continuer</button>
             </div>
+
+            @if ($lienAdmin)
+                <p class="mt-8 border-t border-bordure pt-5 text-center text-sm">
+                    <a href="{{ route('admin.connexion') }}" class="rfl-lien">Tu es admin ?</a>
+                </p>
+            @endif
         </form>
     @else
         <div class="rfl-pastille mb-6">

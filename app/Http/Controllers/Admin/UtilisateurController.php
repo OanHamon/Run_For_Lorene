@@ -47,7 +47,8 @@ class UtilisateurController extends Controller
 
     /**
      * Création d'un compte par l'association (niveau 2) : un compte comme ceux du site, que la
-     * personne active en choisissant son mot de passe depuis le lien reçu par email.
+     * personne active en choisissant son mot de passe depuis le lien reçu par email. Un super
+     * admin peut aussi créer ici un compte admin (sans espace participant).
      */
     public function create(Request $request): View
     {
@@ -70,10 +71,17 @@ class UtilisateurController extends Controller
             'email' => ['required', 'email:filter', 'max:254', Rule::unique('users', 'email')],
             'telephone' => Telephone::REGLE,
             'retour' => ['nullable', 'in:inscription'],
+            'niveau_acces' => ['nullable', 'integer', 'in:0,1,2,3'],
         ], [
             'email.unique' => 'Un compte existe déjà avec cette adresse.',
             'telephone.regex' => Telephone::MESSAGE,
         ]);
+
+        $niveau = (int) ($donnees['niveau_acces'] ?? 0);
+        if ($niveau > 0) {
+            abort_unless($request->user()->peutAdmin(Admin::SUPER) && empty($donnees['retour']), 403);
+            $request->validate(['confirmation' => ['accepted']], ['confirmation.accepted' => 'Coche la case pour confirmer ce nouvel accès admin.']);
+        }
 
         $user = User::create([
             'prenom' => trim($donnees['prenom']),
@@ -83,10 +91,15 @@ class UtilisateurController extends Controller
         ]);
         $user->forceFill(['remember_token' => Str::random(60)])->save();
 
-        $user->notify(new CompteCree);
-        $this->journal->noter('user.creation', $user, ['email' => $user->email]);
+        if ($niveau > 0) {
+            $user->admin()->create(['niveau_acces' => $niveau]);
+        }
 
-        $message = "Compte créé. {$user->email} a reçu un lien pour choisir son mot de passe (valable ".Activation::VALIDITE_JOURS.' jours).';
+        $user->notify(new CompteCree(admin: $niveau > 0));
+        $this->journal->noter('user.creation', $user, array_filter(['email' => $user->email, 'niveau admin' => $niveau ?: null]));
+
+        $message = ($niveau > 0 ? 'Compte admin créé ('.Admin::LIBELLES[$niveau].'). ' : 'Compte créé. ')
+            ."{$user->email} a reçu un lien pour choisir son mot de passe (valable ".Activation::VALIDITE_JOURS.' jours).';
 
         return match (true) {
             ($donnees['retour'] ?? null) === 'inscription' => redirect()->route('admin.inscriptions.create', ['email' => $user->email])->with('statut', $message),
@@ -129,6 +142,7 @@ class UtilisateurController extends Controller
                 ->orderByDesc('id_inscription')
                 ->get(),
             'obstaclesSuppression' => $supprimer->obstacles($utilisateur, $request->user()),
+            'compteParticipant' => ! $utilisateur->admin && $utilisateur->aUneActiviteParticipant(),
         ]);
     }
 
@@ -146,6 +160,11 @@ class UtilisateurController extends Controller
         }
 
         $avant = $utilisateur->niveauAdmin();
+
+        // Espaces séparés : un compte qui sert à s'inscrire reste un compte participant.
+        if ($avant === 0 && $niveau > 0 && $utilisateur->aUneActiviteParticipant()) {
+            return back()->with('erreur', 'Ce compte sert déjà à des inscriptions : il reste un compte participant. Crée un compte admin avec une autre adresse.');
+        }
 
         if ($avant === Admin::SUPER && $niveau < Admin::SUPER && Admin::where('niveau_acces', Admin::SUPER)->count() <= 1) {
             return back()->with('erreur', 'Il doit rester au moins un super admin.');
