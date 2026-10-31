@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\QuestionnaireController;
 use App\Http\Controllers\Admin\RechercheController;
 use App\Http\Controllers\Admin\RemboursementController;
+use App\Http\Controllers\Admin\StatistiquesController;
 use App\Http\Controllers\Admin\TableauController;
 use App\Http\Controllers\Admin\TarifController;
 use App\Http\Controllers\Admin\TexteLegalController;
@@ -31,6 +32,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', TableauController::class)->name('tableau');
 Route::get('a-traiter', ATraiterController::class)->name('a-traiter');
+Route::get('statistiques', StatistiquesController::class)->name('statistiques');
 Route::get('recherche', RechercheController::class)->middleware('throttle:60,1')->name('recherche');
 Route::post('evenement-suivi', EvenementSuiviController::class)->name('evenement-suivi');
 Route::get('journal', JournalController::class)->name('journal');
