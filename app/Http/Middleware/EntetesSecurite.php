@@ -21,7 +21,9 @@ class EntetesSecurite
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        // Caméra seulement pour scanner les billets au retrait des dossards.
+        $camera = $request->is('admin/retrait', 'retrait/*') ? 'camera=(self)' : 'camera=()';
+        $response->headers->set('Permissions-Policy', "{$camera}, microphone=(), geolocation=()");
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
 
         if ($request->isSecure()) {

@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\ActivationController;
+use App\Http\Controllers\BilletController;
 use App\Http\Controllers\EspaceController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaiementController;
+use App\Http\Controllers\PosteRetraitController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TexteLegalController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +21,9 @@ Route::get('activation/{user}', [ActivationController::class, 'show'])->middlewa
 Route::post('activation/{user}', [ActivationController::class, 'store'])->middleware('throttle:10,1');
 
 Volt::route('inscription', 'inscription.tunnel')->name('inscription.tunnel');
+
+// Billet QR en plein écran (lien signé de l'email et de l'espace, sans connexion).
+Route::get('billet/{inscription}', BilletController::class)->middleware(['signed', 'throttle:60,1'])->name('billet');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('inscription/commande/{commande}/paiement', [PaiementController::class, 'payer'])
@@ -36,6 +41,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('espace', EspaceController::class)->name('espace');
     Volt::route('espace/inscriptions/{inscription}', 'espace.inscription')->name('espace.inscription');
     Volt::route('espace/compte', 'espace.compte')->name('espace.compte');
+});
+
+// Poste de retrait des dossards (bénévoles, sans compte) : lien secret créé dans l'admin.
+Route::middleware('throttle:120,1')->prefix('retrait/{jeton}')->where(['jeton' => '[A-Za-z0-9]{40}'])->group(function () {
+    Route::get('/', [PosteRetraitController::class, 'show'])->name('retrait.poste');
+    Route::post('benevole', [PosteRetraitController::class, 'identifier'])->name('retrait.benevole');
+    Route::post('scan', [PosteRetraitController::class, 'scan'])->name('retrait.scan');
+    Route::post('{inscription}/remettre', [PosteRetraitController::class, 'remettre'])->whereNumber('inscription')->name('retrait.remettre');
+    Route::post('{inscription}/annuler', [PosteRetraitController::class, 'annuler'])->whereNumber('inscription')->name('retrait.annuler');
 });
 
 Route::post('stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');

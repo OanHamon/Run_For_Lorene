@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\QuestionnaireController;
 use App\Http\Controllers\Admin\RechercheController;
 use App\Http\Controllers\Admin\RelanceController;
 use App\Http\Controllers\Admin\RemboursementController;
+use App\Http\Controllers\Admin\RetraitController;
 use App\Http\Controllers\Admin\StatistiquesController;
 use App\Http\Controllers\Admin\TableauController;
 use App\Http\Controllers\Admin\TarifController;
@@ -55,6 +56,14 @@ Route::middleware('admin:2')->group(function () {
     Route::get('utilisateurs/nouveau', [UtilisateurController::class, 'create'])->name('utilisateurs.create');
     Route::post('utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');
     Route::post('utilisateurs/{utilisateur}/activation', [UtilisateurController::class, 'renvoyerActivation'])->name('utilisateurs.activation');
+
+    // Retrait des dossards (jour J) et postes des bénévoles.
+    Route::get('retrait', [RetraitController::class, 'index'])->name('retrait.index');
+    Route::post('retrait/scan', [RetraitController::class, 'scan'])->name('retrait.scan');
+    Route::post('retrait/{inscription}/remettre', [RetraitController::class, 'remettre'])->whereNumber('inscription')->name('retrait.remettre');
+    Route::post('retrait/{inscription}/annuler', [RetraitController::class, 'annuler'])->whereNumber('inscription')->name('retrait.annuler');
+    Route::post('retrait/postes', [RetraitController::class, 'ouvrirPoste'])->name('retrait.postes.store');
+    Route::post('retrait/postes/{poste}/revoquer', [RetraitController::class, 'revoquerPoste'])->name('retrait.postes.revoquer');
 
     // Relances ciblées : un groupe ou une seule inscription, modèle modifiable, aperçu avant envoi.
     Route::get('relances', [RelanceController::class, 'index'])->name('relances.index');
