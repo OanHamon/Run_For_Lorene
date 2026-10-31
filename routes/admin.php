@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\QuestionnaireController;
 use App\Http\Controllers\Admin\RechercheController;
+use App\Http\Controllers\Admin\RelanceController;
 use App\Http\Controllers\Admin\RemboursementController;
 use App\Http\Controllers\Admin\StatistiquesController;
 use App\Http\Controllers\Admin\TableauController;
@@ -54,6 +55,12 @@ Route::middleware('admin:2')->group(function () {
     Route::get('utilisateurs/nouveau', [UtilisateurController::class, 'create'])->name('utilisateurs.create');
     Route::post('utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');
     Route::post('utilisateurs/{utilisateur}/activation', [UtilisateurController::class, 'renvoyerActivation'])->name('utilisateurs.activation');
+
+    // Relances ciblées : un groupe ou une seule inscription, modèle modifiable, aperçu avant envoi.
+    Route::get('relances', [RelanceController::class, 'index'])->name('relances.index');
+    Route::get('relances/nouvelle', [RelanceController::class, 'create'])->name('relances.create');
+    Route::post('relances/apercu', [RelanceController::class, 'apercu'])->name('relances.apercu');
+    Route::post('relances', [RelanceController::class, 'store'])->middleware('throttle:10,1')->name('relances.store');
 
     Route::get('inscriptions/gratuite', [InscriptionGratuiteController::class, 'create'])->name('inscriptions.create');
     Route::post('inscriptions/gratuite', [InscriptionGratuiteController::class, 'store'])->name('inscriptions.store');

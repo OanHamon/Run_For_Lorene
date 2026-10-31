@@ -23,6 +23,9 @@
                 <button type="submit" class="rfl-btn-secondaire px-4 py-2 text-sm">Relancer par email</button>
             </form>
         @endif
+        @if ($peutGerer && in_array($i->statut, \App\Services\Admin\RelancesCiblees::STATUTS, true))
+            <a href="{{ route('admin.relances.create', ['inscription' => $i->id_inscription]) }}" class="rfl-btn-secondaire px-4 py-2 text-sm">Écrire à cette personne</a>
+        @endif
         @if ($peutGerer && in_array($i->statut, AnnulerInscription::ANNULABLES, true))
             <form method="POST" action="{{ route('admin.inscriptions.annuler', $i) }}" onsubmit="return confirm('Annuler cette inscription ? Le dossard sera libéré.')">
                 @csrf
@@ -220,6 +223,21 @@
             @endif
         </section>
     </div>
+
+    @php($relancesRecues = $i->relances()->with('admin')->get())
+    @if ($relancesRecues->isNotEmpty())
+        <section class="mt-6 rfl-carte p-6" data-test="relances-recues">
+            <h2 class="mb-3 font-display text-vert">Relances reçues</h2>
+            <ul class="space-y-1 text-sm">
+                @foreach ($relancesRecues as $r)
+                    <li>
+                        <span class="text-gris-texte">{{ $r->created_at->format('d/m/Y H:i') }}</span>
+                        · <strong>{{ $r->sujet }}</strong> à {{ $r->pivot->email }}, par {{ $r->admin?->name }}
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
 
     @if ($journal->isNotEmpty())
         <section class="mt-6 rfl-carte p-6">

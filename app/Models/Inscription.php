@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Inscription extends Model
@@ -78,6 +79,14 @@ class Inscription extends Model
         return $this->belongsTo(Evenement::class, 'id_evenement', 'id_evenement');
     }
 
+    /** Relances envoyées depuis l'admin pour cette inscription, la plus récente d'abord. */
+    public function relances(): BelongsToMany
+    {
+        return $this->belongsToMany(Relance::class, 'relance_destinataires', 'id_inscription', 'id_relance')
+            ->withPivot('email')
+            ->orderByDesc('relances.created_at');
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class, 'id_inscription', 'id_inscription');
@@ -111,7 +120,7 @@ class Inscription extends Model
                     ->whereHas('texteLegal', fn ($t) => $t->where('type_texte', 'decharge')));
 
             $q->orWhere(fn ($mineur) => $mineur->mineurs($evenement)
-                    ->whereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::SANTE)));
+                ->whereDoesntHave('documents.questionnaireSante', fn ($qs) => $qs->where('type_questionnaire', QuestionSante::SANTE)));
         });
     }
 

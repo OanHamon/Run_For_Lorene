@@ -33,6 +33,7 @@ class JournalAdmin extends Model
         'inscription.dossard' => 'Dossard modifié',
         'inscription.annulation' => 'Inscription annulée',
         'inscription.relance' => 'Relance envoyée',
+        'relance.envoi' => 'Relance ciblée envoyée',
         'inscription.participant' => 'Informations du participant corrigées',
         'inscription.gratuite' => 'Inscription gratuite créée',
         'inscription.reprise' => 'Inscription annulée reprise (ancienne commande notée)',
