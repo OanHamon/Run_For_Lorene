@@ -30,7 +30,8 @@ class UtilisateurController extends Controller
         $utilisateurs = User::with('admin')
             ->withCount('participantsGeres')
             ->whereNotNull('email')
-            ->when($request->boolean('admins'), fn ($q) => $q->has('admin'))
+            // Les admins ont leur page (« Admins et accès ») : ici, les comptes participants.
+            ->doesntHave('admin')
             ->when($request->filled('q'), function ($q) use ($request) {
                 $terme = trim((string) $request->query('q'));
                 $q->where(fn ($r) => $r->where('email', 'like', "%{$terme}%")
@@ -54,6 +55,7 @@ class UtilisateurController extends Controller
     {
         return view('admin.utilisateurs.creer', [
             'email' => Str::lower(trim((string) $request->query('email'))),
+            'niveau_defaut' => min(3, max(0, $request->integer('niveau'))),
             'retour' => $request->query('retour') === 'inscription' ? 'inscription' : null,
         ]);
     }

@@ -1,7 +1,6 @@
 @php use App\Support\Format; @endphp
 <x-admin-shell title="Dons">
     <x-admin.titre titre="Dons" :sous-titre="$evenement?->nom">
-        @if ($evenement)<x-admin.filtre-evenement :evenement="$evenement" :evenements="$evenements" />@endif
     </x-admin.titre>
 
     @if (! $evenement)

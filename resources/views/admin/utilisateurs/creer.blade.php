@@ -25,7 +25,7 @@
                 <legend class="rfl-label">Type de compte</legend>
                 @foreach ([0 => 'Participant'] + collect(\App\Models\Admin::LIBELLES)->map(fn ($l) => "Admin · {$l}")->all() as $niveau => $libelle)
                     <label class="flex items-center gap-2">
-                        <input type="radio" name="niveau_acces" value="{{ $niveau }}" id="niveau-{{ $niveau }}" @checked((int) old('niveau_acces', 0) === $niveau)>
+                        <input type="radio" name="niveau_acces" value="{{ $niveau }}" id="niveau-{{ $niveau }}" @checked((int) old('niveau_acces', $niveau_defaut ?? 0) === $niveau)>
                         <span>{{ $libelle }}</span>
                     </label>
                 @endforeach

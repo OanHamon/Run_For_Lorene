@@ -5,7 +5,6 @@
 @endphp
 <x-admin-shell title="Commandes et paiements">
     <x-admin.titre titre="Commandes et paiements" :sous-titre="$evenement?->nom">
-        @if ($evenement)<x-admin.filtre-evenement :evenement="$evenement" :evenements="$evenements" />@endif
     </x-admin.titre>
 
     @if (! $evenement)

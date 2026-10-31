@@ -103,7 +103,7 @@ test("webhook : un montant insuffisant ou une autre devise ne valide pas la comm
         ->and(Inscription::sole()->statut)->toBe(Inscription::EN_ATTENTE_PAIEMENT);
     Notification::assertNothingSentTo($this->user, CommandeConfirmee::class);
 
-    $this->actingAs(admin(1))->get('/admin')->assertOk()
+    $this->actingAs(admin(1))->get('/admin/a-traiter')->assertOk()
         ->assertSee('Paiements à vérifier')
         ->assertSee("Commande n° {$commande->id_commande}");
 })->with([
@@ -148,7 +148,7 @@ test('commande payée restée en attente : signalée au tableau de bord, confirm
     [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
     $paiement->forceFill(['statut' => Paiement::REUSSI, 'montant' => 12, 'date_paiement' => now()])->save();
 
-    $this->actingAs(admin(1))->get('/admin')->assertOk()
+    $this->actingAs(admin(1))->get('/admin/a-traiter')->assertOk()
         ->assertSee('commande restée en attente');
 
     $this->actingAs(admin(2))->post(route('admin.commandes.confirmer', $commande))->assertForbidden();
@@ -176,7 +176,7 @@ test('un paiement reçu sur une commande abandonnée est signalé dans le tablea
 
     app(EnregistrerPaiement::class)->reussi($paiement->reference, 12.0);
 
-    $this->actingAs(admin(1))->get('/admin')->assertOk()
+    $this->actingAs(admin(1))->get('/admin/a-traiter')->assertOk()
         ->assertSee('Paiements à vérifier')
         ->assertSee('abandonnée');
 });

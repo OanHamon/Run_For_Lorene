@@ -1,6 +1,5 @@
 <x-admin-shell title="Questionnaires de santé">
     <x-admin.titre titre="Questionnaires de santé" sous-titre="Participants mineurs le jour de l'événement. Un « oui » ne bloque pas l'inscription : consulte, contacte la famille si besoin, puis marque comme vérifié.">
-        @if ($evenement)<x-admin.filtre-evenement :evenement="$evenement" :evenements="$evenements" />@endif
     </x-admin.titre>
 
     <nav class="mb-6 flex gap-2 overflow-x-auto text-sm" aria-label="Filtrer les questionnaires">

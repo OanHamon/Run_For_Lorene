@@ -97,9 +97,13 @@ test('une plage de dossards pleine déclenche une alerte', function () {
     inscriptionPayee(User::factory()->create(), $enfants)->update(['dossard' => 4000]);
     inscriptionPayee(User::factory()->create(), $enfants); // validée, sans dossard
 
-    $this->actingAs(admin(1))->get('/admin')
-        ->assertSee('Dossards : Course enfants')
+    $this->actingAs(admin(1))->get('/admin/a-traiter')
+        ->assertSee('Dossards')
+        ->assertSee('Course enfants')
         ->assertSee('1 inscription(s) validée(s) sans dossard');
+
+    // Le tableau de bord en donne le résumé, avec un lien vers la liste.
+    $this->get('/admin')->assertSee('Dossards (1)')->assertSee(route('admin.a-traiter'));
 });
 
 test("le filtre d'événement est retenu d'une page à l'autre", function () {

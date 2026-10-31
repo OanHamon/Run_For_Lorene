@@ -8,7 +8,6 @@
 <x-admin-shell title="Inscriptions">
     <x-admin.titre titre="Inscriptions" :sous-titre="$evenement?->nom">
         @if ($evenement)
-            <x-admin.filtre-evenement :evenement="$evenement" :evenements="$evenements" />
             @if ($peutGerer && Route::has('admin.inscriptions.create'))
                 <a href="{{ route('admin.inscriptions.create') }}" class="rfl-btn px-5 py-2.5 text-sm">Inscription gratuite</a>
             @endif

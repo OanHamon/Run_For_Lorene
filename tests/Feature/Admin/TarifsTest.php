@@ -137,7 +137,7 @@ test('un événement publié avec des trous est signalé sur le tableau de bord'
     $this->evenement->update(['statut' => Evenement::PUBLIE]);
     $this->course->tarifs()->create(($this->tarif)(['valide_au' => ($this->jour)(19), 'age_min' => null, 'age_max' => null]));
 
-    $this->get('/admin?evenement='.$this->evenement->id_evenement)
+    $this->get('/admin/a-traiter?evenement='.$this->evenement->id_evenement)
         ->assertSee('Inscriptions bloquées')
         ->assertSee('5 km n&#039;a pas de tarif', false);
 });

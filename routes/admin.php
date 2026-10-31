@@ -1,14 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminsController;
+use App\Http\Controllers\Admin\ATraiterController;
 use App\Http\Controllers\Admin\CommandeController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\DonController;
 use App\Http\Controllers\Admin\EvenementController;
+use App\Http\Controllers\Admin\EvenementSuiviController;
 use App\Http\Controllers\Admin\InscriptionController;
 use App\Http\Controllers\Admin\InscriptionGratuiteController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\QuestionnaireController;
+use App\Http\Controllers\Admin\RechercheController;
+use App\Http\Controllers\Admin\RemboursementController;
 use App\Http\Controllers\Admin\TableauController;
 use App\Http\Controllers\Admin\TarifController;
 use App\Http\Controllers\Admin\TexteLegalController;
@@ -25,7 +30,11 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::get('/', TableauController::class)->name('tableau');
+Route::get('a-traiter', ATraiterController::class)->name('a-traiter');
+Route::get('recherche', RechercheController::class)->middleware('throttle:60,1')->name('recherche');
+Route::post('evenement-suivi', EvenementSuiviController::class)->name('evenement-suivi');
 Route::get('journal', JournalController::class)->name('journal');
+Route::get('remboursements', [RemboursementController::class, 'index'])->name('remboursements.index');
 
 // Suivi des inscriptions : consultation et exports pour tous les admins, actions au niveau 2.
 Route::get('inscriptions', [InscriptionController::class, 'index'])->name('inscriptions.index');
@@ -97,6 +106,8 @@ Route::middleware('admin:3')->group(function () {
     Route::delete('declinaisons/{declinaison}', [OptionController::class, 'supprimerDeclinaison'])->name('declinaisons.destroy');
 
     Route::post('evenements/{evenement}/textes', [TexteLegalController::class, 'store'])->name('textes.store');
+
+    Route::get('admins', [AdminsController::class, 'index'])->name('admins.index');
 
     Route::get('utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
     Route::get('utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->whereNumber('utilisateur')->name('utilisateurs.show');

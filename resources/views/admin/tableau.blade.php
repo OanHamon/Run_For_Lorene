@@ -3,13 +3,9 @@
     use App\Support\Format;
 
     $lienInscriptions = fn (array $filtres = []) => Route::has('admin.inscriptions.index') ? route('admin.inscriptions.index', $filtres) : null;
-    $alertesDossards = $courses->filter(fn ($c) => $c->dossards['sans_dossard'] > 0 || ($c->dossards['libres'] !== null && $c->dossards['libres'] === 0));
-    // Paiement arrivé après la fin de la réservation : la course a pu dépasser son quota.
-    $coursesSurQuota = $courses->filter(fn ($c) => $c->quota && $c->places_prises > $c->quota);
 @endphp
 <x-admin-shell title="Tableau de bord">
     <x-admin.titre titre="Tableau de bord" :sous-titre="$evenement ? $evenement->nom.' · '.$evenement->date_evenement->translatedFormat('j F Y') : null">
-        @if ($evenement)<x-admin.filtre-evenement :evenement="$evenement" :evenements="$evenements" />@endif
     </x-admin.titre>
 
     @if (! $evenement)
@@ -20,56 +16,18 @@
             @endif
         </div>
     @else
-        @if ($bloquants)
-            <div class="mb-4 rfl-alerte" role="alert">
-                <p class="font-display text-vert">Inscriptions bloquées : à corriger au plus vite</p>
-                <ul class="mt-1 list-disc pl-5 text-sm text-gris-texte">
-                    @foreach ($bloquants as $probleme)
-                        <li>{{ ucfirst($probleme) }}.</li>
-                    @endforeach
-                </ul>
-                <a href="{{ route('admin.evenements.show', $evenement) }}" class="mt-2 inline-block rfl-lien text-sm">Ouvrir l'événement</a>
-            </div>
+        {{-- Ce qui attend une action : le détail est sur « À traiter ». --}}
+        @if ($aTraiter)
+            <a href="{{ route('admin.a-traiter') }}" class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-vert p-5 text-white hover:bg-vert/90" data-test="a-traiter">
+                <div>
+                    <p class="font-display text-lg">À traiter</p>
+                    <p class="mt-1 text-sm text-vert-clair">
+                        @foreach ($aTraiter as $g){{ $g['titre'] }} ({{ $g['nombre'] }})@if (! $loop->last) · @endif @endforeach
+                    </p>
+                </div>
+                <span class="rounded-full bg-moutarde px-4 py-2 font-bold text-vert-sombre">Voir la liste</span>
+            </a>
         @endif
-
-        @if ($paiementsAVerifier->isNotEmpty())
-            <div class="mb-4 rfl-alerte" role="alert">
-                <p class="font-display text-vert">Paiements à vérifier</p>
-                <ul class="mt-1 list-disc pl-5 text-sm text-gris-texte">
-                    @foreach ($paiementsAVerifier as $a)
-                        <li>
-                            <a href="{{ route('admin.commandes.show', $a->paiement->commande) }}" class="rfl-lien">Commande n° {{ $a->paiement->id_commande }}</a>
-                            · {{ Format::euros($a->paiement->montant) }} reçus le {{ $a->paiement->date_paiement?->format('d/m/Y') }} : {{ $a->motif }}.
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        @foreach ($coursesSurQuota as $c)
-            <div class="mb-4 rfl-alerte" role="alert">
-                <p class="font-display text-vert">Quota dépassé : {{ $c->course->nom }}</p>
-                <p class="mt-1 text-sm text-gris-texte">{{ $c->places_prises }} places prises pour {{ $c->quota }} prévues : un paiement est arrivé après la fin de la réservation. Augmente le quota ou contacte les personnes concernées.</p>
-            </div>
-        @endforeach
-
-        @foreach ($alertesDossards as $c)
-            <div class="mb-4 rfl-alerte" role="alert">
-                <p class="font-display text-vert">Dossards : {{ $c->course->nom }}</p>
-                <p class="mt-1 text-sm text-gris-texte">
-                    @if ($c->dossards['plage'] === null)
-                        Aucune plage de dossards définie :
-                    @else
-                        Plage {{ $c->course->dossard_debut }}–{{ $c->course->dossard_fin }} pleine.
-                    @endif
-                    @if ($c->dossards['sans_dossard'] > 0)
-                        {{ $c->dossards['sans_dossard'] }} inscription(s) validée(s) sans dossard. Élargis la plage, puis attribue les numéros depuis la fiche de chaque inscription.
-                    @else
-                        Les prochaines inscriptions validées n'auront pas de dossard. Élargis la plage dans les réglages de la course.
-                    @endif
-                </p>
-            </div>
-        @endforeach
 
         {{-- L'essentiel : inscrits par statut et recettes encaissées --}}
         <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
