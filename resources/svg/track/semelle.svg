@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 600" width="240" height="600">
+  <!--
+    TRACK : silhouette de semelle de running (pied droit, vue de dessous, pointe en haut).
+    Dessin original. Avant-pied et talon séparés par le vide de la voûte (côté intérieur, à gauche).
+    Pavés arrondis en quinconce, séparés par des sillons en chevron : chaque pavé deviendra
+    un amas de particules. Étude visuelle aux couleurs de la charte, sans particules.
+  -->
+  <defs>
+    <path id="avant-pied" d="M 120 20
+      C 166 14, 204 50, 210 110
+      C 216 170, 214 220, 206 270
+      C 200 316, 198 350, 190 374
+      C 182 392, 150 392, 128 378
+      C 104 362, 84 330, 64 300
+      C 42 266, 30 222, 32 170
+      C 34 100, 66 26, 120 20 Z"/>
+    <path id="talon" d="M 140 420
+      C 180 418, 206 446, 206 496
+      C 206 548, 178 586, 138 586
+      C 98 586, 74 550, 74 500
+      C 74 452, 100 422, 140 420 Z"/>
+
+    <!-- Les sillons sont découpés (noir dans le masque), pas peints en blanc. -->
+    <mask id="m-avant" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="600">
+      <use href="#avant-pied" fill="#FFFFFF"/>
+      <g fill="none" stroke="#000000" stroke-width="7" stroke-linecap="round">
+        <!-- Sillons transversaux en chevron léger -->
+        <path d="M 0 80  Q 125 56 240 80"/>
+        <path d="M 0 128 Q 125 104 240 128"/>
+        <path d="M 0 176 Q 125 152 240 176"/>
+        <path d="M 0 224 Q 125 200 240 224"/>
+        <path d="M 0 272 Q 125 248 240 272"/>
+        <path d="M 0 320 Q 125 296 240 320"/>
+        <path d="M 0 364 Q 125 340 240 364"/>
+        <!-- Séparations des pavés, en quinconce d'une rangée à l'autre -->
+        <path d="M 120 20 L 120 68"/>
+        <path d="M 92 70 L 92 116"/>   <path d="M 152 70 L 152 116"/>
+        <path d="M 68 118 L 68 164"/>  <path d="M 122 118 L 122 164"/> <path d="M 176 118 L 176 164"/>
+        <path d="M 95 166 L 95 212"/>  <path d="M 150 166 L 150 212"/>
+        <path d="M 68 214 L 68 260"/>  <path d="M 122 214 L 122 260"/> <path d="M 176 214 L 176 260"/>
+        <path d="M 108 262 L 108 308"/> <path d="M 160 262 L 160 308"/>
+        <path d="M 150 310 L 150 352"/>
+      </g>
+    </mask>
+    <mask id="m-talon" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="600">
+      <use href="#talon" fill="#FFFFFF"/>
+      <g fill="none" stroke="#000000" stroke-width="7" stroke-linecap="round">
+        <path d="M 40 470 Q 140 490 240 470"/>
+        <path d="M 40 524 Q 140 544 240 524"/>
+        <path d="M 140 420 L 140 476"/>
+        <path d="M 110 482 L 110 528"/> <path d="M 170 482 L 170 528"/>
+        <path d="M 140 536 L 140 590"/>
+      </g>
+    </mask>
+
+    <!-- Arrondit tous les angles des pavés (flou puis seuil net) : aucun angle vif. -->
+    <filter id="arrondi" x="0" y="0" width="240" height="600" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="2.4"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="12" intercept="-5.5"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+
+  <rect width="240" height="600" fill="#FFFFFF"/>
+
+  <g filter="url(#arrondi)" fill="#23463F">
+    <rect width="240" height="600" mask="url(#m-avant)"/>
+    <rect width="240" height="600" mask="url(#m-talon)"/>
+  </g>
+</svg>
