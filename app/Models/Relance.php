@@ -13,7 +13,7 @@ class Relance extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['modele', 'sujet', 'message', 'cible', 'nb_destinataires', 'id_evenement', 'id_admin'];
+    protected $fillable = ['modele', 'sujet', 'message', 'cible', 'nb_destinataires', 'id_evenement', 'id_admin', 'id_programmee'];
 
     protected function casts(): array
     {

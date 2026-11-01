@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Inscription;
 use App\Models\Relance;
+use App\Models\RelanceProgrammee;
 use App\Models\User;
 use App\Notifications\RelanceAdmin;
 use Illuminate\Database\Eloquent\Builder;
@@ -91,13 +92,13 @@ class RelancesCiblees
      *
      * @param  bool  $inclureRecents  envoyer aussi aux inscriptions relancées il y a moins de 48 h
      */
-    public function envoyer(Evenement $evenement, string $modele, string $sujet, string $message, array $cible, bool $inclureRecents, User $admin): Relance
+    public function envoyer(Evenement $evenement, string $modele, string $sujet, string $message, array $cible, bool $inclureRecents, User $admin, ?RelanceProgrammee $programmee = null): Relance
     {
         $inscriptions = $this->destinataires($evenement, $cible)
             ->when(! $inclureRecents, fn ($c) => $c->filter(fn ($i) => $i->relancee_le === null))
             ->values();
 
-        $relance = DB::transaction(function () use ($evenement, $modele, $sujet, $message, $cible, $inscriptions, $admin) {
+        $relance = DB::transaction(function () use ($evenement, $modele, $sujet, $message, $cible, $inscriptions, $admin, $programmee) {
             $relance = Relance::create([
                 'modele' => $modele,
                 'sujet' => $sujet,
@@ -106,6 +107,7 @@ class RelancesCiblees
                 'nb_destinataires' => $inscriptions->count(),
                 'id_evenement' => $evenement->id_evenement,
                 'id_admin' => $admin->id_user,
+                'id_programmee' => $programmee?->id_programmee,
             ]);
 
             $relance->inscriptions()->attach($inscriptions->mapWithKeys(fn (Inscription $i) => [
@@ -120,11 +122,12 @@ class RelancesCiblees
             $envoi['destinataire']->notify(new RelanceAdmin($i, $envoi['sujet'], $envoi['message']));
         }
 
-        $this->journal->noter('relance.envoi', $relance, [
+        $this->journal->noter('relance.envoi', $relance, array_filter([
             'modèle' => $modele,
             'objet' => $sujet,
             'destinataires' => $inscriptions->count(),
-        ]);
+            'programmé' => $programmee ? 'oui (envoi automatique)' : null,
+        ], fn ($v) => $v !== null), $admin->id_user);
 
         return $relance;
     }
@@ -134,8 +137,9 @@ class RelancesCiblees
         return Inscription::query()
             ->where('id_evenement', $evenement->id_evenement)
             ->whereIn('statut', self::STATUTS)
-            ->when($cible['inscription'], fn ($q, $id) => $q->whereKey($id))
-            ->when(! $cible['inscription'], fn ($q) => $q
+            // Une seule personne (même l'identifiant 0, « personne choisie » : alors aucun résultat).
+            ->when($cible['inscription'] !== null, fn ($q) => $q->whereKey($cible['inscription']))
+            ->when($cible['inscription'] === null, fn ($q) => $q
                 ->when($cible['statut'], fn ($q2, $statut) => $q2->where('statut', $statut))
                 ->when($cible['course'], fn ($q2, $course) => $q2->whereIn('id_tarif', Course::whereKey($course)->firstOrNew()->tarifs()->select('id_tarif')))
                 ->when($cible['mineur'], fn ($q2) => $q2->mineurs($evenement))

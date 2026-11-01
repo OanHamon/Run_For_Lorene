@@ -5,10 +5,12 @@ use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Inscription;
 use App\Models\Paiement;
+use App\Models\Reglage;
 use App\Models\User;
 use App\Notifications\InscriptionValidee;
 use App\Notifications\RelanceInscription;
 use App\Services\Inscriptions\MettreAJourStatut;
+use App\Services\Inscriptions\Relances;
 use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
@@ -28,7 +30,12 @@ test("relance documents : 15 jours avant l'événement, une seule fois, seulemen
     $this->artisan('rfl:relancer-documents')->assertSuccessful();
     Notification::assertNothingSent();
 
-    $this->travelTo($this->evenement->date_evenement->copy()->subDays(15));
+    // Le jour J-15, rien avant l'heure d'envoi (10 h par défaut), puis une seule relance.
+    $this->travelTo($this->evenement->date_evenement->copy()->subDays(15)->setTime(9, 0));
+    $this->artisan('rfl:relancer-documents')->assertSuccessful();
+    Notification::assertNothingSent();
+
+    $this->travelTo($this->evenement->date_evenement->copy()->subDays(15)->setTime(10, 0));
     $this->artisan('rfl:relancer-documents')->assertSuccessful();
     $this->artisan('rfl:relancer-documents')->assertSuccessful();
 
@@ -69,4 +76,20 @@ test('dossier complété après le paiement : email « inscription validée » a
 
     expect($inscription->fresh()->statut)->toBe(Inscription::VALIDEE);
     Notification::assertSentTo($this->user, InscriptionValidee::class, fn ($n) => str_contains($n->toMail($this->user)->subject, "Dossard n° {$inscription->fresh()->dossard}"));
+});
+
+test('les relances automatiques se règlent et se mettent en pause depuis l\'admin', function () {
+    Reglage::ecrire('relance.documents', ['actif' => true, 'jours_avant' => 30, 'heure' => '18:00']);
+    inscriptionPayee($this->user, $this->marche, Inscription::DOSSIER_INCOMPLET);
+
+    $this->travelTo($this->evenement->date_evenement->copy()->subDays(30)->setTime(17, 0));
+    $this->artisan('rfl:relancer-documents');
+    Notification::assertNothingSent();
+
+    $this->travelTo($this->evenement->date_evenement->copy()->subDays(30)->setTime(18, 5));
+    $this->artisan('rfl:relancer-documents');
+    Notification::assertSentToTimes($this->user, RelanceInscription::class, 1);
+
+    Reglage::ecrire('relance.paiement', ['actif' => false, 'heures_apres' => 24]);
+    expect(app(Relances::class)->paiements())->toBe(0);
 });

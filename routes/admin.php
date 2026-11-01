@@ -76,6 +76,10 @@ Route::middleware('admin:2')->group(function () {
     Route::get('relances/nouvelle', [RelanceController::class, 'create'])->name('relances.create');
     Route::post('relances/apercu', [RelanceController::class, 'apercu'])->name('relances.apercu');
     Route::post('relances', [RelanceController::class, 'store'])->middleware('throttle:10,1')->name('relances.store');
+    Route::put('relances/reglages', [RelanceController::class, 'reglages'])->name('relances.reglages');
+    Route::get('relances/programmees/{programmee}', [RelanceController::class, 'edit'])->name('relances.programmees.edit');
+    Route::post('relances/programmees/{programmee}/pause', [RelanceController::class, 'pause'])->name('relances.programmees.pause');
+    Route::delete('relances/programmees/{programmee}', [RelanceController::class, 'destroy'])->name('relances.programmees.destroy');
 
     Route::get('inscriptions/gratuite', [InscriptionGratuiteController::class, 'create'])->name('inscriptions.create');
     Route::post('inscriptions/gratuite', [InscriptionGratuiteController::class, 'store'])->name('inscriptions.store');

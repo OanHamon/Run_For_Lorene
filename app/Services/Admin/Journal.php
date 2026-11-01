@@ -9,11 +9,14 @@ use Illuminate\Support\Facades\Auth;
 /** Note une action admin sensible dans le journal, avec son auteur et l'heure (spec : traçabilité). */
 class Journal
 {
-    /** @param  array<string, mixed>  $details */
-    public function noter(string $action, ?Model $cible = null, array $details = []): JournalAdmin
+    /**
+     * @param  array<string, mixed>  $details
+     * @param  int|null  $auteur  hors requête (tâche planifiée) : l'admin à l'origine de l'action
+     */
+    public function noter(string $action, ?Model $cible = null, array $details = [], ?int $auteur = null): JournalAdmin
     {
         return JournalAdmin::create([
-            'id_admin' => Auth::id(),
+            'id_admin' => $auteur ?? Auth::id(),
             'action' => $action,
             'cible_type' => $cible ? self::type($cible) : null,
             'cible_id' => $cible?->getKey(),
