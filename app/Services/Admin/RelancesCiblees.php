@@ -9,6 +9,7 @@ use App\Models\Relance;
 use App\Models\User;
 use App\Notifications\RelanceAdmin;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -68,7 +69,7 @@ class RelancesCiblees
             '{prenom}' => $destinataire->prenom,
             '{participant}' => $i->participant->user->prenom,
             '{course}' => $i->tarif->course->nom,
-            '{heure}' => $i->tarif->course->heure_depart ? substr((string) $i->tarif->course->heure_depart, 0, 5) : 'à préciser',
+            '{heure}' => $i->tarif->course->heure_depart ? Carbon::parse($i->tarif->course->heure_depart)->format('G\hi') : 'à préciser',
             '{dossard}' => $i->dossard ? (string) $i->dossard : 'bientôt attribué',
             '{evenement}' => $i->evenement->nom,
             '{date}' => $i->evenement->date_evenement->translatedFormat('l j F Y'),

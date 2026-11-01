@@ -16,7 +16,7 @@
             {{-- 1. Rythme des inscriptions --}}
             <x-admin.graphique class="xl:col-span-2" titre="Inscriptions jour par jour" question="Est-ce qu'on avance au bon rythme ? Qu'est-ce qui a fait monter les inscriptions ?"
                 :vide="! $cumul['jours']" hauteur="h-80"
-                :config="['type' => 'bar', 'libelles' => $cumul['jours'], 'axeDroit' => true, 'jalons' => $cumul['jalons'], 'series' => [
+                :config="['type' => 'bar', 'libelles' => array_map($jour, $cumul['jours']), 'axeDroit' => true, 'jalons' => array_map(fn ($j) => ['jour' => $jour($j['jour']), 'libelle' => $j['libelle']], $cumul['jalons']), 'series' => [
                     ['libelle' => 'Total cumulé', 'type' => 'line', 'valeurs' => $cumul['cumul'], 'couleur' => 'vert', 'axe' => 'y'],
                     ['libelle' => 'Nouvelles du jour', 'type' => 'bar', 'valeurs' => $cumul['parJour'], 'couleur' => 'vert-doux', 'axe' => 'y2'],
                 ]]">

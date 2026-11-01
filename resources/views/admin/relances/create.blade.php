@@ -23,7 +23,7 @@
             <x-admin.champ name="sujet" label="Objet" :value="$sujet" required maxlength="150" />
             <div>
                 <label for="message" class="rfl-label">Message</label>
-                <textarea id="message" name="message" rows="12" required maxlength="5000" class="rfl-champ-compact font-sans leading-relaxed">{{ old('message', $message) }}</textarea>
+                <textarea id="message" name="message" rows="12" required maxlength="5000" class="rfl-champ-compact h-auto min-h-64 font-sans leading-relaxed">{{ old('message', $message) }}</textarea>
                 @error('message')<p class="rfl-erreur">{{ $message }}</p>@enderror
                 <p class="mt-2 text-xs text-gris-texte">Une ligne vide sépare deux paragraphes. Le bouton « Ouvrir mon espace » est ajouté à la fin.</p>
             </div>

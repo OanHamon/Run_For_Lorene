@@ -77,7 +77,7 @@ document.querySelectorAll('canvas[data-graphique]').forEach((canvas) => {
                 borderWidth: s.type === 'line' || g.type === 'line' ? 2 : 0,
                 borderRadius: 6,
                 pointRadius: 0,
-                tension: 0.25,
+                tension: 0,
                 yAxisID: s.axe || 'y',
                 order: s.type === 'line' ? 0 : 1,
             })),
@@ -88,8 +88,9 @@ document.querySelectorAll('canvas[data-graphique]').forEach((canvas) => {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { stacked: g.empile === true, grid: { display: horizontal }, ticks: { maxTicksLimit: 10, callback: horizontal && g.euros ? (v) => euros.format(v) : undefined } },
-                y: { stacked: g.empile === true, beginAtZero: true, grid: { display: !horizontal }, ticks: { precision: 0, callback: !horizontal && g.euros ? (v) => euros.format(v) : undefined } },
+                // Pas de « callback: undefined » : il remplacerait le libellé des catégories par leur index.
+                x: { stacked: g.empile === true, grid: { display: horizontal }, ticks: { maxTicksLimit: 10, ...(horizontal && g.euros ? { callback: (v) => euros.format(v) } : {}) } },
+                y: { stacked: g.empile === true, beginAtZero: true, grid: { display: !horizontal }, ticks: { precision: 0, ...(!horizontal && g.euros ? { callback: (v) => euros.format(v) } : {}) } },
                 ...(g.axeDroit ? { y2: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { precision: 0 } } } : {}),
             },
             plugins: {

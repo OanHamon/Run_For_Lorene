@@ -50,9 +50,9 @@
 
     <div class="mx-auto flex max-w-[1400px]">
         <aside class="hidden w-72 shrink-0 px-6 py-8 lg:block">
-            <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto rounded-[28px] bg-vert-sombre px-5 py-7 text-white">
-                <a href="{{ route('admin.tableau') }}" class="block rounded-3xl bg-white p-4">
-                    <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-16 w-auto">
+            <div class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-[28px] bg-vert-sombre px-5 py-6 text-white">
+                <a href="{{ route('admin.tableau') }}" class="block rounded-3xl bg-white p-3">
+                    <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-12 w-auto">
                 </a>
 
                 <div class="mt-6 flex items-center gap-3">
@@ -69,10 +69,10 @@
                 </div>
 
                 @foreach ($sections as $s)
-                    <p class="mt-6 mb-1 px-3 font-display text-sm text-vert-clair">{{ $s['section'] }}</p>
+                    <p class="mt-5 mb-1 px-3 font-display text-sm text-vert-clair">{{ $s['section'] }}</p>
                     <nav class="space-y-0.5 text-sm" aria-label="{{ $s['section'] }}">
                         @foreach ($s['rubriques'] as $r)
-                            <a href="{{ $r['url'] }}" @if ($r['actif']) aria-current="page" @endif class="flex items-center justify-between gap-2 rounded-full px-4 py-2 {{ $r['actif'] ? 'bg-vert-clair font-bold text-vert-sombre' : 'hover:bg-white/10' }}">
+                            <a href="{{ $r['url'] }}" @if ($r['actif']) aria-current="page" @endif class="flex items-center justify-between gap-2 rounded-full px-4 py-1.5 {{ $r['actif'] ? 'bg-vert-clair font-bold text-vert-sombre' : 'hover:bg-white/10' }}">
                                 <span>{{ $r['libelle'] }}</span>
                                 @if ($r['compteur'])<span class="rounded-full bg-moutarde px-2 text-xs font-bold text-vert-sombre" aria-label="{{ $r['compteur'] }} à traiter">{{ $r['compteur'] }}</span>@endif
                             </a>
