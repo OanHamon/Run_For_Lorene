@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\ActivationController;
 use App\Http\Controllers\BilletController;
+use App\Http\Controllers\Dev\QrController as DevQrController;
 use App\Http\Controllers\EspaceController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaiementController;
@@ -27,6 +28,10 @@ Route::get('billet/{inscription}', BilletController::class)->middleware(['signed
 
 // TRACK (empreinte en particules) : page de mise au point, uniquement en local.
 Route::get('dev/track', fn () => app()->isLocal() ? view('dev.track') : abort(404))->name('dev.track');
+
+// Banc d'essai des QR codes des billets : vrais billets, codes piégés et lecteur, en local uniquement.
+Route::get('dev/qr', [DevQrController::class, 'index'])->name('dev.qr');
+Route::post('dev/qr/verifier', [DevQrController::class, 'verifier'])->middleware('throttle:60,1')->name('dev.qr.verifier');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('inscription/commande/{commande}/paiement', [PaiementController::class, 'payer'])
