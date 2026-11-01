@@ -9,12 +9,16 @@
  *   mouvement (prefers-reduced-motion) ou si l'empreinte est déclarée statique (impression, scan).
  *
  * Les effets ne déplacent que l'affichage : la position d'origine des particules ne change jamais.
+ *
+ * Avec une matrice (`data-matrice`, voir trame.js), l'empreinte EST un QR code : les points de
+ * donnée et les repères du QR ne bougent jamais, seules les particules de décor s'animent.
+ * Elle reste donc lisible pendant l'animation.
  */
-import { boiteForme, particules } from './forme';
+import { boiteForme, particules, particulesQr } from './forme.js';
 
 const VAGUE = { amplitude: 0.7, vitesse: 2.2, longueur: 0.045, taille: 0.12 };
 const ATTRACTION = { rayon: 42, force: 0.38, souplesse: 0.1 };
-const BATTEMENT = { période: 1.15, ampleur: 0.13, finesse: 0.055 };
+const BATTEMENT = { période: 1.15, ampleur: 0.13, ampleurQr: 0.06, finesse: 0.055 };
 const ONDE = { vitesse: 150, largeur: 13, amplitude: 3.6, durée: 1.5, intervalle: 280, distance: 22 };
 
 // Écart visé entre deux particules à l'écran (px CSS), borné en unités du SVG :
@@ -28,7 +32,7 @@ function couleur(element, nom, secours) {
 }
 
 export class Empreinte {
-    constructor(element, { graine = 'track', statique = false, espacement } = {}) {
+    constructor(element, { graine = 'track', statique = false, espacement, matrice = null } = {}) {
         this.element = element;
         this.canevas = element.querySelector('canvas') ?? element.appendChild(document.createElement('canvas'));
         this.ctx = this.canevas.getContext('2d');
@@ -36,13 +40,28 @@ export class Empreinte {
         this.graine = graine;
         this.espacementImpose = espacement;
         this.espacement = null;
-        this.boite = boiteForme();
+        const vert = couleur(element, '--color-vert', '#006B61');
+        const vertSombre = couleur(element, '--color-vert-sombre', '#23463F');
+        const vertDoux = couleur(element, '--color-vert-doux', '#5FBAAE');
+        const moutarde = couleur(element, '--color-moutarde', '#D9B21E');
 
-        this.couleurs = [
-            couleur(element, '--color-vert-sombre', '#23463F'),
-            couleur(element, '--color-vert-doux', '#5FBAAE'),
-            couleur(element, '--color-moutarde', '#D9B21E'),
-        ];
+        if (matrice) {
+            // Même palette que le banc de lecture (tests/js/track-qr.mjs) : ne pas la changer sans le relancer.
+            const qr = particulesQr(graine, matrice);
+            this.qr = qr;
+            this.liste = qr.liste;
+            this.coeur = qr.coeur;
+            this.formes = qr.formes;
+            this.boite = qr.cadre;
+            this.déplacements = new Float32Array(this.liste.length * 2);
+            this.couleurs = [vert, vertDoux, moutarde, vertSombre, vertDoux, moutarde];
+            this.couleurReperes = vertSombre;
+        } else {
+            this.qr = null;
+            this.formes = [];
+            this.boite = boiteForme();
+            this.couleurs = [vertSombre, vertDoux, moutarde];
+        }
 
         this.pointeur = null; // position de la souris, en unités du SVG
         this.ondes = [];
@@ -103,12 +122,17 @@ export class Empreinte {
         this.canevas.style.width = `${width}px`;
         this.canevas.style.height = `${height}px`;
 
-        // Marge pour que l'onde et l'attraction ne sortent pas du cadre.
-        const marge = 8;
+        // Marge pour que l'onde et l'attraction ne sortent pas du cadre (le QR a déjà sa zone de calme).
+        const marge = this.qr ? 0 : 8;
         const echelle = Math.min(width / (this.boite.l + marge * 2), height / (this.boite.h + marge * 2));
         this.echelle = echelle * dpr;
         this.origineX = (width * dpr - this.boite.l * this.echelle) / 2 - this.boite.x * this.echelle;
         this.origineY = (height * dpr - this.boite.h * this.echelle) / 2 - this.boite.y * this.echelle;
+
+        if (this.qr) {
+            if (!this.image) this.dessiner(false);
+            return;
+        }
 
         // Densité adaptée à la taille affichée ; on ne recalcule que si l'écart change nettement.
         const voulu = this.espacementImpose
@@ -169,13 +193,24 @@ export class Empreinte {
         const t = this.temps;
         const p = animé ? this.pointeur : null;
         const lissage = 1 - Math.pow(1 - ATTRACTION.souplesse, dt * 60);
-        const chemins = [new Path2D(), new Path2D(), new Path2D()];
+        const chemins = this.couleurs.map(() => new Path2D());
         const coeur = this.coeur;
-        const battement = animé && coeur ? this.battement(t) : 0;
+        const battement = animé && coeur ? this.battement(t) * (this.qr ? BATTEMENT.ampleurQr / BATTEMENT.ampleur : 1) : 0;
+
+        if (this.qr) this.dessinerFond();
 
         for (let i = 0; i < liste.length; i++) {
             const q = liste[i];
             let x = q.x, y = q.y, r = q.r;
+
+            if (q.fixe) {
+                // Donnée du QR : jamais déplacée, jamais grossie.
+                const chemin = chemins[q.nuance];
+                const sx = this.origineX + x * this.echelle, sy = this.origineY + y * this.echelle, sr = r * this.echelle;
+                chemin.moveTo(sx + sr, sy);
+                chemin.arc(sx, sy, sr, 0, Math.PI * 2);
+                continue;
+            }
 
             if (q.nuance === 2 && battement) {
                 // Le cœur se gonfle depuis son centre.
@@ -225,12 +260,27 @@ export class Empreinte {
             chemin.arc(sx, sy, sr, 0, Math.PI * 2);
         }
 
-        ctx.fillStyle = this.couleurs[0];
-        ctx.fill(chemins[0]);
-        ctx.fillStyle = this.couleurs[1];
-        ctx.fill(chemins[1]);
-        ctx.fillStyle = this.couleurs[2];
-        ctx.fill(chemins[2]);
+        chemins.forEach((chemin, i) => {
+            ctx.fillStyle = this.couleurs[i];
+            ctx.fill(chemin);
+        });
+    }
+
+    /** Fond blanc (contraste du QR) et repères du QR : carrés arrondis pleins, fixes. */
+    dessinerFond() {
+        const { ctx, echelle: e } = this;
+        const X = (x) => this.origineX + x * e, Y = (y) => this.origineY + y * e;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(X(this.boite.x), Y(this.boite.y), this.boite.l * e, this.boite.h * e);
+
+        const reperes = new Path2D();
+        const m = this.qr.module * e;
+        for (const f of this.formes) {
+            reperes.roundRect(X(f.x), Y(f.y), f.l * e, f.h * e, f.rayon * e);
+            if (f.creux) reperes.roundRect(X(f.x) + m, Y(f.y) + m, f.l * e - 2 * m, f.h * e - 2 * m, Math.max(0, f.rayon * e - m));
+        }
+        ctx.fillStyle = this.couleurReperes;
+        ctx.fill(reperes, 'evenodd');
     }
 
     /** Gonflement du cœur à l'instant t : deux pulsations rapprochées, puis repos. */
@@ -248,6 +298,7 @@ export function monterEmpreintes(racine = document) {
         element.trackEmpreinte = new Empreinte(element, {
             graine: element.dataset.graine || 'track',
             statique: element.hasAttribute('data-statique'),
+            matrice: element.dataset.matrice ? JSON.parse(element.dataset.matrice) : null,
         });
     });
 }

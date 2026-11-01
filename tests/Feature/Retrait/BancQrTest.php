@@ -26,7 +26,7 @@ test("le banc d'essai montre de vrais billets et des codes piégés", function (
         ->assertSee('Billets valides')
         ->assertSee('Codes piégés')
         ->assertSee('Signature fausse')
-        ->assertSee('data-track', false)
+        ->assertSee('data-matrice', false)
         ->assertSee('<svg', false);
 });
 
