@@ -3,12 +3,14 @@
 use App\Models\Course;
 use App\Models\Declinaison;
 use App\Models\Evenement;
+use App\Models\Inscription;
 use App\Models\InscriptionDeclinaison;
 use App\Models\JournalAdmin;
 use App\Models\OptionEvenement;
 use App\Models\Tarif;
 use App\Models\TexteLegal;
 use App\Models\User;
+use App\Services\Admin\DupliquerEvenement;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,7 +18,7 @@ beforeEach(function () {
     Storage::fake('local');
 });
 
-test("lot 2 : un admin crée de zéro une course fictive complète", function () {
+test('lot 2 : un admin crée de zéro une course fictive complète', function () {
     $this->actingAs($admin = admin(3));
 
     // 1. L'événement
@@ -135,7 +137,7 @@ test('les plages de dossards de deux courses ne se chevauchent pas', function ()
     ])->assertSessionHasNoErrors();
 });
 
-test("une plage de dossards ne peut pas être plus petite que le quota", function () {
+test('une plage de dossards ne peut pas être plus petite que le quota', function () {
     $this->seed();
     $evenement = Evenement::first();
     $course = fn (array $d) => ['nom' => 'Relais', 'heure_depart' => '12:00', ...$d];
@@ -149,7 +151,7 @@ test("une plage de dossards ne peut pas être plus petite que le quota", functio
         ->assertSessionHasNoErrors();
 });
 
-test("places illimitées avec une plage finie, ou quota sans plage : avertissement non bloquant", function () {
+test('places illimitées avec une plage finie, ou quota sans plage : avertissement non bloquant', function () {
     $this->seed();
     $marche = Course::where('nom', 'Marche 5 km')->first(); // places illimitées, plage 3000-3999
 
@@ -162,7 +164,7 @@ test("places illimitées avec une plage finie, ou quota sans plage : avertisseme
     expect(Course::where('nom', 'Course 10 km')->first()->avertissementDossards())->toBeNull(); // 150 places, 1000 dossards
 });
 
-test("une plage ne peut pas exclure des dossards déjà attribués", function () {
+test('une plage ne peut pas exclure des dossards déjà attribués', function () {
     $this->seed();
     $course = Course::where('nom', 'Course 10 km')->first();
     inscriptionPayee(User::factory()->create(), $course)->update(['dossard' => 1500]);
@@ -187,7 +189,7 @@ test("règles d'âge : le maximum ne peut pas être inférieur au minimum", func
     ])->assertSessionHasErrors('age_max');
 });
 
-test("une course, un tarif ou une taille déjà utilisés ne se suppriment pas", function () {
+test('une course, un tarif ou une taille déjà utilisés ne se suppriment pas', function () {
     $this->seed();
     $course = Course::where('nom', 'Course 5 km')->first();
     $inscription = inscriptionPayee(User::factory()->create(), $course);
@@ -212,7 +214,7 @@ test("une course, un tarif ou une taille déjà utilisés ne se suppriment pas",
         ->and(Tarif::where('id_course', $libre->id_course)->exists())->toBeFalse();
 });
 
-test("dupliquer un événement copie courses, tarifs, options et textes, un an plus tard", function () {
+test('dupliquer un événement copie courses, tarifs, options et textes, un an plus tard', function () {
     $this->seed();
     $source = Evenement::first();
     Storage::disk('local')->put('textes-legaux/reglement-rfl3-v1.pdf', '%PDF');
@@ -233,7 +235,7 @@ test("dupliquer un événement copie courses, tarifs, options et textes, un an p
     Storage::disk('local')->assertExists(TexteLegal::chemin($copie, 'reglement', 1));
 });
 
-test("le paramétrage est en lecture seule sous le niveau 3", function () {
+test('le paramétrage est en lecture seule sous le niveau 3', function () {
     $this->seed();
     $evenement = Evenement::first();
     $course = Course::first();
@@ -314,9 +316,9 @@ test("pas d'événement dans le passé, ni d'inscriptions qui ferment après lui
 });
 
 test('dupliquer incrémente le numéro du nom, ou en ajoute un', function () {
-    expect(\App\Services\Admin\DupliquerEvenement::nomSuivant('Run For Lorène 3'))->toBe('Run For Lorène 4')
-        ->and(\App\Services\Admin\DupliquerEvenement::nomSuivant('RFL 2027'))->toBe('RFL 2028')
-        ->and(\App\Services\Admin\DupliquerEvenement::nomSuivant('Course solidaire'))->toBe('Course solidaire 2');
+    expect(DupliquerEvenement::nomSuivant('Run For Lorène 3'))->toBe('Run For Lorène 4')
+        ->and(DupliquerEvenement::nomSuivant('RFL 2027'))->toBe('RFL 2028')
+        ->and(DupliquerEvenement::nomSuivant('Course solidaire'))->toBe('Course solidaire 2');
 });
 
 test("une édition clôturée est signalée dans l'admin et retirée du site", function () {
@@ -363,7 +365,7 @@ test('un événement en brouillon sans inscription se supprime avec tout son par
     expect(Evenement::find($source->id_evenement))->not->toBeNull();
 });
 
-test("un événement publié, ou qui a une inscription, ne se supprime pas", function () {
+test('un événement publié, ou qui a une inscription, ne se supprime pas', function () {
     $this->seed();
     $publie = Evenement::first();
 
@@ -372,9 +374,26 @@ test("un événement publié, ou qui a une inscription, ne se supprime pas", fun
     $this->delete("/admin/evenements/{$publie->id_evenement}")->assertSessionHas('erreur');
 
     $publie->update(['statut' => Evenement::BROUILLON]);
-    inscriptionPayee(User::factory()->create(), Course::first(), App\Models\Inscription::BROUILLON);
+    inscriptionPayee(User::factory()->create(), Course::first(), Inscription::BROUILLON);
     $this->delete("/admin/evenements/{$publie->id_evenement}")->assertSessionHas('erreur');
 
     $this->actingAs(admin(2))->delete("/admin/evenements/{$publie->id_evenement}")->assertForbidden();
     expect(Evenement::find($publie->id_evenement))->not->toBeNull();
+});
+
+test("chaque course a sa couleur, choisie librement, visible à l'écran de retrait", function () {
+    $this->seed();
+    $course = Course::where('nom', 'Course 10 km')->first();
+    $champs = ['nom' => $course->nom, 'heure_depart' => '10:00', 'age_min' => '16', 'quota' => '150', 'dossard_debut' => '1000', 'dossard_fin' => '1999'];
+
+    $this->actingAs(admin(3));
+    $this->get("/admin/courses/{$course->id_course}")->assertOk()->assertSee('Couleur de la course');
+    $this->put("/admin/courses/{$course->id_course}", [...$champs, 'couleur' => 'rouge'])->assertSessionHasErrors('couleur');
+    $this->put("/admin/courses/{$course->id_course}", [...$champs, 'couleur' => '#C2185B'])->assertSessionHasNoErrors();
+    expect($course->fresh()->couleur)->toBe('#C2185B');
+
+    $inscription = inscriptionPayee(User::factory()->create(['prenom' => 'Jules', 'nom' => 'Ferry']), $course);
+    $inscription->update(['dossard' => 1001]);
+    $this->get('/admin/retrait?q=1001')->assertSee('data-couleur="#C2185B"', false)->assertSee('background-color: #C2185B', false);
+    $this->get('/admin/inscriptions')->assertSee('data-couleur="#C2185B"', false);
 });

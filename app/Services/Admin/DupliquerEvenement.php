@@ -39,7 +39,7 @@ class DupliquerEvenement
 
             foreach ($source->courses as $course) {
                 $nouvelle = $copie->courses()->create($course->only([
-                    'nom', 'distance', 'heure_depart', 'age_min', 'age_max', 'quota', 'dossard_debut', 'dossard_fin',
+                    'nom', 'couleur', 'distance', 'heure_depart', 'age_min', 'age_max', 'quota', 'dossard_debut', 'dossard_fin',
                 ]));
 
                 foreach ($course->tarifs as $tarif) {

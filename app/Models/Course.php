@@ -9,12 +9,16 @@ use Illuminate\Support\Carbon;
 
 class Course extends Model
 {
+    /** Couleur proposée à la création d'une course (vert profond de la charte), modifiable. */
+    public const COULEUR_DEFAUT = '#006B61';
+
     protected $table = 'courses';
 
     protected $primaryKey = 'id_course';
 
     protected $fillable = [
         'nom',
+        'couleur',
         'distance',
         'heure_depart',
         'age_min',

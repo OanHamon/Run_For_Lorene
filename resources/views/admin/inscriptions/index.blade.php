@@ -88,7 +88,7 @@
                                         @if ($i->participant->responsable) · géré par {{ $i->participant->responsable->name }} @endif
                                     </span>
                                 </td>
-                                <td>{{ $i->tarif->course->nom }}</td>
+                                <td><span class="flex items-center gap-2"><x-course-couleur :course="$i->tarif->course" />{{ $i->tarif->course->nom }}</span></td>
                                 <td><x-admin.statut :inscription="$i" /></td>
                                 <td class="text-right font-bold">{{ $i->dossard ?? '–' }}</td>
                                 <td>

@@ -27,7 +27,8 @@
             <fieldset @disabled(! $peutModifier)>
                 <legend class="mb-4 font-display text-vert">Course</legend>
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <x-admin.champ name="nom" label="Nom" :value="$course->nom" required maxlength="100" class="sm:col-span-2" />
+                    <x-admin.champ name="nom" label="Nom" :value="$course->nom" required maxlength="100" />
+                    <x-admin.champ name="couleur" label="Couleur de la course" type="color" :value="$course->couleur ?? \App\Models\Course::COULEUR_DEFAUT" required class="[&_input]:h-11 [&_input]:w-24 [&_input]:cursor-pointer [&_input]:p-1" aide="Repère du jour J : bracelet, dossard, scan." />
                     <x-admin.champ name="heure_depart" label="Heure de départ" type="time" :value="$course->heure_depart ? substr($course->heure_depart, 0, 5) : null" required />
                     <x-admin.champ name="distance" label="Distance (km, facultatif)" type="number" step="0.01" min="0" :value="$course->distance" />
                     <x-admin.champ name="age_min" label="Âge minimum" type="number" min="0" max="120" :value="$course->age_min" :readonly="$verrouillee" :aide="$verrouillee ? 'Figé : la course a des inscrits.' : 'Vide : pas de minimum. Âge le jour de l\'événement.'" />

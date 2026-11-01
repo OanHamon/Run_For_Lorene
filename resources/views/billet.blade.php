@@ -8,7 +8,7 @@
         <div class="text-center">
             <p class="text-sm text-gris-texte">{{ $inscription->evenement->nom }} · {{ $inscription->evenement->date_evenement->translatedFormat('l j F Y') }}</p>
             <h1 class="mt-1 font-display text-2xl text-vert">{{ $inscription->participant->user->prenom }} {{ $inscription->participant->user->nom }}</h1>
-            <p class="mt-1 text-sm text-vert-sombre">{{ $course->nom }} · départ {{ \Illuminate\Support\Carbon::parse($course->heure_depart)->format('G\hi') }}</p>
+            <p class="mt-1 flex items-center justify-center gap-2 text-sm text-vert-sombre"><x-course-couleur :course="$course" />{{ $course->nom }} · départ {{ \Illuminate\Support\Carbon::parse($course->heure_depart)->format('G\hi') }}</p>
 
             <div class="mx-auto mt-6 w-fit rounded-3xl bg-white p-4 ring-1 ring-bordure" aria-label="QR code du billet">{!! $qr !!}</div>
 

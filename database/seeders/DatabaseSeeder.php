@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
         $courses = [
             [
                 'nom' => 'Course 10 km',
+                'couleur' => '#006B61',
                 'distance' => 10,
                 'heure_depart' => '10:00:00',
                 'age_min' => 16,
@@ -42,6 +43,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'nom' => 'Course 5 km',
+                'couleur' => '#D9B21E',
                 'distance' => 5,
                 'heure_depart' => '10:30:00',
                 'age_min' => 12,
@@ -53,6 +55,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'nom' => 'Marche 5 km',
+                'couleur' => '#5FBAAE',
                 'distance' => 5,
                 'heure_depart' => '11:00:00',
                 'age_min' => null,
@@ -64,6 +67,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'nom' => 'Course enfants',
+                'couleur' => '#E8743B',
                 'distance' => null,
                 'heure_depart' => '09:30:00',
                 'age_min' => 6,
@@ -78,6 +82,7 @@ class DatabaseSeeder extends Seeder
         foreach ($courses as $data) {
             $course = Course::create([
                 'nom' => $data['nom'],
+                'couleur' => $data['couleur'],
                 'distance' => $data['distance'],
                 'heure_depart' => $data['heure_depart'],
                 'age_min' => $data['age_min'],
