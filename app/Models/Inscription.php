@@ -79,6 +79,12 @@ class Inscription extends Model
         return $this->belongsTo(Evenement::class, 'id_evenement', 'id_evenement');
     }
 
+    /** Notes internes des admins, la plus récente d'abord. */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(NoteInterne::class, 'id_inscription', 'id_inscription')->orderByDesc('id_note');
+    }
+
     /** Relances envoyées depuis l'admin pour cette inscription, la plus récente d'abord. */
     public function relances(): BelongsToMany
     {

@@ -7,9 +7,11 @@ use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\DonController;
 use App\Http\Controllers\Admin\EvenementController;
 use App\Http\Controllers\Admin\EvenementSuiviController;
+use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\InscriptionController;
 use App\Http\Controllers\Admin\InscriptionGratuiteController;
 use App\Http\Controllers\Admin\JournalController;
+use App\Http\Controllers\Admin\NoteInterneController;
 use App\Http\Controllers\Admin\OptionController;
 use App\Http\Controllers\Admin\QuestionnaireController;
 use App\Http\Controllers\Admin\RechercheController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Admin\RetraitController;
 use App\Http\Controllers\Admin\StatistiquesController;
 use App\Http\Controllers\Admin\TableauController;
 use App\Http\Controllers\Admin\TarifController;
+use App\Http\Controllers\Admin\TechniqueController;
 use App\Http\Controllers\Admin\TexteLegalController;
 use App\Http\Controllers\Admin\UtilisateurController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +42,9 @@ Route::get('recherche', RechercheController::class)->middleware('throttle:60,1')
 Route::post('evenement-suivi', EvenementSuiviController::class)->name('evenement-suivi');
 Route::get('journal', JournalController::class)->name('journal');
 Route::get('remboursements', [RemboursementController::class, 'index'])->name('remboursements.index');
+Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
+Route::get('exports/emargement', [ExportController::class, 'emargement'])->name('exports.emargement');
+Route::get('exports/retraits', [ExportController::class, 'retraits'])->name('exports.retraits');
 
 // Suivi des inscriptions : consultation et exports pour tous les admins, actions au niveau 2.
 Route::get('inscriptions', [InscriptionController::class, 'index'])->name('inscriptions.index');
@@ -76,6 +82,7 @@ Route::middleware('admin:2')->group(function () {
     Route::put('inscriptions/{inscription}/dossard', [InscriptionController::class, 'dossard'])->name('inscriptions.dossard');
     Route::post('inscriptions/{inscription}/dossard', [InscriptionController::class, 'attribuerDossard'])->name('inscriptions.attribuer-dossard');
     Route::post('inscriptions/{inscription}/annuler', [InscriptionController::class, 'annuler'])->name('inscriptions.annuler');
+    Route::post('inscriptions/{inscription}/notes', [NoteInterneController::class, 'store'])->middleware('throttle:30,1')->name('inscriptions.notes.store');
     Route::post('inscriptions/{inscription}/relancer', [InscriptionController::class, 'relancer'])->name('inscriptions.relancer');
 });
 
@@ -126,6 +133,7 @@ Route::middleware('admin:3')->group(function () {
     Route::post('evenements/{evenement}/textes', [TexteLegalController::class, 'store'])->name('textes.store');
 
     Route::get('admins', [AdminsController::class, 'index'])->name('admins.index');
+    Route::get('technique', TechniqueController::class)->name('technique');
 
     Route::get('utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
     Route::get('utilisateurs/{utilisateur}', [UtilisateurController::class, 'show'])->whereNumber('utilisateur')->name('utilisateurs.show');

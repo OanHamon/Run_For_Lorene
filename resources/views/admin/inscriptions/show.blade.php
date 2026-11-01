@@ -224,6 +224,32 @@
         </section>
     </div>
 
+    {{-- Notes internes : jamais visibles du participant. --}}
+    <section id="notes" class="mt-6 rfl-carte p-6" aria-labelledby="titre-notes">
+        <h2 id="titre-notes" class="mb-1 font-display text-vert">Notes internes</h2>
+        <p class="mb-4 text-sm text-gris-texte">Visibles des seuls admins. Pas de donnée de santé ici : elles restent dans le questionnaire.</p>
+        @php($notes = $i->notes()->with('auteur')->get())
+        @if ($notes->isNotEmpty())
+            <ul class="mb-4 space-y-3">
+                @foreach ($notes as $note)
+                    <li class="rounded-2xl bg-fond px-4 py-3 text-sm">
+                        <p class="whitespace-pre-line">{{ $note->texte }}</p>
+                        <p class="mt-1 text-xs text-gris-texte">{{ $note->auteur->name }} · {{ $note->created_at->format('d/m/Y H:i') }}</p>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+        @if ($peutGerer)
+            <form method="POST" action="{{ route('admin.inscriptions.notes.store', $i) }}" class="space-y-2">
+                @csrf
+                <label for="note-texte" class="sr-only">Nouvelle note</label>
+                <textarea id="note-texte" name="texte" rows="2" maxlength="2000" required placeholder="Appelé le 12/03, rappelle demain…" class="rfl-champ-compact">{{ old('texte') }}</textarea>
+                @error('texte', 'note')<p class="rfl-erreur">{{ $message }}</p>@enderror
+                <button type="submit" class="rfl-btn-secondaire px-4 py-2 text-sm">Ajouter la note</button>
+            </form>
+        @endif
+    </section>
+
     @php($relancesRecues = $i->relances()->with('admin')->get())
     @if ($relancesRecues->isNotEmpty())
         <section class="mt-6 rfl-carte p-6" data-test="relances-recues">
