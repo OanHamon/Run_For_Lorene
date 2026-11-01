@@ -24,8 +24,9 @@ use Illuminate\View\View;
  * un assistant en quatre étapes (quel message, à qui, quand, vérifier), des choix en français
  * plutôt que des filtres, un aperçu personnalisé avant tout envoi.
  *
- * « Quand » : tout de suite, ou programmé (un jour précis, N jours avant l'événement, tous
- * les N jours sur une période). Les deux relances automatiques du site (documents, paiement)
+ * « Quand » : tout de suite, ou programmé (un jour et une heure précis, ou tous les N jours
+ * sur une période). Le « N jours avant l'événement » a été retiré (trop abstrait, réunion du
+ * 01/11/2026) : une ancienne relance de ce type se rouvre en date précise. Les deux relances automatiques du site (documents, paiement)
  * se règlent aussi ici.
  */
 class RelanceController extends Controller
@@ -72,10 +73,11 @@ class RelanceController extends Controller
             'qui' => $cible['qui'] ?? 'tous',
             'course' => $cible['course'] ?? null,
             'inscription' => $cible['inscription'] ?? null,
-            'quand' => $programmee->quand,
-            'date_jour' => $programmee->date_envoi?->toDateString(),
+            'quand' => $programmee->quand === 'avant' ? 'date' : $programmee->quand,
+            'date_jour' => $programmee->quand === 'avant'
+                ? $programmee->evenement->date_evenement->copy()->subDays((int) $programmee->jours_avant)->toDateString()
+                : $programmee->date_envoi?->toDateString(),
             'heure' => substr((string) $programmee->heure, 0, 5),
-            'jours_avant' => $programmee->jours_avant,
             'tous_les' => $programmee->tous_les,
             'repetee_du' => $programmee->repetee_du?->toDateString(),
             'repetee_au' => $programmee->repetee_au?->toDateString(),
@@ -194,10 +196,9 @@ class RelanceController extends Controller
             'course' => isset($entree['course']) && $entree['course'] !== '' ? (int) $entree['course'] : null,
             'inscription' => $inscription,
             'chercher' => trim((string) ($entree['chercher'] ?? '')),
-            'quand' => in_array($entree['quand'] ?? null, ['maintenant', 'date', 'avant', 'repetee'], true) ? $entree['quand'] : 'maintenant',
+            'quand' => in_array($entree['quand'] ?? null, ['maintenant', 'date', 'repetee'], true) ? $entree['quand'] : 'maintenant',
             'date_jour' => $entree['date_jour'] ?? null,
             'heure' => $entree['heure'] ?? '10:00',
-            'jours_avant' => $entree['jours_avant'] ?? 7,
             'tous_les' => $entree['tous_les'] ?? 7,
             'repetee_du' => $entree['repetee_du'] ?? today()->toDateString(),
             'repetee_au' => $entree['repetee_au'] ?? null,
@@ -213,10 +214,9 @@ class RelanceController extends Controller
             'qui' => ['required', 'in:'.implode(',', array_keys(ModelesRelance::QUI))],
             'inscription' => ['nullable', 'integer', 'required_if:qui,personne'],
             'course' => ['nullable', 'integer'],
-            'quand' => ['required', 'in:maintenant,date,avant,repetee'],
+            'quand' => ['required', 'in:maintenant,date,repetee'],
             'heure' => ['exclude_if:quand,maintenant', 'required', 'date_format:H:i'],
             'date_jour' => ['exclude_unless:quand,date', 'required', 'date'],
-            'jours_avant' => ['exclude_unless:quand,avant', 'required', 'integer', 'min:1', 'max:120'],
             'tous_les' => ['exclude_unless:quand,repetee', 'required', 'integer', 'min:1', 'max:60'],
             'repetee_du' => ['exclude_unless:quand,repetee', 'required', 'date'],
             'repetee_au' => ['exclude_unless:quand,repetee', 'required', 'date', 'after_or_equal:repetee_du'],
@@ -226,7 +226,6 @@ class RelanceController extends Controller
             'inscription.required_if' => 'Cherche la personne par son nom, puis choisis-la dans la liste.',
             'heure.*' => 'Indique l\'heure d\'envoi, par exemple 10:00.',
             'date_jour.*' => 'Choisis le jour de l\'envoi.',
-            'jours_avant.*' => 'Indique un nombre de jours entre 1 et 120.',
             'tous_les.*' => 'Indique tous les combien de jours (entre 1 et 60).',
             'repetee_du.*' => 'Choisis le premier jour.',
             'repetee_au.*' => 'Choisis le dernier jour (le même jour ou après le premier).',
@@ -244,7 +243,6 @@ class RelanceController extends Controller
         $programmation = $this->programmation($etat);
         $premier = match ($etat['quand']) {
             'date' => CarbonImmutable::parse($programmation['date_envoi']),
-            'avant' => CarbonImmutable::parse($evenement->date_evenement->copy()->subDays((int) $etat['jours_avant'])->toDateString().' '.$etat['heure']),
             'repetee' => CarbonImmutable::parse($etat['repetee_au'].' '.$etat['heure']),
         };
 
@@ -263,7 +261,7 @@ class RelanceController extends Controller
             'quand' => $etat['quand'],
             'heure' => $etat['heure'].':00',
             'date_envoi' => $etat['quand'] === 'date' ? $etat['date_jour'].' '.$etat['heure'].':00' : null,
-            'jours_avant' => $etat['quand'] === 'avant' ? (int) $etat['jours_avant'] : null,
+            'jours_avant' => null,
             'tous_les' => $etat['quand'] === 'repetee' ? (int) $etat['tous_les'] : null,
             'repetee_du' => $etat['quand'] === 'repetee' ? $etat['repetee_du'] : null,
             'repetee_au' => $etat['quand'] === 'repetee' ? $etat['repetee_au'] : null,
@@ -312,9 +310,7 @@ class RelanceController extends Controller
         $p->setRelation('evenement', $evenement);
         $premier = $p->prochaine()?->translatedFormat('l j F Y \\à G\\hi');
 
-        // La vraie date d'abord : plus parlant que « 7 jours avant ».
         return match ($etat['quand']) {
-            'avant' => "le {$premier} ({$p->jours_avant} jour(s) avant l'événement)",
             'repetee' => "le {$premier}, puis tous les {$p->tous_les} jour(s) jusqu'au ".$p->repetee_au->translatedFormat('j F Y'),
             default => lcfirst($p->enClair()),
         };

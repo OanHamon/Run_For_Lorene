@@ -16,6 +16,17 @@
                     <span class="rfl-badge bg-erreur-fond text-erreur">Dossier incomplet</span>
                 @endif
             </div>
+            {{-- Notes internes (« diabétique »…) : indicateur discret, le texte se déplie au besoin. --}}
+            @if ($i->notes->isNotEmpty())
+                <details class="mt-2 text-sm" data-test="notes-retrait">
+                    <summary class="cursor-pointer text-vert-sombre"><span class="rfl-badge bg-vert-clair text-vert">Note · {{ $i->notes->count() }}</span></summary>
+                    <ul class="mt-2 space-y-1 rounded-2xl bg-white p-3 ring-1 ring-bordure">
+                        @foreach ($i->notes as $note)
+                            <li class="whitespace-pre-line text-vert-sombre">{{ $note->texte }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
         </div>
         @if ($i->dossard)
             <div class="rounded-2xl bg-vert px-4 py-2 text-center">

@@ -30,11 +30,10 @@
         @endif
 
         {{-- L'essentiel : inscrits par statut et recettes encaissées --}}
-        <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
             @foreach ([
                 [Inscription::VALIDEE, 'Validées', 'inscriptions avec dossard'],
                 [Inscription::DOSSIER_INCOMPLET, 'Dossiers incomplets', 'payées, documents manquants'],
-                [Inscription::EN_ATTENTE_PAIEMENT, 'En attente de paiement', 'commandes non réglées'],
             ] as [$statut, $libelle, $aide])
                 @php($lien = $lienInscriptions(['statut' => $statut]))
                 <a @if ($lien) href="{{ $lien }}" @endif class="rfl-carte block p-4 {{ $lien ? 'hover:bg-fond/60' : '' }}">

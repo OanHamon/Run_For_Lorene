@@ -67,10 +67,11 @@ class InscriptionGratuiteController extends Controller
             'date_naissance_titulaire' => ['nullable', 'date', 'before:today', 'after:1900-01-01'],
             'id_course' => ['required', Rule::exists('courses', 'id_course')->where('id_evenement', $evenement->id_evenement)],
             'consentements' => ['accepted'],
-            'motif' => ['nullable', 'string', 'max:255'],
+            'motif' => ['required', 'string', 'max:255'],
             'prevenir' => ['boolean'],
         ], [
             'participant.required' => 'Choisis qui participe.',
+            'motif.required' => 'Indique pourquoi cette inscription est offerte (partenaire, bénévole, cas particulier…).',
             'consentements.accepted' => 'Le règlement et la politique de protection des données doivent avoir été acceptés.',
         ]);
 
@@ -80,7 +81,7 @@ class InscriptionGratuiteController extends Controller
             'participant' => $inscription->participant->user->name,
             'course' => $inscription->tarif->course->nom,
             'titulaire' => $inscription->titulaire()?->email,
-            'motif' => $donnees['motif'] ?? null,
+            'motif' => $donnees['motif'],
         ]);
 
         $titulaire = $inscription->titulaire();

@@ -272,3 +272,9 @@ test("reprise par l'admin d'une inscription payée puis annulée : l'ancienne co
         ->and($reprise->details['commande précédente'])->toBe($commandePayee)
         ->and($ancienne->fresh()->id_commande)->not->toBe($commandePayee);
 });
+
+test('le motif est obligatoire', function () {
+    $this->actingAs(admin(2))->post('/admin/inscriptions/gratuite', gratuite(['motif' => '']))->assertSessionHasErrors('motif');
+
+    expect(Inscription::count())->toBe(0);
+});
