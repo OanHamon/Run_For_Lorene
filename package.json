@@ -2,7 +2,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "test:track": "node tests/js/track-qr.mjs",
+        "test:track": "node tests/js/track-code.mjs",
         "build": "vite build",
         "dev": "vite"
     },
