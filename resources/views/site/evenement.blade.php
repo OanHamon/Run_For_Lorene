@@ -4,6 +4,7 @@
     @include('partials.head', ['title' => 'Run For Lorène · RFL3'])
 </head>
 <body class="bg-white font-sans text-vert-sombre antialiased">
+    @include('partials.bandeau-beta')
 
     <header class="bg-white">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-4 sm:px-8">

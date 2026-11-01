@@ -53,6 +53,9 @@ class TechniqueController extends Controller
             ['libelle' => 'File d\'attente', 'valeur' => (string) config('queue.default'), 'ok' => config('queue.default') !== 'sync' || ! $prod, 'aide' => 'Un worker doit tourner (queue:work) pour envoyer les emails.'],
             ['libelle' => 'Paiement', 'valeur' => config('paiement.passerelle') === 'stripe' ? 'Stripe' : 'simulation', 'ok' => config('paiement.passerelle') === 'stripe' || ! $prod, 'aide' => 'Sans clé Stripe, le paiement est simulé.'],
             ['libelle' => 'Signature des webhooks Stripe', 'valeur' => config('services.stripe.webhook_secret') ? 'configurée' : 'absente', 'ok' => (bool) config('services.stripe.webhook_secret') || config('paiement.passerelle') !== 'stripe', 'aide' => 'Sans elle, les paiements ne sont jamais confirmés.'],
+            ['libelle' => 'Mode beta', 'valeur' => config('rfl.beta') ? 'activé' : 'désactivé',
+                'ok' => ! (config('rfl.beta') && str_starts_with((string) config('services.stripe.secret'), 'sk_live')),
+                'aide' => 'En beta, Stripe doit rester en mode test (clé sk_test_…) : sinon les testeurs paieraient pour de vrai.'],
             ['libelle' => 'Codes de connexion dans les logs', 'valeur' => config('auth.otp_dans_les_logs') ? 'oui' : 'non', 'ok' => ! ($prod && config('auth.otp_dans_les_logs')), 'aide' => 'Réservé au poste de développement (ignoré en production).'],
         ];
     }

@@ -7,6 +7,7 @@
     @include('partials.head', ['title' => $title.' · Run For Lorène'])
 </head>
 <body class="bg-fond font-sans text-vert-sombre antialiased">
+    @include('partials.bandeau-beta')
     {{-- Barre mobile --}}
     <div class="flex items-center justify-between rounded-b-[28px] bg-white px-5 py-3 ring-1 ring-bordure lg:hidden">
         <a href="{{ route('espace') }}"><img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-10 w-auto"></a>

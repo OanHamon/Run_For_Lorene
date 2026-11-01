@@ -21,4 +21,12 @@ return [
     | l'IP des consentements serait fausse. Vide : aucun proxy.
     */
     'proxies_de_confiance' => env('TRUSTED_PROXIES'),
+
+    /*
+    | Beta test interne (mi-décembre 2026) : bandeau « Version de test » sur toutes les pages,
+    | avec le lien vers le questionnaire de feedback. Les paiements passent par Stripe en mode
+    | test (clés sk_test_…) : rien n'est débité. L'état technique signale une clé live.
+    */
+    'beta' => (bool) env('RFL_BETA', false),
+    'beta_feedback' => env('RFL_BETA_FEEDBACK_URL'),
 ];

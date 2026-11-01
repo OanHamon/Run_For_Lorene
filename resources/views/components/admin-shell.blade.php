@@ -20,6 +20,7 @@
     {{ $head ?? '' }}
 </head>
 <body class="bg-fond-admin font-sans text-vert-sombre antialiased">
+    @include('partials.bandeau-beta')
     {{-- Navigation en vert sombre ; le logo couleur reste sur une pastille blanche (jamais sur du vert, charte). --}}
 
     {{-- Barre mobile : logo, événement, recherche, puis rubriques en pilules défilantes --}}
