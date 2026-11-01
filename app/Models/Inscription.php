@@ -105,6 +105,21 @@ class Inscription extends Model
     }
 
     /** Participants mineurs le jour de l'événement (moins de 18 ans à cette date). */
+    /**
+     * Inscriptions d'un compte : celles qu'il a payées, celles de ses participants gérés et la
+     * sienne. Le compte titulaire d'une inscription est celui de la commande, à défaut le
+     * responsable du participant, à défaut le participant (comme titulaire()).
+     */
+    public function scopeDuCompte(Builder $query, int $idUser): void
+    {
+        $query->where(fn ($q) => $q->whereHas('commande', fn ($c) => $c->where('id_user', $idUser))
+            ->orWhereHas('participant', fn ($p) => $p->where('id_responsable', $idUser)->orWhere('participants.id_user', $idUser)));
+    }
+
+    /** Expression SQL du compte titulaire, pour regrouper la liste par compte. */
+    public const SQL_COMPTE = 'coalesce((select c.id_user from commandes c where c.id_commande = inscriptions.id_commande), '
+        .'(select p.id_responsable from participants p where p.id_user = inscriptions.id_participant), inscriptions.id_participant)';
+
     public function scopeMineurs(Builder $query, Evenement $evenement): void
     {
         $query->whereHas('participant', fn ($q) => $q->whereDate('date_naissance', '>', $evenement->date_evenement->copy()->subYears(18)));

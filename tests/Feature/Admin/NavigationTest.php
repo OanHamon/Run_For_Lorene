@@ -16,7 +16,7 @@ beforeEach(function () {
 
 test('la barre latérale est découpée en sections, selon le niveau d\'accès', function () {
     $this->actingAs(admin(3))->get('/admin')->assertOk()
-        ->assertSeeInOrder(['Pilotage', 'Tableau de bord', 'À traiter', 'Participants', 'Inscriptions', 'Comptes', 'Événement', 'Courses et tarifs', 'Textes et documents', 'Finances', 'Commandes et paiements', 'Remboursements', 'Dons et reçus', 'Administration', 'Admins et accès', 'Journal']);
+        ->assertSeeInOrder(['Pilotage', 'Tableau de bord', 'À traiter', 'Participants', 'Inscriptions', 'Événement', 'Courses et tarifs', 'Textes et documents', 'Finances', 'Commandes et paiements', 'Remboursements', 'Dons et reçus', 'Administration', 'Admins et accès', 'Journal']);
 
     $this->actingAs(admin(1))->get('/admin')->assertOk()
         ->assertDontSee('Questionnaires de santé')

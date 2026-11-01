@@ -2,7 +2,8 @@
     use App\Models\Inscription;
     use App\Support\Format;
 
-    $filtres = request()->only(['q', 'course', 'statut', 'mineur', 'documents', 'sante']);
+    $filtres = request()->only(['q', 'course', 'statut', 'mineur', 'documents', 'sante', 'compte']);
+    $superAdmin = auth()->user()->peutAdmin(3);
     $peutGerer = auth()->user()->peutAdmin(2);
 @endphp
 <x-admin-shell title="Inscriptions">
@@ -17,6 +18,30 @@
     @if (! $evenement)
         <div class="rfl-carte px-6 py-10 text-center text-gris-texte">Aucun événement.</div>
     @else
+        {{-- Deux lectures de la même liste : une ligne par coureur, ou une ligne par compte (famille, entreprise…). --}}
+        <nav class="mb-4 flex flex-wrap items-center gap-2" aria-label="Affichage">
+            @foreach (['inscriptions' => 'Par inscription', 'comptes' => 'Par compte'] as $cle => $libelle)
+                <a href="{{ route('admin.inscriptions.index', [...$filtres, 'vue' => $cle === 'comptes' ? 'comptes' : null]) }}"
+                    @if ($vue === $cle) aria-current="page" @endif
+                    class="rounded-full px-4 py-2 text-sm font-bold ring-1 {{ $vue === $cle ? 'bg-vert text-white ring-vert' : 'bg-white text-vert ring-bordure hover:bg-fond' }}">{{ $libelle }}</a>
+            @endforeach
+            @if ($superAdmin && Route::has('admin.utilisateurs.index'))
+                <a href="{{ route('admin.utilisateurs.index') }}" class="ml-auto rfl-lien text-sm">Tous les comptes, même sans inscription</a>
+            @endif
+        </nav>
+
+        @if ($compte)
+            <div class="rfl-alerte-info mb-4 flex flex-wrap items-center justify-between gap-3 text-sm" role="status" data-test="filtre-compte">
+                <p>Compte de <strong>{{ $compte->name }}</strong>@if ($compte->email) · {{ $compte->email }}@endif : ses inscriptions et celles des participants qu'il gère.</p>
+                <div class="flex flex-wrap gap-4">
+                    @if ($superAdmin)
+                        <a href="{{ route('admin.utilisateurs.show', $compte) }}" class="rfl-lien">Gérer le compte</a>
+                    @endif
+                    <a href="{{ route('admin.inscriptions.index', \Illuminate\Support\Arr::except($filtres, 'compte') + ['vue' => $vue === 'comptes' ? 'comptes' : null]) }}" class="rfl-lien">Voir tous les comptes</a>
+                </div>
+            </div>
+        @endif
+
         <form method="GET" class="rfl-carte mb-6 grid gap-4 p-5 sm:grid-cols-2 {{ $peutGerer ? 'xl:grid-cols-[2fr_1fr_1fr_1fr_auto_auto]' : 'xl:grid-cols-[2fr_1fr_1fr_auto_auto]' }}" role="search">
             <div>
                 <label for="q" class="rfl-label">Rechercher</label>
@@ -56,6 +81,8 @@
                 <label class="flex items-center gap-2"><input type="checkbox" name="mineur" value="1" @checked(request()->boolean('mineur'))> Mineurs</label>
                 <label class="flex items-center gap-2"><input type="checkbox" name="documents" value="1" @checked(request()->boolean('documents'))> Documents manquants</label>
             </fieldset>
+            @if ($vue === 'comptes')<input type="hidden" name="vue" value="comptes">@endif
+            @if ($compte)<input type="hidden" name="compte" value="{{ $compte->id_user }}">@endif
             <div class="flex items-end gap-2">
                 <button type="submit" class="rfl-btn px-5 py-2.5 text-sm">Filtrer</button>
                 @if (array_filter($filtres))
@@ -64,6 +91,44 @@
             </div>
         </form>
 
+        @if ($vue === 'comptes')
+            <div class="rfl-carte overflow-hidden" data-test="vue-comptes">
+                <p class="px-6 py-4 text-sm text-gris-texte"><span class="font-bold text-vert-sombre">{{ $comptes->total() }}</span> compte(s)</p>
+                <div class="overflow-x-auto">
+                    <table class="rfl-tableau min-w-[720px]">
+                        <thead>
+                            <tr><th>Compte</th><th>Inscriptions</th><th class="text-right">Nombre</th></tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($comptes as $c)
+                                <tr class="align-top">
+                                    <td>
+                                        <a href="{{ route('admin.inscriptions.index', ['compte' => $c->user->id_user]) }}" class="font-bold rfl-lien">{{ $c->user->name }}</a>
+                                        <span class="block text-xs text-gris-texte">{{ $c->user->email ?? 'sans email' }}</span>
+                                    </td>
+                                    <td>
+                                        <ul class="space-y-1">
+                                            @foreach ($c->inscriptions as $i)
+                                                <li class="flex flex-wrap items-center gap-2">
+                                                    <a href="{{ route('admin.inscriptions.show', $i) }}" class="rfl-lien">{{ $i->participant->user->name }}</a>
+                                                    <span class="flex items-center gap-1 text-xs text-gris-texte"><x-course-couleur :course="$i->tarif->course" />{{ $i->tarif->course->nom }}</span>
+                                                    <x-admin.statut :inscription="$i" />
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </td>
+                                    <td class="text-right font-bold">{{ $c->inscriptions->count() }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-center text-gris-texte">Aucun compte ne correspond.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mt-6">{{ $comptes->links() }}</div>
+        @else
         <div class="rfl-carte overflow-hidden">
             <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
                 <p class="text-sm text-gris-texte"><span class="font-bold text-vert-sombre">{{ $inscriptions->total() }}</span> inscription(s)</p>
@@ -85,7 +150,7 @@
                                     <a href="{{ route('admin.inscriptions.show', $i) }}" class="font-bold after:absolute after:inset-0">{{ $i->participant->user->prenom }} {{ $i->participant->user->nom }}</a>
                                     <span class="block text-xs text-gris-texte">
                                         {{ $i->participant->ageAu($evenement->date_evenement) }} ans
-                                        @if ($i->participant->responsable) · géré par {{ $i->participant->responsable->name }} @endif
+                                        @if ($i->participant->responsable) · géré par <a href="{{ route('admin.inscriptions.index', ['compte' => $i->participant->responsable->id_user]) }}" class="relative z-10 rfl-lien">{{ $i->participant->responsable->name }}</a> @endif
                                     </span>
                                 </td>
                                 <td><span class="flex items-center gap-2"><x-course-couleur :course="$i->tarif->course" />{{ $i->tarif->course->nom }}</span></td>
@@ -119,5 +184,6 @@
         </div>
 
         <div class="mt-6">{{ $inscriptions->links() }}</div>
+        @endif
     @endif
 </x-admin-shell>
