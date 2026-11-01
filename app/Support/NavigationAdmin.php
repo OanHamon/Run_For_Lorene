@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\Route;
 class NavigationAdmin
 {
     /**
-     * @return list<array{section: string, rubriques: list<array{libelle: string, url: string, actif: bool, compteur: ?int}>}>
+     * Une section est « ouverte » si elle contient la page courante (accordéon de la barre) ;
+     * sans page reconnue (recherche…), la première l'est.
+     *
+     * @return list<array{section: string, ouverte: bool, compteur: int, rubriques: list<array{libelle: string, url: string, actif: bool, compteur: ?int}>}>
      */
     public static function sections(Request $request, User $admin, ?Evenement $evenement, array $compteurs = []): array
     {
@@ -36,8 +39,17 @@ class NavigationAdmin
                 ->all();
 
             if ($visibles) {
-                $sections[] = ['section' => $section, 'rubriques' => $visibles];
+                $sections[] = [
+                    'section' => $section,
+                    'ouverte' => collect($visibles)->contains('actif', true),
+                    'compteur' => (int) collect($visibles)->sum('compteur'),
+                    'rubriques' => $visibles,
+                ];
             }
+        }
+
+        if ($sections && ! collect($sections)->contains('ouverte', true)) {
+            $sections[0]['ouverte'] = true;
         }
 
         return $sections;

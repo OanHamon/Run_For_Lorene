@@ -50,45 +50,61 @@
 
     <div class="mx-auto flex max-w-[1400px]">
         <aside class="hidden w-72 shrink-0 px-6 py-8 lg:block">
-            <div class="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-[28px] bg-vert-sombre px-5 py-6 text-white">
-                <a href="{{ route('admin.tableau') }}" class="block rounded-3xl bg-white p-3">
-                    <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-12 w-auto">
+            {{-- Tient sans défilement sur un écran de 768 px de haut, une section ouverte. --}}
+            <div class="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-[28px] bg-vert-sombre px-5 py-5 text-white">
+                <a href="{{ route('admin.tableau') }}" class="block rounded-2xl bg-white px-3 py-2">
+                    <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-10 w-auto">
                 </a>
 
-                <div class="mt-6 flex items-center gap-3">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-vert-clair font-display text-vert-sombre">{{ $user->initials() }}</span>
-                    <div class="min-w-0">
-                        <p class="truncate font-bold">{{ $user->name }}</p>
-                        <p class="truncate text-xs text-vert-clair">{{ \App\Models\Admin::LIBELLES[$user->niveauAdmin()] }}</p>
-                    </div>
-                </div>
-
-                <div class="mt-6 space-y-2">
+                <div class="mt-4 space-y-2">
                     @include('components.admin.partials.evenement-suivi', ['id' => 'evenement-suivi'])
                     @include('components.admin.partials.recherche', ['id' => 'recherche'])
                 </div>
 
-                @foreach ($sections as $s)
-                    <p class="mt-5 mb-1 px-3 font-display text-sm text-vert-clair">{{ $s['section'] }}</p>
-                    <nav class="space-y-0.5 text-sm" aria-label="{{ $s['section'] }}">
-                        @foreach ($s['rubriques'] as $r)
-                            <a href="{{ $r['url'] }}" @if ($r['actif']) aria-current="page" @endif class="flex items-center justify-between gap-2 rounded-full px-4 py-1.5 {{ $r['actif'] ? 'bg-vert-clair font-bold text-vert-sombre' : 'hover:bg-white/10' }}">
-                                <span>{{ $r['libelle'] }}</span>
-                                @if ($r['compteur'])<span class="rounded-full bg-moutarde px-2 text-xs font-bold text-vert-sombre" aria-label="{{ $r['compteur'] }} à traiter">{{ $r['compteur'] }}</span>@endif
-                            </a>
-                        @endforeach
-                    </nav>
-                @endforeach
-
-                <div class="mt-8 space-y-1 border-t border-white/20 pt-6 text-sm">
-                    <a href="{{ route('home') }}" class="block rounded-full px-4 py-2 hover:bg-white/10">Voir le site</a>
-                    <form method="POST" action="{{ route('admin.deconnexion') }}">
-                        @csrf
-                        <button type="submit" class="block w-full rounded-full px-4 py-2 text-left hover:bg-white/10">Se déconnecter</button>
-                    </form>
+                {{--
+                    Accordéon : une section ouverte à la fois (attribut name des <details>), celle
+                    de la page courante. Fermée, une section montre le total de ses compteurs.
+                --}}
+                <div class="mt-4 space-y-0.5" data-test="accordeon">
+                    @foreach ($sections as $s)
+                        <details name="nav-admin" class="group" @if ($s['ouverte']) open @endif>
+                            <summary class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-full px-3 py-1.5 font-display text-sm text-vert-clair hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+                                <span>{{ $s['section'] }}</span>
+                                <span class="flex items-center gap-2">
+                                    @if ($s['compteur'])<span class="rounded-full bg-moutarde px-2 font-sans text-xs font-bold text-vert-sombre group-open:hidden" aria-label="{{ $s['compteur'] }} à traiter">{{ $s['compteur'] }}</span>@endif
+                                    <svg class="h-4 w-4 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd"/></svg>
+                                </span>
+                            </summary>
+                            <nav class="mt-0.5 mb-2 space-y-0.5 text-sm" aria-label="{{ $s['section'] }}">
+                                @foreach ($s['rubriques'] as $r)
+                                    <a href="{{ $r['url'] }}" @if ($r['actif']) aria-current="page" @endif class="flex items-center justify-between gap-2 rounded-full px-4 py-1 {{ $r['actif'] ? 'bg-vert-clair font-bold text-vert-sombre' : 'hover:bg-white/10' }}">
+                                        <span>{{ $r['libelle'] }}</span>
+                                        @if ($r['compteur'])<span class="rounded-full bg-moutarde px-2 text-xs font-bold text-vert-sombre" aria-label="{{ $r['compteur'] }} à traiter">{{ $r['compteur'] }}</span>@endif
+                                    </a>
+                                @endforeach
+                            </nav>
+                        </details>
+                    @endforeach
                 </div>
 
-                <img src="/images/pastille-ej.png" alt="Effervescence Jeunes" class="mt-8 ml-auto h-10 w-10">
+                {{-- Compte connecté, liens de sortie, signature « ej » en bas à droite (charte). --}}
+                <div class="mt-4 border-t border-white/20 pt-3">
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-vert-clair font-display text-sm text-vert-sombre">{{ $user->initials() }}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-bold">{{ $user->name }}</p>
+                            <p class="truncate text-xs text-vert-clair">{{ \App\Models\Admin::LIBELLES[$user->niveauAdmin()] }}</p>
+                        </div>
+                        <img src="/images/pastille-ej.png" alt="Effervescence Jeunes" class="h-8 w-8 shrink-0">
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-x-1 text-sm">
+                        <a href="{{ route('home') }}" class="rounded-full px-3 py-1 hover:bg-white/10">Voir le site</a>
+                        <form method="POST" action="{{ route('admin.deconnexion') }}">
+                            @csrf
+                            <button type="submit" class="rounded-full px-3 py-1 hover:bg-white/10">Se déconnecter</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </aside>
 

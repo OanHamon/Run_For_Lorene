@@ -115,3 +115,21 @@ test('la page Remboursements liste ceux de l\'événement suivi', function () {
     $this->actingAs(admin(1))->get('/admin/remboursements')->assertOk()
         ->assertSee('Rémi Dupuis')->assertSee('Blessure')->assertSee('Stripe');
 });
+
+test('la barre est un accordéon : seule la section de la page courante est ouverte', function () {
+    inscriptionPayee(User::factory()->create(), $this->course, Inscription::DOSSIER_INCOMPLET);
+
+    $html = $this->actingAs(admin(3))->get('/admin/remboursements')->assertOk()->getContent();
+
+    expect(substr_count($html, '<details name="nav-admin"'))->toBe(5)
+        ->and(preg_match_all('/name="nav-admin" class="group"\s+open\s*>/', $html))->toBe(1);
+    // La section ouverte est « Finances » ; « Pilotage », fermée, garde le compteur de « À traiter ».
+    expect($html)->toMatch('/<details name="nav-admin" class="group"\s+open\s*>\s*<summary[^>]*>\s*<span>Finances/')
+        ->toMatch('/<span>Pilotage<\/span>\s*<span class="flex items-center gap-2">\s*<span class="rounded-full bg-moutarde[^>]*>1<\/span>/');
+});
+
+test('sans page reconnue, la première section est ouverte', function () {
+    $html = $this->actingAs(admin(1))->get('/admin/recherche?q=x')->getContent();
+
+    expect($html)->toMatch('/<details name="nav-admin" class="group"\s+open\s*>\s*<summary[^>]*>\s*<span>Pilotage/');
+});
