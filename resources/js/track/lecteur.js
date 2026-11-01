@@ -17,6 +17,13 @@ import { gabarit, jetonDesCellules } from './code.js';
 
 const LARGEUR_TRAVAIL = 720;
 
+/**
+ * Ce qui s'est passé à la dernière lecture, pour comprendre un échec (banc d'essai /dev/qr) :
+ * image de travail, paires de semelles candidates, meilleur calage (contraste dedans − dehors),
+ * écart entre cellules claires et foncées, résultat.
+ */
+export const diagnostic = {};
+
 const { boite, semelles } = gabarit;
 const COINS = [[boite.x, boite.y], [boite.x + boite.l, boite.y], [boite.x + boite.l, boite.y + boite.h], [boite.x, boite.y + boite.h]];
 const DEDANS = Float32Array.from(gabarit.reperes.dedans.flat());
@@ -238,6 +245,7 @@ function lireCellules(d, l, h, H) {
         return (v[0] + v[1] + v[2] + v[3] + v[4] + v[5]) / 6;
     });
     const { t, m0, m1 } = otsu(valeurs);
+    diagnostic.ecartCellules = Math.round((m1 - m0) * 1000) / 1000;
     if (!(m1 - m0 > 0.06)) return null;
     const marge = (m1 - m0) * 0.18;
     return jetonDesCellules(valeurs.map((v) => v > t), valeurs.map((v) => Math.abs(v - t) < marge));
@@ -250,7 +258,9 @@ function lireCellules(d, l, h, H) {
 export function lireEmpreinte(gris, l, h) {
     const img = reduire(gris, l, h);
     const d = encre(img);
-    for (const p of pairesCandidates(d, img.l, img.h)) {
+    const paires = pairesCandidates(d, img.l, img.h);
+    Object.assign(diagnostic, { image: `${img.l} × ${img.h}`, paires: paires.length, calage: null, ecartCellules: null, etape: paires.length ? 'calage' : 'semelles introuvables' });
+    for (const p of paires) {
         const essais = [];
         for (const [g, dr] of [[p.a, p.b], [p.b, p.a]]) {
             // Similitude : centre des semelles du gabarit → centres des taches.
@@ -269,11 +279,16 @@ export function lireEmpreinte(gris, l, h) {
             essais.push(fin);
         }
         essais.sort((x, y) => y.note - x.note);
+        diagnostic.calage = Math.max(diagnostic.calage ?? -1, Math.round(essais[0].note * 1000) / 1000);
         for (const e of essais) {
             if (e.note < 0.08) continue;
+            diagnostic.etape = 'lecture des cellules';
             const H = homographie(e.coins);
             const jeton = H && lireCellules(d, img.l, img.h, H);
-            if (jeton) return { jeton, coins: e.coins.map(([x, y]) => [x * img.k, y * img.k]) };
+            if (jeton) {
+                diagnostic.etape = 'lu';
+                return { jeton, coins: e.coins.map(([x, y]) => [x * img.k, y * img.k]) };
+            }
         }
     }
     return null;

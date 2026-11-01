@@ -75,26 +75,48 @@ function homographie(de, vers) {
     return b.map((v, i) => v / A[i][i]);
 }
 
-/** « Photographie » l'empreinte : W × H pixels, l'empreinte (carré de 447 unités) en `taille` px. */
+/**
+ * Planche comme la page /dev/qr : `n` empreintes côte à côte, avec deux lignes de texte sous
+ * chacune (nom, jeton). Renvoie une source { px, lu, hu } (largeur et hauteur en unités).
+ */
+function planche(jetons) {
+    const lu = VUE * jetons.length, hu = VUE + 60;
+    const L = lu * RES, Hh = hu * RES;
+    const px = new Float32Array(L * Hh).fill(255);
+    jetons.forEach((j, k) => {
+        const e = dessinerEmpreinte(j);
+        for (let y = 0; y < VUE * RES; y++) px.set(e.subarray(y * VUE * RES, (y + 1) * VUE * RES), y * L + k * VUE * RES);
+        for (const [dy, l] of [[VUE + 8, 180], [VUE + 34, 260]]) {
+            for (let y = dy * RES; y < (dy + 14) * RES; y++) for (let x = (k * VUE + (VUE - l) / 2) * RES; x < (k * VUE + (VUE + l) / 2) * RES; x++) {
+                if (Math.floor(x / (5 * RES)) % 4 !== 3) px[y * L + Math.floor(x)] = 70;
+            }
+        }
+    });
+    return { px, lu, hu };
+}
+
+/** « Photographie » une source : W × H pixels, sa largeur ramenée à `taille` px. */
 function photographier(empreinte, c) {
-    const W = 960, H = 720;
+    const source = empreinte.lu ? empreinte : { px: empreinte, lu: VUE, hu: VUE };
+    empreinte = source.px;
+    const W = c.W ?? 960, H = c.H ?? 720;
     const angle = c.angle ?? alea() * Math.PI * 2;
     const t = c.taille, cx = W / 2 + (alea() - 0.5) * (W - t) * 0.5, cy = H / 2 + (alea() - 0.5) * (H - t) * 0.4;
-    const carre = [[0, 0], [VUE, 0], [VUE, VUE], [0, VUE]];
+    const carre = [[0, 0], [source.lu, 0], [source.lu, source.hu], [0, source.hu]];
     const coins = carre.map(([x, y]) => {
-        const dx = (x - VUE / 2) / VUE * t, dy = (y - VUE / 2) / VUE * t;
+        const dx = (x - source.lu / 2) / source.lu * t, dy = (y - source.hu / 2) / source.lu * t;
         return [cx + dx * Math.cos(angle) - dy * Math.sin(angle) + (alea() - 0.5) * 2 * c.perspective * t,
             cy + dx * Math.sin(angle) + dy * Math.cos(angle) + (alea() - 0.5) * 2 * c.perspective * t];
     });
     const inv = homographie(coins, carre);
-    const L = VUE * RES;
+    const L = source.lu * RES, LH = source.hu * RES;
     const scene = new Float32Array(W * H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
         let s = 0;
         for (const [ox, oy] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
             const X = x + ox, Y = y + oy, w = inv[6] * X + inv[7] * Y + 1;
             const u = ((inv[0] * X + inv[1] * Y + inv[2]) / w) * RES, v = ((inv[3] * X + inv[4] * Y + inv[5]) / w) * RES;
-            if (u < 0 || v < 0 || u >= L - 1 || v >= L - 1) { s += 200; continue; } // autour de l'écran : gris
+            if (u < 0 || v < 0 || u >= L - 1 || v >= LH - 1) { s += 200; continue; } // autour de l'écran : gris
             const u0 = Math.floor(u), v0 = Math.floor(v), fu = u - u0, fv = v - v0, i = v0 * L + u0;
             s += (empreinte[i] * (1 - fu) + empreinte[i + 1] * fu) * (1 - fv) + (empreinte[i + L] * (1 - fu) + empreinte[i + L + 1] * fu) * fv;
         }
@@ -166,6 +188,8 @@ const conditions = [
     { nom: 'limite : 200 px', taille: 200, perspective: 0.03, flou: 1, bruit: 10, contraste: 0.85, attendu: 0 },
     { nom: 'limite : flou 3 (mise au point ratée)', taille: 480, perspective: 0.03, flou: 3, bruit: 10, contraste: 0.85, attendu: 0 },
     { nom: 'empreinte décorative, sans code', taille: 520, perspective: 0.03, flou: 1, bruit: 10, sansCode: true },
+    { nom: 'photo de /dev/qr : 3 empreintes + texte', planche: 3, W: 1600, H: 1200, taille: 1350, perspective: 0.03, angle: 0.05, flou: 1, bruit: 10, contraste: 0.85, attendu: 0.9 },
+    { nom: 'photo de /dev/qr, haute définition', planche: 3, W: 3000, H: 2250, taille: 2200, perspective: 0.03, angle: -0.04, flou: 2, bruit: 10, contraste: 0.85, attendu: 0.9 },
 ];
 
 const ESSAIS = Number(process.env.ESSAIS ?? 8);
@@ -194,7 +218,8 @@ for (const c of conditions) {
     let ok = 0, temps = 0;
     for (let k = 0; k < ESSAIS; k++) {
         const j = jeton();
-        const photo = photographier(dessinerEmpreinte(j, c.sansCode), c);
+        const voisins = c.planche ? [j, ...Array.from({ length: c.planche - 1 }, jeton)] : null;
+        const photo = photographier(voisins ? planche(voisins) : dessinerEmpreinte(j, c.sansCode), c);
         if (k === 0) png(c.nom.replace(/[^a-z0-9]+/gi, '-'), photo);
         const t0 = performance.now();
         const lu = lireEmpreinte(photo.px, photo.l, photo.h);
@@ -202,7 +227,7 @@ for (const c of conditions) {
         if (c.sansCode) {
             // Rien à lire : le lecteur doit se taire, jamais inventer un jeton.
             if (lu) { console.log(`  FAUSSE ALERTE : ${lu.jeton}`); echec = true; } else ok++;
-        } else if (lu?.jeton === j) ok++;
+        } else if (voisins ? voisins.includes(lu?.jeton) : lu?.jeton === j) ok++;
         else if (lu) { console.log(`  FAUX : ${lu.jeton} au lieu de ${j}`); echec = true; }
     }
     if (c.sansCode) c.attendu = 1;

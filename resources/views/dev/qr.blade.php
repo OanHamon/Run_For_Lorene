@@ -34,6 +34,7 @@
 
             <video class="mt-4 hidden aspect-video w-full max-w-md rounded-2xl bg-vert-sombre object-cover" playsinline muted data-lecteur-video></video>
             <p class="rfl-alerte mt-4 hidden" data-lecteur-erreur></p>
+            <p class="mt-3 hidden font-mono text-xs text-gris-texte" data-lecteur-etat></p>
 
             <div class="mt-4 hidden rounded-2xl p-4 ring-1" data-lecteur-resultat>
                 <p class="font-display text-lg" data-resultat-message></p>
@@ -48,9 +49,12 @@
                 <p class="rfl-alerte">Aucune inscription validée avec dossard. Lance <code>php artisan migrate:fresh --seed</code>.</p>
             @endif
             <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($billets as $b)
+                @foreach ($billets as $i => $b)
                     <article class="rfl-carte flex flex-col items-center rounded-3xl bg-white p-6 text-center">
-                        <x-track.empreinte :code="$b['jeton']" class="w-full max-w-72" />
+                        <div id="empreinte-{{ $i }}" class="flex w-full items-center justify-center bg-white">
+                            <x-track.empreinte :code="$b['jeton']" class="w-full max-w-80 [:fullscreen_&]:h-full [:fullscreen_&]:w-auto [:fullscreen_&]:max-w-none" />
+                        </div>
+                        <button type="button" class="rfl-btn-secondaire mt-3 text-sm" data-plein-ecran="empreinte-{{ $i }}">Plein écran</button>
                         <details class="mt-2 text-sm">
                             <summary class="cursor-pointer text-gris-texte">QR classique (témoin)</summary>
                             <div class="mx-auto mt-2 w-fit rounded-2xl bg-white p-2 ring-1 ring-bordure">{!! $b['qr'] !!}</div>

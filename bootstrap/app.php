@@ -34,6 +34,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->append(EntetesSecurite::class);
+
+        // En local seulement : le site peut passer par un tunnel https (cloudflared) pour tester
+        // la caméra sur un téléphone ; on croit alors l'en-tête X-Forwarded-Proto du tunnel.
+        // Jamais en production : n'importe qui pourrait se faire passer pour le proxy.
+        if (env('APP_ENV') === 'local') {
+            $middleware->trustProxies(at: '*');
+        }
         $middleware->web(append: CompteParticipant::class);
 
         $estAdmin = fn ($request) => $request->is('admin', 'admin/*');
