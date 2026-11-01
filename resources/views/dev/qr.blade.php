@@ -10,8 +10,8 @@
         <header class="mb-8">
             <h1 class="font-display text-3xl text-vert">QR codes : banc d'essai</h1>
             <p class="mt-1 text-gris-texte">
-                Vrais billets de {{ $evenement?->nom ?? 'la base' }}, codes piégés et un lecteur. Scanne un code avec la caméra,
-                ou prends-le en photo. Rien n'est modifié en base.
+                Vrais billets de {{ $evenement?->nom ?? 'la base' }} : chaque empreinte (les semelles) est le QR code du billet.
+                Scanne-la avec la caméra ou prends-la en photo. Codes piégés plus bas. Rien n'est modifié en base.
             </p>
         </header>
 
@@ -49,10 +49,11 @@
             <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($billets as $b)
                     <article class="rfl-carte flex flex-col items-center rounded-3xl bg-white p-6 text-center">
-                        <div class="flex items-center gap-4">
-                            <div class="rounded-2xl bg-white p-2 ring-1 ring-bordure">{!! $b['qr'] !!}</div>
-                            <x-track.empreinte :graine="$b['jeton']" class="w-20" />
-                        </div>
+                        <x-track.empreinte :code="$b['jeton']" class="w-full max-w-72" />
+                        <details class="mt-2 text-sm">
+                            <summary class="cursor-pointer text-gris-texte">QR classique (témoin)</summary>
+                            <div class="mx-auto mt-2 w-fit rounded-2xl bg-white p-2 ring-1 ring-bordure">{!! $b['qr'] !!}</div>
+                        </details>
                         <h3 class="mt-4 font-display text-lg text-vert">{{ $b['titre'] }}</h3>
                         <p class="text-sm text-gris-texte">{{ $b['detail'] }}</p>
                         <p class="mt-2 break-all font-mono text-xs text-gris-texte">{{ $b['jeton'] }}</p>
@@ -67,7 +68,7 @@
             <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($pieges as $p)
                     <article class="rfl-carte flex flex-col items-center rounded-3xl bg-white p-6 text-center">
-                        <div class="rounded-2xl bg-white p-2 ring-1 ring-bordure">{!! $p['qr'] !!}</div>
+                        <x-track.empreinte :code="$p['jeton']" class="w-full max-w-72" />
                         <h3 class="mt-4 font-display text-lg text-vert">{{ $p['titre'] }}</h3>
                         <p class="text-sm text-gris-texte">{{ $p['detail'] }}</p>
                         <p class="mt-2 break-all font-mono text-xs text-gris-texte">{{ $p['jeton'] }}</p>
