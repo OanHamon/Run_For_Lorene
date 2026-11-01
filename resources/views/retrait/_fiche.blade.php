@@ -3,11 +3,15 @@
     $remis = $i->date_retrait !== null;
     $estMineur = $i->participant->ageAu($ecran['evenement']->date_evenement) < 18;
 @endphp
-<article class="rounded-3xl p-5 ring-1 {{ $grande ? 'bg-fond ring-vert' : 'bg-white ring-bordure' }}" data-test="fiche-retrait-{{ $i->id_inscription }}">
+<article class="overflow-hidden rounded-3xl p-5 ring-1 {{ $grande ? 'bg-fond ring-vert' : 'bg-white ring-bordure' }}" data-test="fiche-retrait-{{ $i->id_inscription }}">
+    {{-- La couleur de la course, repère du jour J : bien visible d'un coup d'œil. --}}
+    @if ($i->tarif->course->couleur)
+        <div class="-mx-5 -mt-5 mb-4 {{ $grande ? 'h-4' : 'h-2' }}" style="background-color: {{ $i->tarif->course->couleur }}" aria-hidden="true"></div>
+    @endif
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
             <p class="font-display {{ $grande ? 'text-2xl' : 'text-lg' }} text-vert">{{ $i->participant->user->name }}</p>
-            <p class="text-sm text-vert-sombre">{{ $i->tarif->course->nom }}</p>
+            <p class="flex items-center gap-2 {{ $grande ? 'text-base font-bold' : 'text-sm' }} text-vert-sombre"><x-course-couleur :course="$i->tarif->course" :taille="$grande ? 'h-5 w-5' : 'h-3 w-3'" />{{ $i->tarif->course->nom }}</p>
             <div class="mt-2 flex flex-wrap gap-2">
                 @if ($estMineur)<span class="rfl-badge bg-moutarde text-vert-sombre">Mineur · {{ $i->participant->ageAu($ecran['evenement']->date_evenement) }} ans</span>@endif
                 @if ($remis)
@@ -16,6 +20,20 @@
                     <span class="rfl-badge bg-erreur-fond text-erreur">Dossier incomplet</span>
                 @endif
             </div>
+            {{-- Notes internes (« diabétique »…) : indicateur discret, le texte se déplie au besoin.
+                 Un poste bénévole sans compte n'a que l'indicateur : le texte reste aux admins. --}}
+            @if ($i->notes->isNotEmpty() && ! ($ecran['notes'] ?? false))
+                <p class="mt-2 text-sm" data-test="notes-retrait"><span class="rfl-badge bg-vert-clair text-vert">Note : voir un responsable</span></p>
+            @elseif ($i->notes->isNotEmpty())
+                <details class="mt-2 text-sm" data-test="notes-retrait">
+                    <summary class="cursor-pointer text-vert-sombre"><span class="rfl-badge bg-vert-clair text-vert">Note · {{ $i->notes->count() }}</span></summary>
+                    <ul class="mt-2 space-y-1 rounded-2xl bg-white p-3 ring-1 ring-bordure">
+                        @foreach ($i->notes as $note)
+                            <li class="whitespace-pre-line text-vert-sombre">{{ $note->texte }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
         </div>
         @if ($i->dossard)
             <div class="rounded-2xl bg-vert px-4 py-2 text-center">

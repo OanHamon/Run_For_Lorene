@@ -16,7 +16,7 @@ beforeEach(function () {
 
 test('la barre latérale est découpée en sections, selon le niveau d\'accès', function () {
     $this->actingAs(admin(3))->get('/admin')->assertOk()
-        ->assertSeeInOrder(['Pilotage', 'Tableau de bord', 'À traiter', 'Participants', 'Inscriptions', 'Questionnaires de santé', 'Comptes', 'Événement', 'Courses et tarifs', 'Textes et documents', 'Finances', 'Commandes et paiements', 'Remboursements', 'Dons et reçus', 'Administration', 'Admins et accès', 'Journal']);
+        ->assertSeeInOrder(['Pilotage', 'Tableau de bord', 'À traiter', 'Participants', 'Inscriptions', 'Événement', 'Courses et tarifs', 'Textes et documents', 'Finances', 'Commandes et paiements', 'Remboursements', 'Dons et reçus', 'Administration', 'Admins et accès', 'Journal']);
 
     $this->actingAs(admin(1))->get('/admin')->assertOk()
         ->assertDontSee('Questionnaires de santé')
@@ -69,15 +69,14 @@ test('sans rien en attente, « À traiter » le dit', function () {
     $this->actingAs(admin(1))->get('/admin/a-traiter')->assertOk()->assertSee('Rien à traiter');
 });
 
-test('les questionnaires de santé à vérifier ne sont visibles qu\'à partir du niveau 2', function () {
+test("les questionnaires de santé ne remontent pas dans « À traiter » : un « oui » n'impose rien", function () {
     $enfant = User::factory()->create();
     Participant::create(['id_user' => $enfant->id_user, 'date_naissance' => now()->subYears(12)->toDateString()]);
     $inscription = inscriptionPayee($enfant, $this->course);
     $inscription->participant->update(['date_naissance' => now()->subYears(12)->toDateString()]);
     documentsComplets($inscription->fresh());
 
-    $this->actingAs(admin(2))->get('/admin/a-traiter')->assertSee('Questionnaires de santé à vérifier');
-    $this->actingAs(admin(1))->get('/admin/a-traiter')->assertDontSee('Questionnaires de santé à vérifier');
+    $this->actingAs(admin(2))->get('/admin/a-traiter')->assertOk()->assertDontSee('Questionnaires de santé');
 });
 
 test('la recherche trouve une inscription par nom ou par dossard, et une commande par numéro', function () {

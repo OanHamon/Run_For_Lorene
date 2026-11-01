@@ -11,8 +11,8 @@ use App\Services\Admin\ControleTarifs;
 use App\Services\Admin\Journal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Illuminate\View\View;
 
@@ -98,6 +98,7 @@ class CourseController extends Controller
     {
         $donnees = $request->validate([
             'nom' => ['required', 'string', 'max:100'],
+            'couleur' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'distance' => ['nullable', 'numeric', 'min:0', 'max:999.99'],
             'heure_depart' => ['required', 'date_format:H:i,H:i:s'],
             'age_min' => ['nullable', 'integer', 'min:0', 'max:120'],
@@ -107,6 +108,7 @@ class CourseController extends Controller
             'dossard_fin' => ['nullable', 'required_with:dossard_debut', 'integer', 'min:1', 'max:65535', 'gte:dossard_debut'],
         ], [
             'age_max.gte' => "L'âge maximum doit être supérieur ou égal à l'âge minimum.",
+            'couleur.*' => 'Choisis la couleur de la course.',
             'dossard_fin.gte' => 'Le dernier dossard doit être supérieur ou égal au premier.',
         ]);
 

@@ -92,3 +92,18 @@ test("une consultation refusée n'est pas notée", function () {
 
     expect(JournalAdmin::where('action', 'document.consultation')->exists())->toBeFalse();
 });
+
+test('la liste des inscriptions filtre par questionnaire de santé, à partir du niveau 2', function () {
+    $sans = User::create(['prenom' => 'Nina', 'nom' => 'Martin']);
+    Participant::create(['id_user' => $sans->id_user, 'date_naissance' => '2013-06-01', 'id_responsable' => $this->parent->id_user]);
+    $autre = inscriptionPayee($sans, Course::where('nom', 'Course 5 km')->first(), Inscription::DOSSIER_INCOMPLET);
+    app(Questionnaires::class)->enregistrer($autre, 'sante', reponses('sante'), true, $this->parent->id_user);
+
+    $this->actingAs(admin(2));
+    $this->get('/admin/inscriptions?sante=oui')->assertOk()->assertSee('Questionnaire de santé')->assertSee('Léo')->assertDontSee('Nina');
+    $this->get('/admin/inscriptions?sante=a_verifier')->assertSee('Léo')->assertSee('Nina');
+    $this->get('/admin/inscriptions?sante=verifies')->assertDontSee('Léo')->assertDontSee('Nina');
+
+    // En lecture seule : ni le filtre, ni son effet.
+    $this->actingAs(admin(1))->get('/admin/inscriptions?sante=oui')->assertOk()->assertDontSee('Questionnaire de santé')->assertSee('Nina');
+});

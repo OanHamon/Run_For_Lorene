@@ -107,8 +107,8 @@
         {{-- Étape 4 : quand ? --}}
         <section class="group/quand rfl-carte p-6" aria-labelledby="etape-4">
             <h2 id="etape-4" class="flex items-center font-display text-xl text-vert">{!! $etape(4, 'Quand ?') !!}</h2>
-            @php($choix = ['maintenant' => ['Tout de suite', 'Juste après ta vérification.'], 'date' => ['Un jour précis', 'Par exemple le 20 mars à 10h00.'], 'avant' => ['Quelques jours avant l\'événement', 'Par exemple 7 jours avant, à 18h00.'], 'repetee' => ['Régulièrement', 'Par exemple tous les 7 jours, jusqu\'à une date.']])
-            <fieldset class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @php($choix = ['maintenant' => ['Tout de suite', 'Juste après ta vérification.'], 'date' => ['Un jour précis', 'Par exemple le 20 mars à 10h00.'], 'repetee' => ['Régulièrement', 'Par exemple tous les 7 jours, jusqu\'à une date.']])
+            <fieldset class="mt-4 grid gap-3 sm:grid-cols-3">
                 <legend class="sr-only">Moment de l'envoi</legend>
                 @foreach ($choix as $q => [$libelle, $aide])
                     <label class="flex cursor-pointer items-start gap-3 rounded-2xl p-4 ring-1 ring-bordure has-[:checked]:bg-vert-clair has-[:checked]:ring-2 has-[:checked]:ring-vert">
@@ -123,10 +123,6 @@
                     <label for="date_jour" class="rfl-label">Le</label>
                     <input id="date_jour" name="date_jour" type="date" value="{{ $etat['date_jour'] }}" min="{{ today()->toDateString() }}" max="{{ $evenement->date_evenement->toDateString() }}" class="rfl-champ">
                 </div>
-                <div class="hidden group-has-[#quand-avant:checked]/quand:block">
-                    <label for="jours_avant" class="rfl-label">Combien de jours avant ?</label>
-                    <input id="jours_avant" name="jours_avant" type="number" min="1" max="120" value="{{ $etat['jours_avant'] }}" class="rfl-champ w-28 text-center">
-                </div>
                 <div class="hidden group-has-[#quand-repetee:checked]/quand:block">
                     <label for="tous_les" class="rfl-label">Tous les combien de jours ?</label>
                     <input id="tous_les" name="tous_les" type="number" min="1" max="60" value="{{ $etat['tous_les'] }}" class="rfl-champ w-28 text-center">
@@ -139,12 +135,12 @@
                     <label for="repetee_au" class="rfl-label">Jusqu'au</label>
                     <input id="repetee_au" name="repetee_au" type="date" value="{{ $etat['repetee_au'] }}" max="{{ $evenement->date_evenement->toDateString() }}" class="rfl-champ">
                 </div>
-                <div class="hidden group-has-[#quand-date:checked]/quand:block group-has-[#quand-avant:checked]/quand:block group-has-[#quand-repetee:checked]/quand:block">
+                <div class="hidden group-has-[#quand-date:checked]/quand:block group-has-[#quand-repetee:checked]/quand:block">
                     <label for="heure" class="rfl-label">À quelle heure ?</label>
                     <input id="heure" name="heure" type="time" value="{{ $etat['heure'] }}" class="rfl-champ w-36">
                 </div>
             </div>
-            @foreach (['quand', 'date_jour', 'heure', 'jours_avant', 'tous_les', 'repetee_du', 'repetee_au'] as $champ)
+            @foreach (['quand', 'date_jour', 'heure', 'tous_les', 'repetee_du', 'repetee_au'] as $champ)
                 @error($champ)<p class="rfl-erreur">{{ $message }}</p>@enderror
             @endforeach
         </section>

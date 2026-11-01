@@ -100,7 +100,7 @@
                 <div class="rfl-carte p-5">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="font-display text-lg text-vert">{{ $course->nom }}</h2>
+                            <h2 class="flex items-center gap-2 font-display text-lg text-vert"><x-course-couleur :course="$course" taille="h-4 w-4" />{{ $course->nom }}</h2>
                             <p class="mt-1 text-sm text-gris-texte">
                                 Départ {{ substr($course->heure_depart, 0, 5) }}
                                 @if ($course->distance) · {{ rtrim(rtrim(number_format((float) $course->distance, 2, ',', ''), '0'), ',') }} km @endif

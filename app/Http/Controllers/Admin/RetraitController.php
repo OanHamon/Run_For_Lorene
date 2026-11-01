@@ -106,6 +106,7 @@ class RetraitController extends Controller
             'compteur' => $this->retraits->compteur($evenement),
             'terme' => (string) $request->query('q'),
             'resultats' => $this->retraits->rechercher($evenement, (string) $request->query('q')),
+            'notes' => true,
             'trouve' => session('retrait.trouve') ? $this->retraits->trouver($evenement, (int) session('retrait.trouve')) : null,
             'routes' => [
                 'recherche' => route('admin.retrait.index'),

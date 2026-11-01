@@ -93,10 +93,8 @@ class NavigationAdmin
                 ['libelle' => 'Statistiques', 'route' => 'admin.statistiques', 'motifs' => ['admin.statistiques'], 'niveau' => Admin::LECTURE],
             ],
             'Participants' => [
-                ['libelle' => 'Inscriptions', 'route' => 'admin.inscriptions.index', 'motifs' => ['admin.inscriptions.*'], 'niveau' => Admin::LECTURE],
-                ['libelle' => 'Questionnaires de santé', 'route' => 'admin.questionnaires.index', 'motifs' => ['admin.questionnaires.*'], 'niveau' => Admin::GESTION],
+                ['libelle' => 'Inscriptions', 'route' => 'admin.inscriptions.index', 'motifs' => ['admin.inscriptions.*', 'admin.utilisateurs.*'], 'niveau' => Admin::LECTURE],
                 ['libelle' => 'Relances', 'route' => 'admin.relances.index', 'motifs' => ['admin.relances.*'], 'niveau' => Admin::GESTION],
-                ['libelle' => 'Comptes', 'route' => 'admin.utilisateurs.index', 'motifs' => ['admin.utilisateurs.*'], 'niveau' => Admin::SUPER],
                 ['libelle' => 'Retrait des dossards', 'route' => 'admin.retrait.index', 'motifs' => ['admin.retrait.*'], 'niveau' => Admin::GESTION],
             ],
             'Événement' => [

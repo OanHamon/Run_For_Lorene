@@ -7,8 +7,11 @@ use App\Models\Inscription;
 use App\Models\JournalAdmin;
 use App\Models\Paiement;
 use App\Models\Participant;
+use App\Models\TexteLegal;
 use App\Models\User;
 use App\Notifications\RelanceInscription;
+use App\Services\Inscriptions\MettreAJourStatut;
+use App\Services\Inscriptions\Questionnaires;
 use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
@@ -55,7 +58,7 @@ test('le filtre « documents manquants » suit la règle du dossier complet', fu
     $complet = documentsComplets(inscriptionPayee(User::factory()->create(), $this->dix));
     $sansDecharge = inscriptionPayee(User::factory()->create(), $this->dix, Inscription::DOSSIER_INCOMPLET);
     $enfant = enfantInscrit(User::factory()->create(), $this->cinq);
-    app(\App\Services\Inscriptions\Questionnaires::class)->remplirDecharge($enfant, affirmations(), $enfant->participant->id_responsable, '127.0.0.1');
+    app(Questionnaires::class)->remplirDecharge($enfant, affirmations(), $enfant->participant->id_responsable, '127.0.0.1');
 
     $ids = Inscription::avecDocumentsManquants($this->evenement)->pluck('id_inscription')->sort()->values()->all();
 
@@ -78,7 +81,7 @@ test('la fiche détaillée réunit participant, course, paiement et documents', 
         ->assertDontSee('Annuler l\'inscription'); // lecture seule
 });
 
-test("un admin modifie un dossard : plage de la course et unicité par événement vérifiées", function () {
+test('un admin modifie un dossard : plage de la course et unicité par événement vérifiées', function () {
     $a = inscriptionPayee(User::factory()->create(), $this->dix);
     $b = inscriptionPayee(User::factory()->create(), $this->dix);
     $a->update(['dossard' => 1000]);
@@ -107,7 +110,7 @@ test('une inscription validée restée sans dossard en reçoit un à la demande'
     expect($sans->fresh()->dossard)->toBe(1001);
 });
 
-test("annuler une inscription validée libère son dossard", function () {
+test('annuler une inscription validée libère son dossard', function () {
     $inscription = inscriptionPayee(User::factory()->create(), $this->dix);
     $inscription->update(['dossard' => 1000]);
 
@@ -119,7 +122,7 @@ test("annuler une inscription validée libère son dossard", function () {
     expect(JournalAdmin::where('action', 'inscription.annulation')->sole()->details)->toMatchArray(['dossard libéré' => 1000]);
 });
 
-test("annuler une inscription en attente de paiement ferme la commande et remet les autres en brouillon", function () {
+test('annuler une inscription en attente de paiement ferme la commande et remet les autres en brouillon', function () {
     $parent = User::factory()->create();
     $a = inscriptionPayee($parent, $this->dix, Inscription::EN_ATTENTE_PAIEMENT);
     $commande = $a->commande;
@@ -212,7 +215,7 @@ test("le CSV s'ouvre colonne par colonne dans Excel : ligne sep=;, Windows-1252,
 });
 
 test('sans PDF de décharge, les affirmations du tunnel suffisent', function () {
-    App\Models\TexteLegal::where('type_texte', 'decharge')->delete();
+    TexteLegal::where('type_texte', 'decharge')->delete();
     $inscription = inscriptionPayee(User::factory()->create(), $this->dix, Inscription::DOSSIER_INCOMPLET);
     expect($inscription->documentsManquants())->toBe(['la décharge de responsabilité']);
 
@@ -221,7 +224,7 @@ test('sans PDF de décharge, les affirmations du tunnel suffisent', function () 
         ->and($inscription->typesConsentis())->not->toContain('decharge')
         ->and(Inscription::avecDocumentsManquants($this->evenement)->pluck('id_inscription')->all())->not->toContain($inscription->id_inscription);
 
-    app(App\Services\Inscriptions\MettreAJourStatut::class)($inscription);
+    app(MettreAJourStatut::class)($inscription);
     expect($inscription->fresh()->statut)->toBe(Inscription::VALIDEE);
 });
 
@@ -270,7 +273,7 @@ test('un super admin corrige les informations du participant, et la correction e
     expect(JournalAdmin::where('action', 'inscription.participant')->sole()->details)->toMatchArray(['prenom' => 'Léo → Léon']);
 });
 
-test("une date de naissance incompatible avec la course, ou qui change le statut mineur, est refusée", function () {
+test('une date de naissance incompatible avec la course, ou qui change le statut mineur, est refusée', function () {
     $adulte = inscriptionPayee(User::factory()->create(), $this->dix); // né en 1980, 10 km dès 16 ans
 
     $this->actingAs(admin(3));
@@ -287,11 +290,53 @@ test("une date de naissance incompatible avec la course, ou qui change le statut
     expect($adulte->participant->fresh()->date_naissance->toDateString())->toBe('1980-01-02');
 });
 
-test("seul le super admin modifie les informations du participant", function () {
+test('seul le super admin modifie les informations du participant', function () {
     $inscription = inscriptionPayee(User::factory()->create(), $this->dix);
 
     $this->actingAs(admin(2))->get("/admin/inscriptions/{$inscription->id_inscription}")->assertDontSee('Modifier les informations');
     $this->put("/admin/inscriptions/{$inscription->id_inscription}/participant", champsParticipant($inscription, ['prenom' => 'Pirate']))->assertForbidden();
 
     expect($inscription->participant->user->fresh()->prenom)->not->toBe('Pirate');
+});
+
+test('la liste se lit par inscription ou par compte, et se filtre sur un compte', function () {
+    $parent = User::factory()->create(['prenom' => 'Sam', 'nom' => 'Leroy']);
+    $soi = inscriptionPayee($parent, $this->dix);
+    $enfant = enfantInscrit($parent, $this->cinq);
+    $voisin = inscriptionPayee(User::factory()->create(['prenom' => 'Inès', 'nom' => 'Garnier']), $this->dix);
+
+    $this->actingAs(admin(1));
+
+    // Par compte : une ligne par titulaire, avec ses participants gérés.
+    $this->get('/admin/inscriptions?vue=comptes')->assertOk()
+        ->assertSee('2</span> compte(s)', false)
+        ->assertSeeInOrder(['Inès Garnier', 'Sam Leroy', 'Léo Leroy']);
+
+    // Filtre sur un compte, dans les deux vues.
+    $this->get("/admin/inscriptions?compte={$parent->id_user}")->assertOk()
+        ->assertSee('2</span> inscription(s)', false)
+        ->assertSee('Léo Leroy')->assertDontSee('Inès Garnier');
+    $this->get("/admin/inscriptions?vue=comptes&compte={$parent->id_user}")->assertSee('1</span> compte(s)', false);
+
+    // Les filtres habituels s'appliquent aussi à la vue par compte.
+    $this->get("/admin/inscriptions?vue=comptes&course={$this->cinq->id_course}")->assertSee('Sam Leroy')->assertDontSee('Inès Garnier');
+
+    // « Comptes » n'est plus une rubrique à part ; la gestion du compte reste au super admin.
+    $this->get('/admin')->assertDontSee('>Comptes<', false);
+    $this->get("/admin/inscriptions?compte={$parent->id_user}")->assertDontSee('Gérer le compte');
+    $this->actingAs(admin(3))->get("/admin/inscriptions?compte={$parent->id_user}")->assertSee('Gérer le compte');
+});
+
+test("la fiche d'une inscription donne tout le compte titulaire", function () {
+    $parent = User::factory()->create(['prenom' => 'Sam', 'nom' => 'Leroy']);
+    $soi = inscriptionPayee($parent, $this->dix);
+    $enfant = enfantInscrit($parent, $this->cinq);
+
+    $this->actingAs(admin(1))->get(route('admin.inscriptions.show', $enfant))->assertOk()
+        ->assertSee('Aussi sur ce compte (1)')
+        ->assertSee(route('admin.inscriptions.show', $soi))
+        ->assertSee(route('admin.inscriptions.index', ['compte' => $parent->id_user]));
+
+    $seul = inscriptionPayee(User::factory()->create(), $this->dix);
+    $this->get(route('admin.inscriptions.show', $seul))->assertSee('Seule inscription de ce compte');
 });

@@ -138,13 +138,12 @@ test('un jour précis : programmé, puis envoyé par le planificateur à la date
         ->and($p->fresh()->etat())->toBe('terminee');
 });
 
-test("N jours avant l'événement, et régulièrement : la liste est recalculée à chaque envoi", function () {
+test('régulièrement : la liste est recalculée à chaque envoi', function () {
     $incomplete = inscriptionPayee($u = User::factory()->create(), $this->course, Inscription::DOSSIER_INCOMPLET);
     $this->actingAs(admin(2));
 
     $du = today()->addDay();
     $this->post('/admin/relances', relance(['qui' => 'documents', 'quand' => 'repetee', 'tous_les' => 7, 'repetee_du' => $du->toDateString(), 'repetee_au' => $du->copy()->addDays(20)->toDateString(), 'heure' => '10:00']));
-    $this->post('/admin/relances', relance(['sujet' => 'J-7', 'quand' => 'avant', 'jours_avant' => 7, 'heure' => '09:00']));
 
     $this->travelTo($du->copy()->setTime(10, 1));
     $this->artisan('rfl:envois-programmes');
@@ -155,8 +154,22 @@ test("N jours avant l'événement, et régulièrement : la liste est recalculée
     $this->travelTo($du->copy()->addDays(7)->setTime(10, 1));
     $this->artisan('rfl:envois-programmes');
     Notification::assertSentToTimes($u, RelanceAdmin::class, 1);
+});
 
-    $this->travelTo($this->evenement->date_evenement->copy()->subDays(7)->setTime(9, 5));
+test("« N jours avant l'événement » n'est plus proposé ; une ancienne relance de ce type part encore et se rouvre en date précise", function () {
+    $this->actingAs(admin(2))->get('/admin/relances/nouvelle')->assertDontSee('Quelques jours avant');
+    $this->post('/admin/relances', relance(['quand' => 'avant', 'jours_avant' => 7, 'heure' => '09:00']))->assertSessionHasErrors('quand');
+
+    $u = User::factory()->create();
+    inscriptionPayee($u, $this->course);
+    $p = RelanceProgrammee::create(['modele' => 'libre', 'sujet' => 'J-7', 'message' => 'Bonjour', 'cible' => ['qui' => 'tous'], 'quand' => 'avant',
+        'jours_avant' => 7, 'heure' => '09:00:00', 'actif' => true, 'id_evenement' => $this->evenement->id_evenement, 'id_admin' => auth()->id()]);
+
+    $jour = $this->evenement->date_evenement->copy()->subDays(7);
+    $this->get(route('admin.relances.programmees.edit', $p))->assertOk()
+        ->assertSee('value="'.$jour->toDateString().'"', false);
+
+    $this->travelTo($jour->copy()->setTime(9, 5));
     $this->artisan('rfl:envois-programmes');
     Notification::assertSentTo($u, RelanceAdmin::class, fn ($n) => $n->sujet === 'J-7');
 });
@@ -187,7 +200,6 @@ test('un moment déjà passé, ou après l\'événement, est refusé', function 
 
     $this->post('/admin/relances', relance(['quand' => 'date', 'date_jour' => today()->subDay()->toDateString(), 'heure' => '10:00']))->assertSessionHasErrors('quand');
     $this->post('/admin/relances', relance(['quand' => 'date', 'date_jour' => $this->evenement->date_evenement->copy()->addDay()->toDateString(), 'heure' => '10:00']))->assertSessionHasErrors('quand');
-    $this->post('/admin/relances', relance(['quand' => 'avant', 'jours_avant' => 120, 'heure' => '10:00']))->assertSessionHasErrors('quand');
 
     expect(RelanceProgrammee::count())->toBe(0);
 });
@@ -210,9 +222,9 @@ test("les listes montrent l'objet lisible, sans accolades", function () {
 
 test("l'aperçu d'un envoi programmé donne la vraie date", function () {
     inscriptionPayee(User::factory()->create(), $this->course);
-    $jour = $this->evenement->date_evenement->copy()->subDays(7);
+    $jour = today()->addDays(5);
 
-    $this->actingAs(admin(2))->post('/admin/relances/apercu', relance(['quand' => 'avant', 'jours_avant' => 7, 'heure' => '10:00']))
-        ->assertSee('le '.$jour->translatedFormat('l j F Y').' à 10h00 (7 jour(s) avant l&#039;événement)', false)
+    $this->actingAs(admin(2))->post('/admin/relances/apercu', relance(['quand' => 'date', 'date_jour' => $jour->toDateString(), 'heure' => '10:00']))
+        ->assertSee('le '.$jour->translatedFormat('l j F Y').' à 10h00', false)
         ->assertSee('Programmer l&#039;envoi', false);
 });

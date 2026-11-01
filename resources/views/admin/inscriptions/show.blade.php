@@ -73,7 +73,30 @@
                         @endif
                     @endif
                     @if (auth()->user()->peutAdmin(3))
-                        <a href="{{ route('admin.utilisateurs.show', $titulaire) }}" class="rfl-lien">{{ $titulaire->hasVerifiedEmail() ? 'Voir le compte' : 'Voir le compte ou corriger l\'email' }}</a>
+                        <a href="{{ route('admin.utilisateurs.show', $titulaire) }}" class="rfl-lien">{{ $titulaire->hasVerifiedEmail() ? 'Gérer le compte' : 'Gérer le compte ou corriger l\'email' }}</a>
+                    @endif
+                </div>
+
+                {{-- Tout le compte titulaire : les autres inscriptions de la famille sur cet événement. --}}
+                <div class="mt-4 rounded-2xl bg-fond p-4" data-test="compte-famille">
+                    <p class="text-sm font-bold text-vert-sombre">
+                        @if ($famille->isEmpty())
+                            Seule inscription de ce compte sur l'événement.
+                        @else
+                            Aussi sur ce compte ({{ $famille->count() }}) :
+                        @endif
+                    </p>
+                    @if ($famille->isNotEmpty())
+                        <ul class="mt-2 space-y-1.5 text-sm">
+                            @foreach ($famille as $autre)
+                                <li class="flex flex-wrap items-center gap-2">
+                                    <a href="{{ route('admin.inscriptions.show', $autre) }}" class="rfl-lien">{{ $autre->participant->user->name }}</a>
+                                    <span class="flex items-center gap-1 text-xs text-gris-texte"><x-course-couleur :course="$autre->tarif->course" />{{ $autre->tarif->course->nom }}</span>
+                                    <x-admin.statut :inscription="$autre" />
+                                </li>
+                            @endforeach
+                        </ul>
+                        <a href="{{ route('admin.inscriptions.index', ['compte' => $titulaire->id_user]) }}" class="mt-2 inline-block text-sm rfl-lien">Voir tout le compte dans la liste</a>
                     @endif
                 </div>
             @endif

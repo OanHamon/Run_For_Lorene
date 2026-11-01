@@ -141,3 +141,19 @@ test("un poste ne voit pas les inscriptions d'un autre événement", function ()
     $this->post("/retrait/{$jeton}/{$this->inscription->id_inscription}/remettre")->assertNotFound();
     $this->get("/retrait/{$jeton}?q=jade")->assertDontSee('Jade Rivière');
 });
+
+test("une note interne apparaît discrètement à l'écran de retrait", function () {
+    $i = Inscription::where('dossard', 1042)->sole();
+    $admin = admin(2);
+    \App\Models\NoteInterne::create(['texte' => 'Diabétique : sucre au ravitaillement', 'id_inscription' => $i->id_inscription, 'id_admin' => $admin->id_user]);
+
+    $this->actingAs($admin)->get('/admin/retrait?q=1042')
+        ->assertSee('Note · 1')->assertSee('Diabétique : sucre au ravitaillement');
+
+    // Poste bénévole sans compte : l'indicateur seulement, le texte reste aux admins.
+    auth()->logout();
+    $jeton = posteOuvert($this->evenement);
+    $this->post("/retrait/{$jeton}/benevole", ['prenom' => 'Sacha']);
+    $this->get("/retrait/{$jeton}?q=1042")->assertOk()
+        ->assertSee('Note : voir un responsable')->assertDontSee('Diabétique');
+});

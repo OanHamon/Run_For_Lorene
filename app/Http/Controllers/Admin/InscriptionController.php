@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Inscription;
 use App\Models\JournalAdmin;
+use App\Models\QuestionnaireSante;
 use App\Models\QuestionSante;
+use App\Models\User;
 use App\Notifications\RelanceInscription;
 use App\Services\Admin\AnnulerInscription;
 use App\Services\Admin\Journal;
@@ -37,18 +40,59 @@ class InscriptionController extends Controller
 {
     public function __construct(private Journal $journal) {}
 
+    /**
+     * Liste des inscriptions, vue « par inscription » (une ligne par coureur) ou « par compte »
+     * (une ligne par compte titulaire, avec ses participants) : les deux lectures au même endroit,
+     * avec les mêmes filtres (réunion du 01/11/2026, l'ancienne page « Comptes » y est fusionnée).
+     */
     public function index(Request $request): View
     {
         $evenement = EvenementAdmin::choisi($request);
+        $vue = $request->query('vue') === 'comptes' ? 'comptes' : 'inscriptions';
 
         return view('admin.inscriptions.index', [
             'evenement' => $evenement,
             'evenements' => Evenement::orderByDesc('date_evenement')->get(),
             'courses' => $evenement ? $evenement->courses()->orderBy('heure_depart')->get() : collect(),
-            'inscriptions' => $evenement
+            'vue' => $vue,
+            'compte' => $request->filled('compte') ? User::find($request->integer('compte')) : null,
+            'inscriptions' => $evenement && $vue === 'inscriptions'
                 ? $this->requete($request, $evenement)->paginate(50)->withQueryString()
                 : null,
+            'comptes' => $evenement && $vue === 'comptes' ? $this->parCompte($request, $evenement) : null,
         ]);
+    }
+
+    /**
+     * Vue « par compte » : les comptes titulaires des inscriptions filtrées, par ordre alphabétique,
+     * chacun avec ses inscriptions (participants gérés compris).
+     */
+    private function parCompte(Request $request, Evenement $evenement)
+    {
+        $filtrees = $this->requete($request, $evenement)->reorder()->setEagerLoads([])
+            ->select('inscriptions.id_inscription')->selectRaw(Inscription::SQL_COMPTE.' as id_compte');
+
+        $comptes = DB::query()->fromSub($filtrees, 'f')
+            ->join('users', 'users.id_user', '=', 'f.id_compte')
+            ->select('f.id_compte')->selectRaw('count(*) as nombre')
+            ->groupBy('f.id_compte', 'users.nom', 'users.prenom')
+            ->orderBy('users.nom')->orderBy('users.prenom')
+            ->paginate(50)->withQueryString();
+
+        $ids = collect($comptes->items())->pluck('id_compte');
+        $parCompte = DB::query()->fromSub($filtrees, 'f')->whereIn('f.id_compte', $ids)->get()->groupBy('id_compte');
+        $inscriptions = Inscription::with('participant.user', 'tarif.course')
+            ->whereIn('id_inscription', $parCompte->flatten()->pluck('id_inscription'))
+            ->get()->keyBy('id_inscription');
+        $users = User::whereIn('id_user', $ids)->get()->keyBy('id_user');
+
+        $comptes->setCollection(collect($comptes->items())->map(fn ($ligne) => (object) [
+            'user' => $users[$ligne->id_compte],
+            'inscriptions' => $parCompte[$ligne->id_compte]->map(fn ($f) => $inscriptions[$f->id_inscription])
+                ->sortBy(fn (Inscription $i) => $i->participant->user->prenom)->values(),
+        ]));
+
+        return $comptes;
     }
 
     public function export(Request $request): Response
@@ -147,7 +191,17 @@ class InscriptionController extends Controller
             'sante' => $questionnaires->dernier($inscription, QuestionSante::SANTE),
             'decharge' => $questionnaires->dernier($inscription, QuestionSante::DECHARGE),
             'journal' => JournalAdmin::with('auteur')->where('cible_type', 'inscription')->where('cible_id', $inscription->id_inscription)->orderByDesc('id_journal')->get(),
-            'titulaire' => $inscription->titulaire(),
+            'titulaire' => $titulaire = $inscription->titulaire(),
+            // Tout le compte titulaire sur cet événement : les autres inscriptions de la famille.
+            'famille' => $titulaire
+                ? Inscription::with('participant.user', 'tarif.course')
+                    ->where('id_evenement', $inscription->id_evenement)
+                    ->where('statut', '!=', Inscription::BROUILLON)
+                    ->whereKeyNot($inscription->id_inscription)
+                    ->duCompte($titulaire->id_user)
+                    ->orderBy('id_inscription')
+                    ->get()
+                : collect(),
         ]);
     }
 
@@ -327,7 +381,10 @@ class InscriptionController extends Controller
         return back()->with('statut', "Relance envoyée à {$titulaire->email}.");
     }
 
-    /** Requête de la liste, avec la recherche et les filtres (course, statut, mineur, documents manquants). */
+    /** Filtre « Santé » de la liste : questionnaires à vérifier, avec au moins un « oui », ou vérifiés. */
+    public const FILTRES_SANTE = ['a_verifier' => 'À vérifier', 'oui' => 'Avec un « oui »', 'verifies' => 'Vérifiés'];
+
+    /** Requête de la liste, avec la recherche et les filtres (course, statut, mineur, documents manquants, compte, santé). */
     private function requete(Request $request, Evenement $evenement): Builder
     {
         $statut = $request->query('statut');
@@ -342,6 +399,11 @@ class InscriptionController extends Controller
             ->when($request->filled('course'), fn ($q) => $q->whereIn('id_tarif', Course::whereKey($request->integer('course'))->firstOrNew()->tarifs()->select('id_tarif')))
             ->when($request->boolean('mineur'), fn ($q) => $q->mineurs($evenement))
             ->when($request->boolean('documents'), fn ($q) => $q->avecDocumentsManquants($evenement))
+            ->when($request->filled('compte'), fn ($q) => $q->duCompte($request->integer('compte')))
+            ->when(
+                array_key_exists((string) $request->query('sante'), self::FILTRES_SANTE) && $request->user()->peutAdmin(Admin::GESTION),
+                fn ($q) => $q->whereIn('inscriptions.id_inscription', $this->inscriptionsSante($evenement, (string) $request->query('sante'))),
+            )
             ->when($request->filled('q'), function ($q) use ($request) {
                 $terme = trim((string) $request->query('q'));
                 $q->where(function ($r) use ($terme) {
@@ -356,5 +418,27 @@ class InscriptionController extends Controller
                 });
             })
             ->orderByDesc('id_inscription');
+    }
+
+    /**
+     * Inscriptions dont le questionnaire de santé correspond au filtre. Les réponses sont chiffrées :
+     * le compte des « oui » se fait après déchiffrement (quelques centaines de mineurs au plus).
+     *
+     * @return list<int>
+     */
+    private function inscriptionsSante(Evenement $evenement, string $filtre): array
+    {
+        return QuestionnaireSante::with('document', 'reponses')
+            ->where('type_questionnaire', QuestionSante::SANTE)
+            ->whereHas('document.inscription', fn ($q) => $q->where('id_evenement', $evenement->id_evenement))
+            ->whereHas('document', fn ($d) => $filtre === 'verifies'
+                ? $d->where('statut', QuestionnaireController::VERIFIE)
+                : $d->where('statut', '!=', QuestionnaireController::VERIFIE))
+            ->get()
+            ->when($filtre === 'oui', fn ($c) => $c->filter(fn (QuestionnaireSante $q) => $q->reponses->contains('reponse', 'oui')))
+            ->map(fn (QuestionnaireSante $q) => $q->document->id_inscription)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

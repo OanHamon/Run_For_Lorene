@@ -6,6 +6,7 @@
     <meta name="robots" content="noindex">
 </head>
 <body class="bg-fond font-sans text-vert-sombre antialiased">
+    @include('partials.bandeau-beta')
     <div class="mx-auto max-w-xl px-4 py-5">
         <header class="mb-5 flex items-center justify-between gap-3">
             <img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-12 w-auto">

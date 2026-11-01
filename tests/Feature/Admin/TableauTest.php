@@ -122,3 +122,7 @@ test('le journal liste les actions admin', function () {
         ->assertSee('Dossard modifié')
         ->assertSee($admin->name);
 });
+
+test("le tableau de bord n'affiche plus de tuile « en attente de paiement »", function () {
+    $this->actingAs(admin(1))->get('/admin')->assertOk()->assertDontSee('En attente de paiement');
+});

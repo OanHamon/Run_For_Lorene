@@ -106,7 +106,7 @@
                             @endforeach
                         </select>
                     </x-admin.champ>
-                    <x-admin.champ name="motif" label="Motif (facultatif)" maxlength="255" aide="Partenaire, bénévole, cas particulier… Noté dans le journal." />
+                    <x-admin.champ name="motif" label="Motif" required maxlength="255" aide="Partenaire, bénévole, cas particulier… Noté dans le journal." />
 
                     <label class="flex items-start gap-3 text-sm">
                         <input type="checkbox" name="consentements" value="1" class="mt-1" @checked(old('consentements')) required>

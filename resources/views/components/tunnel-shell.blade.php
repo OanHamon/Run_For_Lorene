@@ -11,6 +11,7 @@
     {{ $head ?? '' }}
 </head>
 <body class="relative min-h-screen overflow-x-hidden bg-fond font-sans text-vert-sombre antialiased">
+    @include('partials.bandeau-beta')
     <x-charte.tache class="pointer-events-none fixed -top-20 -right-24 h-80 w-80 text-vert-clair" />
     <x-charte.tache class="pointer-events-none fixed -bottom-28 -left-24 h-72 w-72 rotate-180 text-vert-clair/60" />
 

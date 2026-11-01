@@ -20,6 +20,7 @@ beforeEach(function () {
 
     $this->champsCourse = fn (array $d = []) => [
         'nom' => $this->course->nom,
+        'couleur' => '#D9B21E',
         'heure_depart' => '10:30',
         'distance' => '5',
         'age_min' => (string) $this->course->age_min,
@@ -71,7 +72,7 @@ test('avec des inscrits, les âges de la course sont figés et le quota a un pla
     expect($this->course->fresh())->nom->toBe('5 km nature')->quota->toBeNull();
 });
 
-test("un tarif déjà choisi garde son montant, son début et ses âges, mais peut finir plus tôt ou plus tard", function () {
+test('un tarif déjà choisi garde son montant, son début et ses âges, mais peut finir plus tôt ou plus tard', function () {
     inscriptionPayee(User::factory()->create(), $this->course);
     $url = "/admin/tarifs/{$this->tarif->id_tarif}";
 

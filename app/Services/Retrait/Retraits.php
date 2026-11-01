@@ -129,7 +129,7 @@ class Retraits
 
     private function requete(Evenement $evenement)
     {
-        return Inscription::with('participant.user', 'tarif.course', 'evenement')
+        return Inscription::with('participant.user', 'tarif.course', 'evenement', 'notes')
             ->where('id_evenement', $evenement->id_evenement)
             ->whereIn('statut', [Inscription::VALIDEE, Inscription::DOSSIER_INCOMPLET]);
     }
