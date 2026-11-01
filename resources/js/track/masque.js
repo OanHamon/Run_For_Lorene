@@ -5,6 +5,51 @@
  */
 export const FINESSE = 3; // pixels de masque par unité du SVG, pour tester finement les bords
 
+/**
+ * Pixellise le tracé d'un SVG (premier attribut d, commandes M/C/Z absolues) en « evenodd » :
+ * courbes aplaties, remplissage rangée par rangée. Calcul entier en +, −, ×, ÷ : le même résultat
+ * dans tous les navigateurs et dans Node (le gabarit du code en dépend).
+ */
+export function pixelliser(source) {
+    const d = source.match(/\sd="([^"]+)"/)[1];
+    const vue = source.match(/viewBox="([^"]+)"/)[1].trim().split(/\s+/).map(Number);
+    const polygones = d.split(/(?=M)/).filter((p) => p.trim()).map((p) => {
+        const n = p.match(/-?\d+\.?\d*/g).map(Number);
+        const pts = [[n[0], n[1]]];
+        let cur = pts[0];
+        for (let i = 2; i + 6 <= n.length; i += 6) {
+            const [x1, y1, x2, y2, x3, y3] = n.slice(i, i + 6);
+            for (let k = 1; k <= 16; k++) {
+                const t = k / 16, a = 1 - t;
+                pts.push([a * a * a * cur[0] + 3 * a * a * t * x1 + 3 * a * t * t * x2 + t * t * t * x3,
+                    a * a * a * cur[1] + 3 * a * a * t * y1 + 3 * a * t * t * y2 + t * t * t * y3]);
+            }
+            cur = [x3, y3];
+        }
+        return pts;
+    });
+
+    const largeur = Math.ceil(vue[2] * FINESSE), hauteur = Math.ceil(vue[3] * FINESSE);
+    const plein = new Uint8Array(largeur * hauteur);
+    for (let py = 0; py < hauteur; py++) {
+        const y = (py + 0.5) / FINESSE;
+        const xs = [];
+        for (const P of polygones) {
+            for (let j = 0; j < P.length; j++) {
+                const [xa, ya] = P[j], [xb, yb] = P[(j + 1) % P.length];
+                if ((ya <= y) !== (yb <= y)) xs.push(xa + ((y - ya) * (xb - xa)) / (yb - ya));
+            }
+        }
+        xs.sort((a, b) => a - b);
+        for (let k = 0; k + 1 < xs.length; k += 2) {
+            const fin = Math.min(largeur, Math.round(xs[k + 1] * FINESSE));
+            for (let px = Math.max(0, Math.round(xs[k] * FINESSE)); px < fin; px++) plein[py * largeur + px] = 1;
+        }
+    }
+
+    return construireMasque(plein, largeur, hauteur);
+}
+
 /** Complète un masque brut : boîte englobante de la forme et place du cœur. */
 export function construireMasque(plein, largeur, hauteur) {
     let x0 = largeur, y0 = hauteur, x1 = 0, y1 = 0;

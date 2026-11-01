@@ -6,13 +6,12 @@
  * Un cœur, en particules lui aussi, bat entre les deux semelles : il prend la plus grande place
  * libre au milieu de la paire, calculée sur le masque (aucune coordonnée en dur).
  *
- * La graine fait varier le placement, la taille et les nuances des particules. Avec une matrice
- * de QR (particulesQr), l'empreinte devient un vrai QR code : voir trame.js.
+ * La graine fait varier le placement, la taille et les nuances des particules. Le code d'un
+ * billet, lui, colore les cellules des semelles : voir code.js.
  * La géométrie pure (cœur, tests de forme) est dans masque.js, testable sans navigateur.
  */
 import source from '../../svg/track/semelles.svg?raw';
 import { FINESSE, construireMasque, particules as particulesLibres } from './masque.js';
-import { trame } from './trame.js';
 
 const tracé = source.match(/\sd="([^"]+)"/)[1].replace(/\s+/g, ' ');
 const [, , largeurVue, hauteurVue] = source.match(/viewBox="([^"]+)"/)[1].trim().split(/\s+/).map(Number);
@@ -44,11 +43,6 @@ function lireMasque() {
 /** Empreinte décorative (sans donnée) : voir masque.js. */
 export function particules(graine = 'track', espacement = 3.8) {
     return particulesLibres(lireMasque(), graine, espacement);
-}
-
-/** Empreinte-QR : le QR de `matrice` dessiné en particules, les semelles en filigrane (trame.js). */
-export function particulesQr(graine, matrice) {
-    return trame(lireMasque(), matrice, graine);
 }
 
 /** Boîte englobante de la forme, en unités du SVG. */

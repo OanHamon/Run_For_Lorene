@@ -13,27 +13,14 @@ it('affiche la page de mise au point TRACK en local', function () {
         ->assertOk()
         ->assertSee('data-track', false)
         ->assertSee('data-graine="demo-jade"', false)
-        ->assertSee('data-matrice', false);
+        ->assertSee('data-code', false);
 });
 
-it("fait de l'empreinte un QR code quand on lui donne un code", function () {
-    $html = Blade::render('<x-track.empreinte code="RFL-12-abc" />');
-    $matrice = App\Support\Billet::matrice('RFL-12-abc');
+it("transmet le code du billet à l'empreinte", function () {
+    $html = Blade::render('<x-track.empreinte code="RFL-12-0123456789abcdef0123" />');
 
     expect($html)
-        ->toContain('data-graine="RFL-12-abc"')
-        ->toContain('aspect-square')
-        ->toContain(e(json_encode($matrice)))
-        ->and($matrice['taille'])->toBe(33)
-        ->and(strlen($matrice['modules']))->toBe(33 * 33);
-});
-
-it('rend une empreinte avec sa graine, statique sur demande', function () {
-    $html = Blade::render('<x-track.empreinte graine="RFL-12-abc" statique class="w-24" />');
-
-    expect($html)
-        ->toContain('data-graine="RFL-12-abc"')
-        ->toContain('data-statique')
-        ->toContain('w-24')
-        ->toContain('role="img"');
+        ->toContain('data-code="RFL-12-0123456789abcdef0123"')
+        ->toContain('data-graine="RFL-12-0123456789abcdef0123"')
+        ->toContain('code du billet');
 });

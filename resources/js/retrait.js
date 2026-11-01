@@ -1,9 +1,12 @@
 /*
- * Scan du billet QR au retrait des dossards : caméra arrière, lecture image par image avec
- * jsQR (fonctionne aussi sur iPhone, sans BarcodeDetector). Un code « RFL-… » trouvé est envoyé
- * au serveur, qui vérifie la signature et affiche la fiche. Sans caméra : la recherche par nom.
+ * Scan du billet au retrait des dossards : caméra arrière, lecture image par image. Deux codes
+ * possibles : le QR classique (jsQR, fonctionne aussi sur iPhone, sans BarcodeDetector) et
+ * l'empreinte TRACK (les semelles, lecteur maison, quelques fois par seconde). Un jeton « RFL-… »
+ * trouvé est envoyé au serveur, qui vérifie la signature et affiche la fiche. Sans caméra : la
+ * recherche par nom.
  */
 import jsQR from 'jsqr';
+import { lireEmpreinteRGBA } from './track/lecteur.js';
 
 document.querySelectorAll('[data-scan-form]').forEach((form) => {
     const ouvrir = form.querySelector('[data-scan-ouvrir]');
@@ -16,6 +19,7 @@ document.querySelectorAll('[data-scan-form]').forEach((form) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     let flux = null;
+    let derniereEmpreinte = 0;
 
     const arreter = () => {
         flux?.getTracks().forEach((piste) => piste.stop());
@@ -30,10 +34,16 @@ document.querySelectorAll('[data-scan-form]').forEach((form) => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
-            if (code && code.data.startsWith('RFL-')) {
+            const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let lu = jsQR(image.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
+            // L'empreinte demande plus de calcul : une tentative toutes les 250 ms suffit.
+            if (!lu && performance.now() - derniereEmpreinte > 250) {
+                derniereEmpreinte = performance.now();
+                lu = lireEmpreinteRGBA(image.data, canvas.width, canvas.height)?.jeton ?? null;
+            }
+            if (lu && lu.startsWith('RFL-')) {
                 navigator.vibrate?.(80);
-                jeton.value = code.data;
+                jeton.value = lu;
                 arreter();
                 form.submit();
                 return;

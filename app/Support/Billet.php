@@ -3,10 +3,6 @@
 namespace App\Support;
 
 use App\Models\Inscription;
-use BaconQrCode\Common\ErrorCorrectionLevel;
-use BaconQrCode\Common\Version;
-use BaconQrCode\Encoder\Encoder;
-use BaconQrCode\Exception\WriterException;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -49,33 +45,6 @@ class Billet
 
         // Retire la déclaration XML pour l'insérer dans une page HTML.
         return preg_replace('/^<\?xml[^>]*>\s*/', '', $writer->writeString($contenu));
-    }
-
-    /**
-     * Grille brute du QR d'un texte, pour l'empreinte TRACK (le QR dessiné en semelles).
-     * Correction d'erreur maximale (H, 30 %) : les particules décoratives autour de chaque module
-     * brouillent un peu l'image. Version 4 (33 × 33) imposée tant que le texte y tient, pour que
-     * toutes les empreintes aient la même trame ; sans préfixe ECI, comme un QR ordinaire.
-     *
-     * @return array{taille: int, version: int, modules: string} modules : '1' foncé, '0' clair, ligne après ligne
-     */
-    public static function matrice(string $contenu): array
-    {
-        try {
-            $qr = Encoder::encode($contenu, ErrorCorrectionLevel::H(), 'ISO-8859-1', Version::getVersionForNumber(4), false);
-        } catch (WriterException) {
-            $qr = Encoder::encode($contenu, ErrorCorrectionLevel::H(), 'ISO-8859-1', null, false);
-        }
-
-        $grille = $qr->getMatrix();
-        $modules = '';
-        for ($y = 0; $y < $grille->getHeight(); $y++) {
-            for ($x = 0; $x < $grille->getWidth(); $x++) {
-                $modules .= $grille->get($x, $y) === 1 ? '1' : '0';
-            }
-        }
-
-        return ['taille' => $grille->getWidth(), 'version' => $qr->getVersion()->getVersionNumber(), 'modules' => $modules];
     }
 
     /** Lien vers le billet en plein écran, sans connexion (signé, valable tant que la clé ne change pas). */

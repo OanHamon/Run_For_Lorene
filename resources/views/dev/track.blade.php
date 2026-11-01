@@ -9,7 +9,7 @@
         <header class="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl text-vert">TRACK</h1>
-                <p class="mt-1 text-gris-texte">L'empreinte est un QR code : scanne-la avec ton téléphone. Survole-la, clique ou touche-la.</p>
+                <p class="mt-1 text-gris-texte">L'empreinte porte un code : lis-la avec le lecteur de /dev/qr. Survole-la, clique ou touche-la.</p>
             </div>
             <button type="button" class="rfl-btn-secondaire" id="track-pause">Figer (mode scan)</button>
         </header>
@@ -22,9 +22,9 @@
             <div class="flex flex-col gap-6">
                 <div class="rfl-carte rounded-3xl bg-white p-6">
                     <h2 class="font-display text-lg text-vert">Une empreinte par personne</h2>
-                    <p class="mt-1 text-sm text-gris-texte">Chaque billet a son propre QR, donc sa propre trame.</p>
+                    <p class="mt-1 text-sm text-gris-texte">Chaque billet colore ses semelles à sa façon : c'est son code.</p>
                     <div class="mt-4 grid grid-cols-3 gap-3">
-                        @foreach (['RFL-1042-a1', 'RFL-1043-b7', 'RFL-1044-c3'] as $graine)
+                        @foreach (['RFL-1043-7c1e9a0b2d4f6e8a1c3b', 'RFL-1044-e5d4c3b2a1f0e9d8c7b6', 'RFL-1045-0123456789abcdef0123'] as $graine)
                             <x-track.empreinte :code="$graine" class="w-full" />
                         @endforeach
                     </div>

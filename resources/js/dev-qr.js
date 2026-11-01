@@ -1,10 +1,12 @@
 /*
- * Banc d'essai des QR codes (/dev/qr, local uniquement) : lecture par caméra ou par photo avec
- * jsQR, comme au poste de retrait, puis vérification du code par le serveur.
+ * Banc d'essai des billets (/dev/qr, local uniquement) : lecture par caméra ou par photo, comme
+ * au poste de retrait (QR classique avec jsQR, empreinte TRACK avec le lecteur des semelles),
+ * puis vérification du jeton par le serveur.
  * La caméra demande une page sécurisée : http://localhost sur l'ordinateur, ou https.
  * La photo marche partout, même sur un téléphone en http.
  */
 import jsQR from 'jsqr';
+import { lireEmpreinteRGBA } from './track/lecteur.js';
 
 const racine = document.querySelector('[data-lecteur]');
 const $ = (nom) => racine.querySelector(`[data-${nom}]`);
@@ -17,22 +19,34 @@ const canevas = document.createElement('canvas');
 const ctx = canevas.getContext('2d', { willReadFrequently: true });
 let flux = null;
 let dernier = { code: null, t: 0 };
+let derniereEmpreinte = 0;
 
 function montrerErreur(texte) {
     erreur.textContent = texte;
     erreur.classList.toggle('hidden', !texte);
 }
 
-/** Décode l'image d'une source (vidéo ou photo), réduite pour rester rapide. */
-function decoder(source, largeur, hauteur) {
+/**
+ * Décode l'image d'une source (vidéo ou photo), réduite pour rester rapide : QR classique d'abord,
+ * puis l'empreinte des semelles (pas plus de 4 fois par seconde en vidéo).
+ * Renvoie { code, par } ou null.
+ */
+function decoder(source, largeur, hauteur, toujoursEmpreinte = false) {
     const reduction = Math.min(1, 1280 / Math.max(largeur, hauteur));
     canevas.width = Math.round(largeur * reduction);
     canevas.height = Math.round(hauteur * reduction);
     ctx.drawImage(source, 0, 0, canevas.width, canevas.height);
-    return jsQR(ctx.getImageData(0, 0, canevas.width, canevas.height).data, canevas.width, canevas.height, { inversionAttempts: 'attemptBoth' })?.data ?? null;
+    const image = ctx.getImageData(0, 0, canevas.width, canevas.height);
+    const qr = jsQR(image.data, canevas.width, canevas.height, { inversionAttempts: 'attemptBoth' })?.data;
+    if (qr) return { code: qr, par: 'QR classique' };
+    if (!toujoursEmpreinte && performance.now() - derniereEmpreinte < 250) return null;
+    derniereEmpreinte = performance.now();
+    const t0 = performance.now();
+    const empreinte = lireEmpreinteRGBA(image.data, canevas.width, canevas.height);
+    return empreinte ? { code: empreinte.jeton, par: `semelles (${Math.round(performance.now() - t0)} ms)` } : null;
 }
 
-async function verifier(code) {
+async function verifier(code, par) {
     navigator.vibrate?.(80);
     const reponse = await fetch(racine.dataset.verifier, {
         method: 'POST',
@@ -44,7 +58,7 @@ async function verifier(code) {
     resultat.classList.add(...(r.ok ? ['ring-vert', 'bg-vert-clair/40'] : ['ring-erreur-bord', 'bg-erreur-fond']));
     $('resultat-message').textContent = r.message ?? 'Réponse inattendue du serveur.';
     $('resultat-fiche').textContent = r.fiche ? `${r.fiche.nom} · ${r.fiche.course} · dossard ${r.fiche.dossard ?? '—'} · ${r.fiche.evenement}` : '';
-    $('resultat-code').textContent = `Code lu : ${code}`;
+    $('resultat-code').textContent = `Lu par ${par} : ${code}`;
 }
 
 function arreter() {
@@ -58,11 +72,11 @@ function arreter() {
 function lireVideo() {
     if (!flux) return;
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const code = decoder(video, video.videoWidth, video.videoHeight);
+        const lu = decoder(video, video.videoWidth, video.videoHeight);
         // On reste en lecture continue ; le même code n'est revérifié qu'après 3 secondes.
-        if (code && (code !== dernier.code || performance.now() - dernier.t > 3000)) {
-            dernier = { code, t: performance.now() };
-            verifier(code);
+        if (lu && (lu.code !== dernier.code || performance.now() - dernier.t > 3000)) {
+            dernier = { code: lu.code, t: performance.now() };
+            verifier(lu.code, lu.par);
         }
     }
     requestAnimationFrame(lireVideo);
@@ -97,10 +111,10 @@ $('lecteur-photo').addEventListener('change', async (e) => {
     montrerErreur('');
     try {
         const image = await createImageBitmap(fichier);
-        const code = decoder(image, image.width, image.height);
+        const lu = decoder(image, image.width, image.height, true);
         image.close();
-        if (code) verifier(code);
-        else montrerErreur('Aucun QR code trouvé sur la photo. Rapproche-toi et évite les reflets.');
+        if (lu) verifier(lu.code, lu.par);
+        else montrerErreur('Aucun billet trouvé sur la photo (ni QR ni semelles). Rapproche-toi et évite les reflets.');
     } catch {
         montrerErreur('Impossible de lire cette image.');
     }
