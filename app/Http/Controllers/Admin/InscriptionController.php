@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\Course;
 use App\Models\Evenement;
 use App\Models\Inscription;
 use App\Models\JournalAdmin;
+use App\Models\QuestionnaireSante;
 use App\Models\QuestionSante;
 use App\Notifications\RelanceInscription;
 use App\Services\Admin\AnnulerInscription;
@@ -327,7 +329,10 @@ class InscriptionController extends Controller
         return back()->with('statut', "Relance envoyée à {$titulaire->email}.");
     }
 
-    /** Requête de la liste, avec la recherche et les filtres (course, statut, mineur, documents manquants). */
+    /** Filtre « Santé » de la liste : questionnaires à vérifier, avec au moins un « oui », ou vérifiés. */
+    public const FILTRES_SANTE = ['a_verifier' => 'À vérifier', 'oui' => 'Avec un « oui »', 'verifies' => 'Vérifiés'];
+
+    /** Requête de la liste, avec la recherche et les filtres (course, statut, mineur, documents manquants, santé). */
     private function requete(Request $request, Evenement $evenement): Builder
     {
         $statut = $request->query('statut');
@@ -342,6 +347,10 @@ class InscriptionController extends Controller
             ->when($request->filled('course'), fn ($q) => $q->whereIn('id_tarif', Course::whereKey($request->integer('course'))->firstOrNew()->tarifs()->select('id_tarif')))
             ->when($request->boolean('mineur'), fn ($q) => $q->mineurs($evenement))
             ->when($request->boolean('documents'), fn ($q) => $q->avecDocumentsManquants($evenement))
+            ->when(
+                array_key_exists((string) $request->query('sante'), self::FILTRES_SANTE) && $request->user()->peutAdmin(Admin::GESTION),
+                fn ($q) => $q->whereIn('inscriptions.id_inscription', $this->inscriptionsSante($evenement, (string) $request->query('sante'))),
+            )
             ->when($request->filled('q'), function ($q) use ($request) {
                 $terme = trim((string) $request->query('q'));
                 $q->where(function ($r) use ($terme) {
@@ -356,5 +365,27 @@ class InscriptionController extends Controller
                 });
             })
             ->orderByDesc('id_inscription');
+    }
+
+    /**
+     * Inscriptions dont le questionnaire de santé correspond au filtre. Les réponses sont chiffrées :
+     * le compte des « oui » se fait après déchiffrement (quelques centaines de mineurs au plus).
+     *
+     * @return list<int>
+     */
+    private function inscriptionsSante(Evenement $evenement, string $filtre): array
+    {
+        return QuestionnaireSante::with('document', 'reponses')
+            ->where('type_questionnaire', QuestionSante::SANTE)
+            ->whereHas('document.inscription', fn ($q) => $q->where('id_evenement', $evenement->id_evenement))
+            ->whereHas('document', fn ($d) => $filtre === 'verifies'
+                ? $d->where('statut', QuestionnaireController::VERIFIE)
+                : $d->where('statut', '!=', QuestionnaireController::VERIFIE))
+            ->get()
+            ->when($filtre === 'oui', fn ($c) => $c->filter(fn (QuestionnaireSante $q) => $q->reponses->contains('reponse', 'oui')))
+            ->map(fn (QuestionnaireSante $q) => $q->document->id_inscription)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

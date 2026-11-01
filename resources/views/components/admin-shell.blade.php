@@ -10,7 +10,6 @@
     $compteurs = app(\App\Services\Admin\ATraiter::class)->compteurs($evenementSuivi, $user);
     $sections = NavigationAdmin::sections(request(), $user, $evenementSuivi, [
         'admin.a-traiter' => $compteurs['total'] ?: null,
-        'admin.questionnaires.index' => $compteurs['sante'] ?: null,
     ]);
     $fil = NavigationAdmin::fil($sections, $title);
 @endphp

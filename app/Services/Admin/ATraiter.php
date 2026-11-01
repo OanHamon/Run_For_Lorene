@@ -2,19 +2,19 @@
 
 namespace App\Services\Admin;
 
-use App\Http\Controllers\Admin\QuestionnaireController;
-use App\Models\Admin;
 use App\Models\Evenement;
 use App\Models\Inscription;
-use App\Models\QuestionnaireSante;
-use App\Models\QuestionSante;
 use App\Models\User;
 use App\Support\Format;
 
 /**
- * « À traiter » : tout ce qui attend une action d'un admin, regroupé par type, le plus urgent
- * d'abord. Les inscriptions non finalisées (brouillons, paiement en attente) n'y sont pas :
- * l'inscription se fait d'une traite, on ne les relance pas.
+ * « À traiter » : seulement les vraies anomalies, celles qui attendent une action d'un admin,
+ * regroupées par type, le plus urgent d'abord, chacune avec son motif en clair.
+ *
+ * N'y sont pas : les inscriptions non finalisées (l'inscription se fait d'une traite, on ne les
+ * relance pas) et les questionnaires de santé. Un « oui » n'impose rien, il conseille fortement
+ * de consulter un médecin (réunion du 01/11/2026) : ils se retrouvent par le filtre « Santé »
+ * de la liste des inscriptions.
  *
  * Chaque groupe : clé, titre, explication, éléments (libellé, détail, lien) et le nombre total.
  */
@@ -75,30 +75,20 @@ class ATraiter
                     'url' => route('admin.inscriptions.show', $i),
                 ])->all(), $total, route('admin.inscriptions.index', ['statut' => Inscription::DOSSIER_INCOMPLET]));
 
-            if ($admin->peutAdmin(Admin::GESTION)) {
-                $sante = $this->questionnairesAVerifier($evenement);
-                $groupes[] = $this->groupe('sante', 'Questionnaires de santé à vérifier', 'À lire puis marquer « vérifié ». Une réponse « oui » ne bloque pas l\'inscription : contacte la famille si besoin.',
-                    $sante->take(self::MAX_PAR_GROUPE)->map(fn (QuestionnaireSante $q) => [
-                        'libelle' => $q->document->inscription->participant->user->name.' · '.$q->document->inscription->tarif->course->nom,
-                        'detail' => $q->nb_oui > 0 ? "{$q->nb_oui} réponse(s) « oui »" : 'Aucune réponse « oui »',
-                        'url' => route('admin.questionnaires.show', $q->document),
-                    ])->values()->all(), $sante->count(), route('admin.questionnaires.index'));
-            }
         }
 
         return array_values(array_filter($groupes, fn ($g) => $g['nombre'] > 0));
     }
 
     /**
-     * Nombre affiché à côté de « À traiter » dans la barre : sans déchiffrer les questionnaires
-     * ni charger les listes, pour rester léger sur chaque page.
+     * Nombre affiché à côté de « À traiter » dans la barre : sans charger les listes, pour
+     * rester léger sur chaque page.
      *
-     * @return array{total: int, sante: int}
+     * @return array{total: int}
      */
     public function compteurs(?Evenement $evenement, User $admin): array
     {
         $total = Statistiques::paiementsAVerifier()->count();
-        $sante = 0;
 
         if ($evenement) {
             if ($evenement->statut === Evenement::PUBLIE && $evenement->fermeture->isFuture()) {
@@ -109,32 +99,9 @@ class ATraiter
             $total += $courses->filter(fn ($c) => $c->quota && $c->places_prises > $c->quota)->count();
             $total += $courses->filter(fn ($c) => $c->dossards['sans_dossard'] > 0 || ($c->dossards['libres'] !== null && $c->dossards['libres'] === 0))->count();
             $total += Inscription::where('id_evenement', $evenement->id_evenement)->where('statut', Inscription::DOSSIER_INCOMPLET)->count();
-
-            if ($admin->peutAdmin(Admin::GESTION)) {
-                $sante = $this->requeteSante($evenement)->count();
-                $total += $sante;
-            }
         }
 
-        return ['total' => $total, 'sante' => $sante];
-    }
-
-    private function questionnairesAVerifier(Evenement $evenement)
-    {
-        return $this->requeteSante($evenement)
-            ->with('document.inscription.participant.user', 'document.inscription.tarif.course', 'reponses')
-            ->orderBy('id_document')
-            ->get()
-            // Réponses chiffrées : le compte des « oui » se fait après déchiffrement ; les « oui » d'abord.
-            ->each(fn (QuestionnaireSante $q) => $q->setAttribute('nb_oui', $q->reponses->where('reponse', 'oui')->count()))
-            ->sortByDesc('nb_oui');
-    }
-
-    private function requeteSante(Evenement $evenement)
-    {
-        return QuestionnaireSante::where('type_questionnaire', QuestionSante::SANTE)
-            ->whereHas('document', fn ($d) => $d->where('statut', '!=', QuestionnaireController::VERIFIE))
-            ->whereHas('document.inscription', fn ($q) => $q->where('id_evenement', $evenement->id_evenement)->where('statut', '!=', Inscription::ANNULEE));
+        return ['total' => $total];
     }
 
     private function groupe(string $cle, string $titre, string $aide, array $elements, ?int $nombre = null, ?string $voirTout = null): array

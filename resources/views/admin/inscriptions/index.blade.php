@@ -2,7 +2,7 @@
     use App\Models\Inscription;
     use App\Support\Format;
 
-    $filtres = request()->only(['q', 'course', 'statut', 'mineur', 'documents']);
+    $filtres = request()->only(['q', 'course', 'statut', 'mineur', 'documents', 'sante']);
     $peutGerer = auth()->user()->peutAdmin(2);
 @endphp
 <x-admin-shell title="Inscriptions">
@@ -17,7 +17,7 @@
     @if (! $evenement)
         <div class="rfl-carte px-6 py-10 text-center text-gris-texte">Aucun événement.</div>
     @else
-        <form method="GET" class="rfl-carte mb-6 grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto_auto]" role="search">
+        <form method="GET" class="rfl-carte mb-6 grid gap-4 p-5 sm:grid-cols-2 {{ $peutGerer ? 'xl:grid-cols-[2fr_1fr_1fr_1fr_auto_auto]' : 'xl:grid-cols-[2fr_1fr_1fr_auto_auto]' }}" role="search">
             <div>
                 <label for="q" class="rfl-label">Rechercher</label>
                 <input id="q" name="q" type="search" value="{{ request('q') }}" placeholder="Nom, email, dossard ou n°" class="rfl-champ-compact">
@@ -40,6 +40,17 @@
                     @endforeach
                 </select>
             </div>
+            @if ($peutGerer)
+                <div>
+                    <label for="sante" class="rfl-label">Questionnaire de santé</label>
+                    <select id="sante" name="sante" class="rfl-champ-compact">
+                        <option value="">Tous</option>
+                        @foreach (\App\Http\Controllers\Admin\InscriptionController::FILTRES_SANTE as $valeur => $libelle)
+                            <option value="{{ $valeur }}" @selected(request('sante') === $valeur)>{{ $libelle }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
             <fieldset class="flex flex-col justify-end gap-1 pb-1 text-sm">
                 <legend class="sr-only">Autres filtres</legend>
                 <label class="flex items-center gap-2"><input type="checkbox" name="mineur" value="1" @checked(request()->boolean('mineur'))> Mineurs</label>
