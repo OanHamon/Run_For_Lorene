@@ -3,6 +3,9 @@
  * pour la course), le remplit en « evenodd » sur un canevas hors écran, puis y répartit les
  * particules : grille en quinconce légèrement bousculée, sans grille apparente.
  *
+ * Un cœur, en particules lui aussi, bat entre les deux semelles : il prend la plus grande place
+ * libre au milieu de la paire, calculée sur le masque (aucune coordonnée en dur).
+ *
  * La graine (le jeton d'un participant, par exemple) fait varier le placement, la taille et
  * les nuances des particules : chaque empreinte est unique. Elle n'encode encore aucune donnée.
  */
@@ -47,8 +50,69 @@ function lireMasque() {
         plein, largeur, hauteur,
         boite: { x: x0 / FINESSE, y: y0 / FINESSE, l: (x1 - x0) / FINESSE, h: (y1 - y0) / FINESSE },
     };
+    masque.coeur = placerCoeur(masque);
 
     return masque;
+}
+
+/*
+ * Cœur : courbe (u² + v² − 1)³ − u²·v³ ≤ 0. Il occupe u ∈ [−1,14 ; 1,14] et v ∈ [−1 ; 1,25] :
+ * pour une largeur L, l'unité vaut L / 2,28, le haut est à 1,25 unité au-dessus du centre.
+ */
+const COEUR = { demiLargeur: 1.14, haut: 1.25, bas: 1, marge: 7, max: 0.15 };
+
+/** Plus grand cœur qui tient entre les deux semelles, le plus près possible du milieu de la hauteur. */
+function placerCoeur(m) {
+    const { boite } = m;
+    const cxp = Math.round((boite.x + boite.l / 2) * FINESSE);
+
+    // Demi-largeur libre de part et d'autre de l'axe central, rangée par rangée (unités du SVG).
+    const libre = new Float32Array(m.hauteur);
+    for (let py = 0; py < m.hauteur; py++) {
+        let g = 0, d = 0;
+        while (cxp - g >= 0 && !m.plein[py * m.largeur + cxp - g]) g++;
+        while (cxp + d < m.largeur && !m.plein[py * m.largeur + cxp + d]) d++;
+        libre[py] = Math.min(g, d) / FINESSE;
+    }
+    const libreEntre = (ya, yb) => {
+        let min = Infinity;
+        for (let py = Math.floor(ya * FINESSE); py <= Math.ceil(yb * FINESSE); py++) min = Math.min(min, libre[py] ?? 0);
+        return min;
+    };
+
+    // On garde le cœur dans la hauteur des semelles (pas au-dessus ni au-dessous de la paire).
+    const yMin = boite.y + boite.h * 0.12, yMax = boite.y + boite.h * 0.88, milieu = boite.y + boite.h / 2;
+    for (let largeur = Math.round(boite.l * COEUR.max); largeur >= 14; largeur -= 1) {
+        const unite = largeur / (COEUR.demiLargeur * 2);
+        const hauteur = unite * (COEUR.haut + COEUR.bas);
+        let meilleur = null;
+        for (let haut = yMin; haut + hauteur <= yMax; haut += 1) {
+            if (libreEntre(haut - COEUR.marge, haut + hauteur + COEUR.marge) < largeur / 2 + COEUR.marge) continue;
+            const cy = haut + COEUR.haut * unite;
+            if (!meilleur || Math.abs(haut + hauteur / 2 - milieu) < Math.abs(meilleur.y + hauteur / 2 - milieu)) {
+                meilleur = { x: cxp / FINESSE, y: cy, unite };
+            }
+        }
+        if (meilleur) return { cx: meilleur.x, cy: meilleur.y, unite: meilleur.unite };
+    }
+
+    return null;
+}
+
+function dansCoeur(c, x, y) {
+    const u = (x - c.cx) / c.unite;
+    const v = -(y - c.cy) / c.unite;
+    const a = u * u + v * v - 1;
+    return a * a * a - u * u * v * v * v <= 0;
+}
+
+function disqueDansCoeur(c, x, y, r) {
+    if (!dansCoeur(c, x, y)) return false;
+    for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        if (!dansCoeur(c, x + Math.cos(a) * r, y + Math.sin(a) * r)) return false;
+    }
+    return true;
 }
 
 function dedans(m, x, y) {
@@ -85,12 +149,13 @@ export function hasard(graine) {
 
 /**
  * Particules de l'empreinte, en unités du SVG.
- * Chaque particule : { x, y, r, phase, nuance } (nuance 1 = couleur secondaire).
+ * Chaque particule : { x, y, r, phase, nuance } (0 = couleur principale, 1 = secondaire, 2 = cœur).
+ * `coeur` : { cx, cy, unite } du cœur, ou null s'il n'a pas trouvé de place.
  */
 export function particules(graine = 'track', espacement = 3.8) {
     const m = lireMasque();
     const alea = hasard(graine);
-    const { boite } = m;
+    const { boite, coeur } = m;
 
     // Taches douces de couleur secondaire, placées selon la graine.
     const fx = 0.03 + alea() * 0.03, fy = 0.025 + alea() * 0.03;
@@ -105,6 +170,12 @@ export function particules(graine = 'track', espacement = 3.8) {
             const jx = x + (alea() - 0.5) * espacement * 0.55;
             const jy = y + (alea() - 0.5) * espacement * 0.55;
             const r = espacement * (0.28 + alea() * 0.18);
+
+            if (coeur && disqueDansCoeur(coeur, jx, jy, r * 0.6)) {
+                liste.push({ x: jx, y: jy, r, phase: alea() * Math.PI * 2, nuance: 2 });
+                continue;
+            }
+
             // Le centre et l'essentiel du disque dans la forme : bords nets sans boucher les sillons.
             if (!disqueDedans(m, jx, jy, r * 0.6)) continue;
 
@@ -119,7 +190,7 @@ export function particules(graine = 'track', espacement = 3.8) {
         }
     }
 
-    return { liste, boite };
+    return { liste, boite, coeur };
 }
 
 /** Boîte englobante de la forme, en unités du SVG. */

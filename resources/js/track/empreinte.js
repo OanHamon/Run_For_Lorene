@@ -4,6 +4,7 @@
  * - vague permanente qui remonte la semelle, du talon vers la pointe (l'élan de la course) ;
  * - attraction douce des particules vers le curseur (souris uniquement) ;
  * - onde qui se propage autour du curseur, ou d'un toucher sur mobile ;
+ * - cœur moutarde entre les deux semelles, qui bat (double battement, comme un pouls de coureur) ;
  * - pause hors écran et onglet caché ; aucune animation si la personne a demandé moins de
  *   mouvement (prefers-reduced-motion) ou si l'empreinte est déclarée statique (impression, scan).
  *
@@ -13,6 +14,7 @@ import { boiteForme, particules } from './forme';
 
 const VAGUE = { amplitude: 0.7, vitesse: 2.2, longueur: 0.045, taille: 0.12 };
 const ATTRACTION = { rayon: 42, force: 0.38, souplesse: 0.1 };
+const BATTEMENT = { période: 1.15, ampleur: 0.13, finesse: 0.055 };
 const ONDE = { vitesse: 150, largeur: 13, amplitude: 3.6, durée: 1.5, intervalle: 280, distance: 22 };
 
 // Écart visé entre deux particules à l'écran (px CSS), borné en unités du SVG :
@@ -39,6 +41,7 @@ export class Empreinte {
         this.couleurs = [
             couleur(element, '--color-vert-sombre', '#23463F'),
             couleur(element, '--color-vert-doux', '#5FBAAE'),
+            couleur(element, '--color-moutarde', '#D9B21E'),
         ];
 
         this.pointeur = null; // position de la souris, en unités du SVG
@@ -112,7 +115,7 @@ export class Empreinte {
             ?? Math.min(DENSITE.max, Math.max(DENSITE.min, DENSITE.ecartEcran / (echelle || 1)));
         if (!this.espacement || Math.abs(voulu / this.espacement - 1) > 0.15) {
             this.espacement = voulu;
-            this.liste = particules(this.graine, voulu).liste;
+            ({ liste: this.liste, coeur: this.coeur } = particules(this.graine, voulu));
             this.déplacements = new Float32Array(this.liste.length * 2);
         }
 
@@ -166,11 +169,20 @@ export class Empreinte {
         const t = this.temps;
         const p = animé ? this.pointeur : null;
         const lissage = 1 - Math.pow(1 - ATTRACTION.souplesse, dt * 60);
-        const chemins = [new Path2D(), new Path2D()];
+        const chemins = [new Path2D(), new Path2D(), new Path2D()];
+        const coeur = this.coeur;
+        const battement = animé && coeur ? this.battement(t) : 0;
 
         for (let i = 0; i < liste.length; i++) {
             const q = liste[i];
             let x = q.x, y = q.y, r = q.r;
+
+            if (q.nuance === 2 && battement) {
+                // Le cœur se gonfle depuis son centre.
+                x = coeur.cx + (x - coeur.cx) * (1 + battement);
+                y = coeur.cy + (y - coeur.cy) * (1 + battement);
+                r *= 1 + battement * 0.6;
+            }
 
             if (animé) {
                 // Vague : remonte la semelle, chaque particule légèrement décalée.
@@ -217,6 +229,15 @@ export class Empreinte {
         ctx.fill(chemins[0]);
         ctx.fillStyle = this.couleurs[1];
         ctx.fill(chemins[1]);
+        ctx.fillStyle = this.couleurs[2];
+        ctx.fill(chemins[2]);
+    }
+
+    /** Gonflement du cœur à l'instant t : deux pulsations rapprochées, puis repos. */
+    battement(t) {
+        const ph = (t % BATTEMENT.période) / BATTEMENT.période;
+        const pic = (centre) => Math.exp(-(((ph - centre) / BATTEMENT.finesse) ** 2));
+        return BATTEMENT.ampleur * (pic(0.12) + 0.55 * pic(0.32));
     }
 }
 
