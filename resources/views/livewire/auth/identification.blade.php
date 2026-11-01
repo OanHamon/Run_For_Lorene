@@ -19,7 +19,10 @@ use Livewire\Volt\Component;
  * - code       : code à 6 chiffres reçu par email ; vérifie l'adresse et connecte
  *
  * Un compte admin ne se connecte pas ici : le back-office a sa propre connexion
- * (/admin/connexion), l'espace participant ne lui est pas ouvert.
+ * (/admin/connexion), l'espace participant ne lui est pas ouvert. Pour ne pas révéler
+ * qu'une adresse est celle d'un admin, elle suit le même parcours qu'un compte ordinaire
+ * (écran mot de passe, écran code) mais aucun mot de passe ni code n'y est accepté et
+ * aucun code n'est envoyé.
  *
  * Un compte n'est connecté qu'une fois son adresse vérifiée. Après connexion, la page est
  * réellement rechargée vers $destination : Auth::login() régénère la session et donc le
@@ -104,10 +107,6 @@ new class extends Component {
             return;
         }
 
-        if ($this->refuserAdmin($user)) {
-            return;
-        }
-
         // Compte sans mot de passe (connexion par code uniquement) : inutile de le demander.
         if (! $user->mot_de_passe) {
             $this->recevoirCode();
@@ -140,7 +139,10 @@ new class extends Component {
             return null;
         }
 
-        if (! $user || ! $user->mot_de_passe || ! Hash::check($this->password, $user->mot_de_passe)) {
+        $valide = $user && $user->mot_de_passe && Hash::check($this->password, $user->mot_de_passe);
+
+        // Compte admin : même réponse qu'un mauvais mot de passe (rien ne trahit l'admin).
+        if (! $valide || $user->admin) {
             RateLimiter::hit($cleCompte, 60);
             RateLimiter::hit($cleIp, 60);
             $this->password = '';
@@ -175,15 +177,12 @@ new class extends Component {
             return;
         }
 
-        if ($this->refuserAdmin($user)) {
-            return;
-        }
-
         $this->resetErrorBag();
         $this->password = '';
         $this->mode = 'code';
 
-        if (! app(CodeEmail::class)->aUnCodeActif($user)) {
+        // Compte admin : écran code affiché comme d'habitude, mais aucun code envoyé.
+        if (! $user->admin && ! app(CodeEmail::class)->aUnCodeActif($user)) {
             $this->envoyerCode($user);
         }
     }
@@ -244,7 +243,8 @@ new class extends Component {
             return null;
         }
 
-        $resultat = app(CodeEmail::class)->verifier($user, $this->code);
+        // Compte admin : aucun code accepté, même réponse qu'un code faux.
+        $resultat = $user->admin ? 'invalide' : app(CodeEmail::class)->verifier($user, $this->code);
 
         if ($resultat === 'invalide') {
             $this->addError('code', 'Ce code ne correspond pas. Vérifie-le et réessaie.');
@@ -285,6 +285,12 @@ new class extends Component {
         $this->resetErrorBag();
         $this->code = '';
 
+        if ($user->admin) {
+            $this->info = 'Nouveau code envoyé.';
+
+            return;
+        }
+
         if ($this->envoyerCode($user)) {
             $this->info = 'Nouveau code envoyé.';
         }
@@ -320,7 +326,9 @@ new class extends Component {
     private function connecter(User $user, bool $parCode = false)
     {
         // Dernier verrou : les propriétés du composant viennent du navigateur.
-        if ($this->refuserAdmin($user)) {
+        if ($user->admin) {
+            $this->addError('password', 'Mot de passe incorrect. Tu peux aussi recevoir un code par email.');
+
             return null;
         }
 
@@ -335,20 +343,6 @@ new class extends Component {
         }
 
         return $this->redirect($this->destination);
-    }
-
-    /** Vrai (et retour à l'écran email, message posé) si l'adresse est celle d'un compte admin. */
-    private function refuserAdmin(User $user): bool
-    {
-        if (! $user->admin) {
-            return false;
-        }
-
-        $this->reset('password', 'code', 'info', 'motDePasseProuvePour');
-        $this->mode = 'email';
-        $this->addError('email', 'Cette adresse est celle d\'un compte admin : connecte-toi depuis l\'accès admin.');
-
-        return true;
     }
 
     /**

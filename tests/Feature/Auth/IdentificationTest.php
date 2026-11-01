@@ -334,25 +334,38 @@ test('la page de connexion propose le lien vers la connexion admin, pas le tunne
     Volt::test('auth.identification', ['destination' => route('inscription.tunnel')])->assertDontSee('Tu es admin ?');
 });
 
-test("un compte admin ne se connecte pas à l'espace participant", function () {
+test("un compte admin ne se connecte pas à l'espace participant, sans que rien ne le trahisse", function () {
+    Notification::fake();
     $admin = admin(3, confirme: false);
+    $admin->forceFill(['mot_de_passe' => 'password'])->save();
 
-    Volt::test('auth.identification')
+    // Même parcours qu'un compte ordinaire : écran mot de passe, aucun mot « admin ».
+    $composant = Volt::test('auth.identification')
         ->set('email', $admin->email)
         ->call('continuerEmail')
-        ->assertSet('mode', 'email')
-        ->assertHasErrors('email')
-        ->assertSee('compte admin');
+        ->assertSet('mode', 'password')
+        ->assertHasNoErrors()
+        ->assertDontSee('compte admin');
 
-    // Même en forçant l'écran mot de passe depuis le navigateur.
-    Volt::test('auth.identification')
-        ->set('email', $admin->email)
-        ->set('mode', 'password')
-        ->set('password', 'password')
+    // Le bon mot de passe est refusé avec le message d'un mauvais mot de passe.
+    $composant->set('password', 'password')
         ->call('seConnecter')
-        ->assertHasErrors('email')
+        ->assertHasErrors('password')
+        ->assertSee('Mot de passe incorrect')
+        ->assertDontSee('admin')
         ->assertNoRedirect();
 
+    // Écran code affiché, mais aucun code envoyé ni accepté.
+    $composant->call('recevoirCode')
+        ->assertSet('mode', 'code')
+        ->set('code', '123456')
+        ->call('validerCode')
+        ->assertHasErrors('code')
+        ->assertSee('Ce code ne correspond pas')
+        ->assertNoRedirect();
+    $composant->call('renvoyerCode')->assertSet('info', 'Nouveau code envoyé.');
+
+    Notification::assertNothingSentTo($admin);
     $this->assertGuest('web');
     $this->assertGuest('admin');
 });
