@@ -112,6 +112,8 @@ class PosteRetraitController extends Controller
             'compteur' => $this->retraits->compteur($poste->evenement),
             'terme' => (string) $request->query('q'),
             'resultats' => $this->retraits->rechercher($poste->evenement, (string) $request->query('q')),
+            // Notes internes : indicateur seul pour un poste sans compte, le texte reste aux admins.
+            'notes' => false,
             'trouve' => session('retrait.trouve') ? $this->retraits->trouver($poste->evenement, (int) session('retrait.trouve')) : null,
             'routes' => [
                 'recherche' => route('retrait.poste', $jeton),

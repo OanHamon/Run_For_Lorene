@@ -16,8 +16,11 @@
                     <span class="rfl-badge bg-erreur-fond text-erreur">Dossier incomplet</span>
                 @endif
             </div>
-            {{-- Notes internes (« diabétique »…) : indicateur discret, le texte se déplie au besoin. --}}
-            @if ($i->notes->isNotEmpty())
+            {{-- Notes internes (« diabétique »…) : indicateur discret, le texte se déplie au besoin.
+                 Un poste bénévole sans compte n'a que l'indicateur : le texte reste aux admins. --}}
+            @if ($i->notes->isNotEmpty() && ! ($ecran['notes'] ?? false))
+                <p class="mt-2 text-sm" data-test="notes-retrait"><span class="rfl-badge bg-vert-clair text-vert">Note : voir un responsable</span></p>
+            @elseif ($i->notes->isNotEmpty())
                 <details class="mt-2 text-sm" data-test="notes-retrait">
                     <summary class="cursor-pointer text-vert-sombre"><span class="rfl-badge bg-vert-clair text-vert">Note · {{ $i->notes->count() }}</span></summary>
                     <ul class="mt-2 space-y-1 rounded-2xl bg-white p-3 ring-1 ring-bordure">
