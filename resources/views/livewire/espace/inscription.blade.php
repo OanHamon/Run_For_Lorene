@@ -522,12 +522,19 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                 @endif
             </div>
 
-            {{-- Billet QR : présenté au retrait des dossards. --}}
+            {{-- Billet : l'empreinte (le QR classique en secours), présentée au retrait des dossards. --}}
             @if ($i->statut === Inscription::VALIDEE)
                 <section class="rounded-3xl border border-bordure bg-white p-5 text-center" aria-labelledby="titre-billet" data-test="billet">
                     <h2 id="titre-billet" class="font-display text-vert">Ton billet</h2>
-                    <div class="mx-auto mt-3 w-fit" aria-label="QR code du billet">{!! \App\Support\Billet::svg($i, 180) !!}</div>
-                    <p class="mt-3 text-xs text-gris-texte">À présenter au retrait des dossards.</p>
+                    {{-- wire:ignore : Livewire ne redessine pas l'empreinte (son animation continue). --}}
+                    <div class="mx-auto mt-3 w-full max-w-56" wire:ignore>
+                        <x-track.empreinte :code="\App\Support\Billet::jeton($i)" class="w-full" libelle="Ton empreinte : le billet à présenter au retrait des dossards" />
+                    </div>
+                    <p class="mt-3 text-xs text-gris-texte">Ton empreinte, à présenter au retrait des dossards.</p>
+                    <details class="mt-2 text-xs">
+                        <summary class="cursor-pointer text-gris-texte">Afficher le QR code</summary>
+                        <div class="mx-auto mt-2 w-fit" aria-label="QR code du billet">{!! \App\Support\Billet::svg($i, 160) !!}</div>
+                    </details>
                     <a href="{{ \App\Support\Billet::url($i) }}" target="_blank" rel="noopener" class="mt-2 inline-block text-sm rfl-lien">Ouvrir en plein écran</a>
                 </section>
             @endif

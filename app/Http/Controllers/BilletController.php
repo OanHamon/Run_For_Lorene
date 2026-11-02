@@ -21,6 +21,7 @@ class BilletController extends Controller
             'inscription' => $inscription,
             'valide' => $inscription->statut === Inscription::VALIDEE,
             'qr' => $inscription->statut === Inscription::VALIDEE ? Billet::svg($inscription, 260) : null,
+            'jeton' => $inscription->statut === Inscription::VALIDEE ? Billet::jeton($inscription) : null,
         ]);
     }
 }

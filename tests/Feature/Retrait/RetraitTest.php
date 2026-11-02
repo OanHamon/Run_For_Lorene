@@ -36,11 +36,13 @@ test('le jeton du billet est signé : impossible de le fabriquer pour une autre 
 });
 
 test("le billet s'ouvre par un lien signé, seulement pour une inscription validée", function () {
-    $this->get(Billet::url($this->inscription))->assertOk()->assertSee('Jade Rivière')->assertSee('1042')->assertSee('<svg', false);
+    $this->get(Billet::url($this->inscription))->assertOk()->assertSee('Jade Rivière')->assertSee('1042')->assertSee('<svg', false)
+        ->assertSee('data-code="'.Billet::jeton($this->inscription).'"', false)
+        ->assertSee('Le scan ne passe pas');
     $this->get(route('billet', $this->inscription))->assertForbidden();
 
     $this->inscription->update(['statut' => Inscription::DOSSIER_INCOMPLET]);
-    $this->get(Billet::url($this->inscription))->assertOk()->assertSee('Billet indisponible')->assertDontSee('QR code du billet');
+    $this->get(Billet::url($this->inscription))->assertOk()->assertSee('Billet indisponible')->assertDontSee('QR code du billet')->assertDontSee('data-code', false);
 });
 
 test("l'email « inscription validée » et l'espace donnent le billet", function () {
@@ -48,7 +50,9 @@ test("l'email « inscription validée » et l'espace donnent le billet", functio
     $mail = (new InscriptionValidee($this->inscription))->toMail($user);
     expect(implode(' ', $mail->introLines))->toContain(Billet::url($this->inscription));
 
-    $this->actingAs($user)->get(route('espace.inscription', $this->inscription))->assertOk()->assertSee('Ton billet')->assertSee('<svg', false);
+    $this->actingAs($user)->get(route('espace.inscription', $this->inscription))->assertOk()->assertSee('Ton billet')->assertSee('<svg', false)
+        ->assertSee('data-code="'.Billet::jeton($this->inscription).'"', false)
+        ->assertSee('wire:ignore', false);
 });
 
 test("l'admin remet un dossard par le billet scanné, une seule fois", function () {

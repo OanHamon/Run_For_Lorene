@@ -90,7 +90,7 @@ class ModelesRelance
             'retrait' => [
                 'libelle' => 'Retrait des dossards',
                 'sujet' => 'Retrait de ton dossard',
-                'message' => "Bonjour {prenom},\n\nLe dossard n° {dossard} de {participant} t'attend.\n\nPrésente ton billet (le QR code dans ton espace) au point de retrait, ou donne simplement ton nom.",
+                'message' => "Bonjour {prenom},\n\nLe dossard n° {dossard} de {participant} t'attend.\n\nPrésente ton billet (ton empreinte, dans ton espace) au point de retrait, ou donne simplement ton nom.",
                 'qui' => 'non_retires',
             ],
             'changement' => [

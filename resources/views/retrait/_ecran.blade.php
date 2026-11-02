@@ -36,7 +36,7 @@
             <div class="mt-4 hidden overflow-hidden rounded-2xl bg-vert-sombre" data-scan-zone>
                 <video class="max-h-[60vh] w-full object-contain" playsinline muted data-scan-video></video>
             </div>
-            <p class="mt-3 hidden text-sm text-gris-texte" data-scan-aide>Vise le QR code du billet, ou l'empreinte : les deux semelles en entier dans l'image. Sans caméra, cherche la personne par son nom ci-dessous.</p>
+            <p class="mt-3 hidden text-sm text-gris-texte" data-scan-aide>Vise l'empreinte du billet (les deux semelles en entier dans l'image) ou son QR code. Sans caméra, cherche la personne par son nom ci-dessous.</p>
             <p class="mt-3 hidden rfl-alerte-erreur text-sm" role="alert" data-scan-erreur></p>
             <button type="button" class="mt-3 hidden w-full rfl-btn-secondaire py-3" data-scan-fermer>Fermer la caméra</button>
         </form>

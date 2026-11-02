@@ -38,7 +38,7 @@ class InscriptionValidee extends Notification implements ShouldQueue
             ->greeting("Bonjour {$notifiable->prenom},")
             ->line(($moi ? 'Ton dossier est complet : ton inscription' : "Le dossier de {$inscription->participant->user->prenom} est complet : son inscription")." est validée ({$course}).")
             ->line($inscription->dossard ? "Numéro de dossard : {$inscription->dossard}." : "Le numéro de dossard sera communiqué par l'association.")
-            ->line('Ton billet, à présenter au retrait des dossards : [ouvrir le billet (QR code)]('.Billet::url($inscription).').')
+            ->line('Ton billet, à présenter au retrait des dossards : [ouvrir ton billet (ton empreinte)]('.Billet::url($inscription).').')
             ->action($lien['active'] ? 'Voir mon espace' : 'Créer mon mot de passe', $lien['url'])
             ->salutation("À très vite sur la ligne de départ,\nL'équipe Run For Lorène");
     }
