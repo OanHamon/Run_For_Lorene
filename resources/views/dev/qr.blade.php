@@ -32,7 +32,9 @@
                 </div>
             </div>
 
-            <video class="mt-4 hidden aspect-video w-full max-w-md rounded-2xl bg-vert-sombre object-cover" playsinline muted data-lecteur-video></video>
+            {{-- Image entière de la caméra (sans recadrage) : on voit exactement ce que lit le lecteur. --}}
+            <video class="mt-4 hidden max-h-[60vh] w-full max-w-md rounded-2xl bg-vert-sombre object-contain" playsinline muted data-lecteur-video></video>
+            <p class="mt-2 text-xs text-gris-texte" data-lecteur-camera-taille></p>
             <p class="rfl-alerte mt-4 hidden" data-lecteur-erreur></p>
             <p class="mt-3 hidden font-mono text-xs text-gris-texte" data-lecteur-etat></p>
 

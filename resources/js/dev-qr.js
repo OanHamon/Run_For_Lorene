@@ -6,7 +6,7 @@
  * La photo marche partout, même sur un téléphone en http.
  */
 import jsQR from 'jsqr';
-import { diagnostic, lireEmpreinteRGBA } from './track/lecteur.js';
+import { CAMERA, lecteurSemelles } from './track/scan.js';
 
 const racine = document.querySelector('[data-lecteur]');
 const $ = (nom) => racine.querySelector(`[data-${nom}]`);
@@ -19,13 +19,13 @@ const canevas = document.createElement('canvas');
 const ctx = canevas.getContext('2d', { willReadFrequently: true });
 let flux = null;
 let dernier = { code: null, t: 0 };
-let derniereEmpreinte = 0;
+const semelles = lecteurSemelles();
 
 /** État du lecteur des semelles, pour comprendre ce qui coince (voir `diagnostic` dans lecteur.js). */
-function montrerEtat(ms) {
-    const d = diagnostic;
-    $('lecteur-etat').textContent = `Semelles : ${d.etape} · image ${d.image} · paires ${d.paires}`
-        + ` · calage ${d.calage ?? '—'} (lisible dès 0,08) · écart des cellules ${d.ecartCellules ?? '—'} (lisible dès 0,06) · ${Math.round(ms)} ms`;
+function montrerEtat({ diagnostic: d, ms }) {
+    $('lecteur-etat').textContent = `Semelles : ${d.etape} · image ${d.image} · départs ${d.paires}`
+        + ` · calage ${d.calage ?? '—'} (lisible dès 0,03) · écart des cellules ${d.ecartCellules ?? '—'} (lisible dès 0,06)`
+        + ` · hors image ${d.horsImage ?? '—'} · ${Math.round(ms)} ms`;
     $('lecteur-etat').classList.remove('hidden');
 }
 
@@ -35,24 +35,21 @@ function montrerErreur(texte) {
 }
 
 /**
- * Décode l'image d'une source (vidéo ou photo), réduite pour rester rapide : QR classique d'abord,
- * puis l'empreinte des semelles (pas plus de 4 fois par seconde en vidéo).
- * Renvoie { code, par } ou null.
+ * Image d'une source (vidéo ou photo), réduite pour rester rapide. QR classique lu tout de suite ;
+ * sinon les semelles, dans le worker s'il est libre. Renvoie une promesse { code, par } ou null.
  */
-function decoder(source, largeur, hauteur, toujoursEmpreinte = false) {
-    const reduction = Math.min(1, 1280 / Math.max(largeur, hauteur));
+async function decoder(source, largeur, hauteur) {
+    const reduction = Math.min(1, 1600 / Math.max(largeur, hauteur));
     canevas.width = Math.round(largeur * reduction);
     canevas.height = Math.round(hauteur * reduction);
     ctx.drawImage(source, 0, 0, canevas.width, canevas.height);
     const image = ctx.getImageData(0, 0, canevas.width, canevas.height);
     const qr = jsQR(image.data, canevas.width, canevas.height, { inversionAttempts: 'attemptBoth' })?.data;
     if (qr) return { code: qr, par: 'QR classique' };
-    if (!toujoursEmpreinte && performance.now() - derniereEmpreinte < 250) return null;
-    derniereEmpreinte = performance.now();
-    const t0 = performance.now();
-    const empreinte = lireEmpreinteRGBA(image.data, canevas.width, canevas.height);
-    montrerEtat(performance.now() - t0);
-    return empreinte ? { code: empreinte.jeton, par: `semelles (${Math.round(performance.now() - t0)} ms)` } : null;
+    const r = await semelles.lire(image);
+    if (!r) return null;
+    montrerEtat(r);
+    return r.jeton ? { code: r.jeton, par: `semelles (${Math.round(r.ms)} ms)` } : null;
 }
 
 async function verifier(code, par) {
@@ -80,13 +77,14 @@ function arreter() {
 
 function lireVideo() {
     if (!flux) return;
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const lu = decoder(video, video.videoWidth, video.videoHeight);
-        // On reste en lecture continue ; le même code n'est revérifié qu'après 3 secondes.
-        if (lu && (lu.code !== dernier.code || performance.now() - dernier.t > 3000)) {
-            dernier = { code: lu.code, t: performance.now() };
-            verifier(lu.code, lu.par);
-        }
+    if (video.readyState === video.HAVE_ENOUGH_DATA && !semelles.occupe()) {
+        decoder(video, video.videoWidth, video.videoHeight).then((lu) => {
+            // On reste en lecture continue ; le même code n'est revérifié qu'après 3 secondes.
+            if (lu && flux && (lu.code !== dernier.code || performance.now() - dernier.t > 3000)) {
+                dernier = { code: lu.code, t: performance.now() };
+                verifier(lu.code, lu.par);
+            }
+        });
     }
     requestAnimationFrame(lireVideo);
 }
@@ -98,13 +96,15 @@ ouvrir.addEventListener('click', async () => {
         return;
     }
     try {
-        flux = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        flux = await navigator.mediaDevices.getUserMedia(CAMERA);
     } catch {
         montrerErreur('Caméra indisponible ou refusée. Autorise-la dans le navigateur, ou utilise « Lire une photo ».');
         return;
     }
     video.srcObject = flux;
     await video.play();
+    const { width, height } = flux.getVideoTracks()[0].getSettings();
+    $('lecteur-camera-taille').textContent = `Caméra : ${width} × ${height}. Fais entrer les deux semelles en entier dans l'image.`;
     video.classList.remove('hidden');
     arreterBouton.classList.remove('hidden');
     ouvrir.classList.add('hidden');
@@ -120,7 +120,8 @@ $('lecteur-photo').addEventListener('change', async (e) => {
     montrerErreur('');
     try {
         const image = await createImageBitmap(fichier);
-        const lu = decoder(image, image.width, image.height, true);
+        while (semelles.occupe()) await new Promise((r) => setTimeout(r, 50));
+        const lu = await decoder(image, image.width, image.height);
         image.close();
         if (lu) verifier(lu.code, lu.par);
         else montrerErreur(`Aucun billet trouvé sur la photo (ni QR ni semelles). Rapproche-toi et évite les reflets. ${$('lecteur-etat').textContent}`);

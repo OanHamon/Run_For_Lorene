@@ -19,6 +19,9 @@ export { gabarit };
 const DONNEES = 15;
 const OCTETS = Math.floor(gabarit.cellules.length / 8);
 const CORRECTION = OCTETS - DONNEES;
+// Octets de correction gardés pour la détection (voir rs.js) : une lecture très abîmée est
+// refusée plutôt que « corrigée » vers un faux jeton. Il reste 13 octets pour corriger.
+const RESERVE = 4;
 
 /** Suite de brouillage fixe, une valeur par cellule (même suite à l'encodage et à la lecture). */
 const BROUILLAGE = (() => {
@@ -72,9 +75,9 @@ export function jetonDesCellules(foncees, doutes = null) {
     }
 
     // D'abord avec les octets douteux déclarés illisibles (s'ils ne sont pas trop nombreux), puis sans.
-    const essais = douteux.size && douteux.size <= CORRECTION ? [[...douteux], []] : [[]];
+    const essais = douteux.size && douteux.size <= CORRECTION - RESERVE ? [[...douteux], []] : [[]];
     for (const illisibles of essais) {
-        const jeton = jetonDesOctets(decoder(bloc, CORRECTION, illisibles));
+        const jeton = jetonDesOctets(decoder(bloc, CORRECTION, illisibles, RESERVE));
         if (jeton) return jeton;
     }
 

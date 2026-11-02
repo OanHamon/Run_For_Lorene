@@ -1,12 +1,12 @@
 /*
  * Scan du billet au retrait des dossards : caméra arrière, lecture image par image. Deux codes
  * possibles : le QR classique (jsQR, fonctionne aussi sur iPhone, sans BarcodeDetector) et
- * l'empreinte TRACK (les semelles, lecteur maison, quelques fois par seconde). Un jeton « RFL-… »
+ * l'empreinte TRACK (les semelles, lecteur maison dans un worker, dès qu'il est libre). Un jeton « RFL-… »
  * trouvé est envoyé au serveur, qui vérifie la signature et affiche la fiche. Sans caméra : la
  * recherche par nom.
  */
 import jsQR from 'jsqr';
-import { lireEmpreinteRGBA } from './track/lecteur.js';
+import { CAMERA, lecteurSemelles } from './track/scan.js';
 
 document.querySelectorAll('[data-scan-form]').forEach((form) => {
     const ouvrir = form.querySelector('[data-scan-ouvrir]');
@@ -19,7 +19,7 @@ document.querySelectorAll('[data-scan-form]').forEach((form) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     let flux = null;
-    let derniereEmpreinte = 0;
+    const semelles = lecteurSemelles();
 
     const arreter = () => {
         flux?.getTracks().forEach((piste) => piste.stop());
@@ -28,25 +28,30 @@ document.querySelectorAll('[data-scan-form]').forEach((form) => {
         ouvrir.classList.remove('hidden');
     };
 
+    const trouve = (code) => {
+        if (!code.startsWith('RFL-')) return false;
+        navigator.vibrate?.(80);
+        jeton.value = code;
+        arreter();
+        form.submit();
+        return true;
+    };
+
     const lire = () => {
         if (!flux) return;
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Image réduite à 1280 px : assez pour les deux lecteurs, rapide même en haute définition.
+            const reduction = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
+            canvas.width = Math.round(video.videoWidth * reduction);
+            canvas.height = Math.round(video.videoHeight * reduction);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let lu = jsQR(image.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
-            // L'empreinte demande plus de calcul : une tentative toutes les 250 ms suffit.
-            if (!lu && performance.now() - derniereEmpreinte > 250) {
-                derniereEmpreinte = performance.now();
-                lu = lireEmpreinteRGBA(image.data, canvas.width, canvas.height)?.jeton ?? null;
-            }
-            if (lu && lu.startsWith('RFL-')) {
-                navigator.vibrate?.(80);
-                jeton.value = lu;
-                arreter();
-                form.submit();
-                return;
+            const lu = jsQR(image.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
+            if (lu) {
+                if (trouve(lu)) return;
+            } else {
+                // Les semelles : dans le worker, dès qu'il a fini l'image précédente.
+                semelles.lire(image)?.then((r) => { if (r.jeton && flux) trouve(r.jeton); });
             }
         }
         requestAnimationFrame(lire);
@@ -55,7 +60,7 @@ document.querySelectorAll('[data-scan-form]').forEach((form) => {
     ouvrir.addEventListener('click', async () => {
         erreur.classList.add('hidden');
         try {
-            flux = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            flux = await navigator.mediaDevices.getUserMedia(CAMERA);
         } catch {
             erreur.textContent = "Caméra indisponible ou refusée. Autorise-la dans les réglages du navigateur, ou cherche la personne par son nom.";
             erreur.classList.remove('hidden');

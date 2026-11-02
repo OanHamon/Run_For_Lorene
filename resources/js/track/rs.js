@@ -134,9 +134,13 @@ function syndromesForney(synd, positions, longueur) {
 /**
  * Corrige un bloc reçu (message + `n` octets de correction). `illisibles` : positions des octets
  * dont on sait qu'ils sont douteux. Renvoie le message corrigé, ou null si c'est impossible.
+ *
+ * `marge` : octets de correction gardés en réserve pour détecter, pas pour corriger. Sans marge,
+ * un bloc très abîmé finit toujours par « se corriger » vers un message quelconque ; on refuse
+ * donc toute correction qui demande plus de n − marge (2 × erreurs + illisibles).
  */
-export function decoder(recu, n, illisibles = []) {
-    if (illisibles.length > n) return null;
+export function decoder(recu, n, illisibles = [], marge = 0) {
+    if (illisibles.length > n - marge) return null;
     try {
         let msg = [...recu];
         for (const p of illisibles) msg[p] = 0;
@@ -145,6 +149,7 @@ export function decoder(recu, n, illisibles = []) {
         const fsynd = syndromesForney(synd, illisibles, msg.length);
         const loc = localisateurErreurs(fsynd, n, illisibles.length);
         const erreurs = trouverErreurs([...loc].reverse(), msg.length);
+        if (2 * erreurs.length + illisibles.length > n - marge) return null;
         msg = corrigerErrata(msg, synd, [...illisibles, ...erreurs]);
         synd = syndromes(msg, n);
         return Math.max(...synd) === 0 ? msg.slice(0, -n) : null;

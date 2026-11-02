@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { cellulesDuJeton, colorerParticules } from '../../resources/js/track/code.js';
-import { lireEmpreinte } from '../../resources/js/track/lecteur.js';
+import { diagnostic, lireEmpreinte } from '../../resources/js/track/lecteur.js';
 import { particules, pixelliser } from '../../resources/js/track/masque.js';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -229,10 +229,27 @@ for (const c of conditions) {
             if (lu) { console.log(`  FAUSSE ALERTE : ${lu.jeton}`); echec = true; } else ok++;
         } else if (voisins ? voisins.includes(lu?.jeton) : lu?.jeton === j) ok++;
         else if (lu) { console.log(`  FAUX : ${lu.jeton} au lieu de ${j}`); echec = true; }
+        else if (process.env.DETAIL) console.log(`  raté : ${diagnostic.etape}, calage ${diagnostic.calage}, écart ${diagnostic.ecartCellules}, hors image ${diagnostic.horsImage}`);
     }
     if (c.sansCode) c.attendu = 1;
     const part = ok / ESSAIS;
     if (part < c.attendu) echec = true;
     console.log(`${part >= c.attendu ? 'ok  ' : 'BAS '} ${String(ok).padStart(2)}/${ESSAIS}  ${c.nom.padEnd(42)} ${Math.round(temps / ESSAIS)} ms/lecture`);
 }
+// Vraie image de caméra : un téléphone filme une empreinte sur l'écran d'un portable (aperçu
+// recadré et recompressé par WhatsApp, bord noir de l'écran visible ; l'inscription n° 60).
+// Trop dégradée pour lire les cellules (2 à 3 pixels chacune), mais le lecteur doit caler la
+// forme dessus (le bord d'écran ne doit pas l'attirer) et surtout ne jamais inventer de jeton.
+{
+    const brut = readFileSync(join(racine, 'tests/js/images/camera-ecran-302x172.gray'));
+    const lu = lireEmpreinte(Float32Array.from(brut), 302, 172);
+    const [[x0, y0], , [x2, y2]] = diagnostic.coins ?? [[0, 0], 0, [0, 0]];
+    const centre = [(x0 + x2) / 2, (y0 + y2) / 2];
+    // L'empreinte est au milieu de l'image, environ 150 px de large.
+    const bienCalee = diagnostic.calage > 0.2 && Math.abs(centre[0] - 151) < 15 && Math.abs(centre[1] - 90) < 20;
+    const bon = bienCalee && (!lu || lu.jeton.startsWith('RFL-60-'));
+    if (!bon) echec = true;
+    console.log(`${bon ? 'ok  ' : 'BAS '} vraie image de caméra : calage ${diagnostic.calage} au centre (${centre.map(Math.round)}), ${lu ? 'lu ' + lu.jeton : 'rien lu (image trop dégradée), aucun faux jeton'}`);
+}
+
 process.exit(echec ? 1 : 0);

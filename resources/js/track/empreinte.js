@@ -18,7 +18,9 @@ import { cellulesDuJeton, colorerParticules } from './code.js';
 import { boiteForme, particules } from './forme.js';
 
 const VAGUE = { amplitude: 0.7, vitesse: 2.2, longueur: 0.045, taille: 0.12 };
-const ATTRACTION = { rayon: 42, force: 0.38, souplesse: 0.1 };
+// Sur une empreinte codée, l'attraction reste discrète : elle ne doit pas pousser les particules
+// d'une cellule dans sa voisine (sinon la souris posée sur l'empreinte gênerait la lecture).
+const ATTRACTION = { rayon: 42, force: 0.38, forceCode: 0.08, souplesse: 0.1 };
 const BATTEMENT = { période: 1.15, ampleur: 0.13, finesse: 0.055 };
 const ONDE = { vitesse: 150, largeur: 13, amplitude: 3.6, durée: 1.5, intervalle: 280, distance: 22 };
 
@@ -205,7 +207,7 @@ export class Empreinte {
                 let cx = 0, cy = 0;
                 if (p) {
                     const ax = p.x - q.x, ay = p.y - q.y;
-                    const f = Math.exp(-(ax * ax + ay * ay) / (ATTRACTION.rayon * ATTRACTION.rayon)) * ATTRACTION.force;
+                    const f = Math.exp(-(ax * ax + ay * ay) / (ATTRACTION.rayon * ATTRACTION.rayon)) * (this.cellules ? ATTRACTION.forceCode : ATTRACTION.force);
                     cx = ax * f;
                     cy = ay * f;
                 }
