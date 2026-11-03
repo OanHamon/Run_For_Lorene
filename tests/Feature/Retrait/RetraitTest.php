@@ -52,7 +52,8 @@ test("l'email « inscription validée » et l'espace donnent le billet", functio
 
     $this->actingAs($user)->get(route('espace.inscription', $this->inscription))->assertOk()->assertSee('Ton billet')->assertSee('<svg', false)
         ->assertSee('data-code="'.Billet::jeton($this->inscription).'"', false)
-        ->assertSee('wire:ignore', false);
+        ->assertSee('wire:ignore', false)
+        ->assertSeeInOrder(['Ton billet', 'Dossard n° </span>1042'], false);
 });
 
 test("l'admin remet un dossard par le billet scanné, une seule fois", function () {
