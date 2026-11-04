@@ -393,3 +393,18 @@ test("le changement de mot de passe dans l'espace applique la même règle", fun
         ->call('enregistrerMotDePasse')
         ->assertHasErrors('nouveau');
 });
+
+test("un compte admin forcé sur l'écran du code ne reçoit pas de code participant et rien n'est effacé", function () {
+    $admin = admin(3, confirme: false);
+    $mdp = $admin->mot_de_passe;
+
+    Volt::test('auth.identification')
+        ->set('email', $admin->email)->set('mode', 'code')
+        ->call('renvoyerCode')->assertHasErrors('email')
+        ->set('mode', 'code')->set('code', '123456')
+        ->call('validerCode')->assertHasErrors('email');
+
+    Notification::assertNothingSentTo($admin);
+    expect($admin->fresh()->mot_de_passe)->toBe($mdp);
+    $this->assertGuest('web');
+});

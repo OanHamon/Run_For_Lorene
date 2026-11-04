@@ -131,6 +131,11 @@ new class extends Component {
 
         $user = $this->utilisateur();
 
+        // Les propriétés viennent du navigateur : un compte admin est refusé avant tout essai.
+        if ($user && $this->refuserAdmin($user)) {
+            return null;
+        }
+
         // Limites par compte (quelle que soit l'adresse IP) et par adresse IP (quel que soit le compte).
         $cleCompte = 'mdp:'.($user?->id_user ?? $this->email);
         $cleIp = 'mdp-ip:'.request()->ip();
@@ -245,6 +250,10 @@ new class extends Component {
             return null;
         }
 
+        if ($this->refuserAdmin($user)) {
+            return null;
+        }
+
         $resultat = app(CodeEmail::class)->verifier($user, $this->code);
 
         if ($resultat === 'invalide') {
@@ -279,7 +288,7 @@ new class extends Component {
     {
         $user = $this->utilisateur();
 
-        if (! $user) {
+        if (! $user || $this->refuserAdmin($user)) {
             return;
         }
 
