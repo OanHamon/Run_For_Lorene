@@ -199,6 +199,7 @@ new class extends Component {
             'password' => ['required', 'string', Password::defaults()],
         ], [
             'email.unique' => 'Un compte existe déjà avec cette adresse.',
+            'password.min' => 'Le mot de passe doit contenir au moins '.\App\Support\MotDePasse::LONGUEUR_MIN.' caractères.',
         ], [
             'prenom' => 'prénom',
             'password' => 'mot de passe',
@@ -448,7 +449,7 @@ new class extends Component {
                 <input wire:model="password" id="nouveau-password" :type="voir ? 'text' : 'password'" autocomplete="new-password" required class="rfl-champ pr-24" aria-describedby="password-aide">
                 <button type="button" x-on:click="voir = !voir" class="absolute inset-y-0 right-4 text-sm rfl-lien" x-text="voir ? 'Masquer' : 'Afficher'">Afficher</button>
             </div>
-            <p id="password-aide" class="mt-2 text-xs text-gris-texte">8 caractères minimum.</p>
+            <p id="password-aide" class="mt-2 text-xs text-gris-texte">{{ \App\Support\MotDePasse::AIDE }}</p>
             @error('password') <p class="rfl-erreur">{{ $message }}</p> @enderror
             @error('email') <p class="rfl-erreur">{{ $message }}</p> @enderror
 

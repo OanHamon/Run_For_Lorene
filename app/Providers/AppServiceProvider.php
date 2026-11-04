@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\Paiement\Passerelle;
 use App\Services\Paiement\PasserelleSimulation;
 use App\Services\Paiement\PasserelleStripe;
+use App\Support\MotDePasse;
 use App\Support\TachesPlanifiees;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
@@ -52,10 +53,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ScheduledTaskFinished::class, fn ($e) => TachesPlanifiees::noter($e->task, $e->task->exitCode === 0 || $e->task->exitCode === null));
         Event::listen(ScheduledTaskFailed::class, fn ($e) => TachesPlanifiees::noter($e->task, false));
 
-        // 8 caractères minimum ; en production, refus des mots de passe déjà sortis dans une
-        // fuite connue (service Have I Been Pwned, seul un préfixe du hash est envoyé).
-        Password::defaults(fn () => $this->app->isProduction()
-            ? Password::min(8)->uncompromised()
-            : Password::min(8));
+        // Règle commune des mots de passe : voir App\Support\MotDePasse.
+        Password::defaults(fn () => MotDePasse::regle($this->app->isProduction()));
     }
 }

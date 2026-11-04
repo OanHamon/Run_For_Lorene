@@ -49,7 +49,7 @@ class ActivationController extends Controller
             'mot_de_passe' => ['required', 'string', Password::defaults(), 'confirmed'],
         ], [
             'mot_de_passe.required' => 'Choisis un mot de passe.',
-            'mot_de_passe.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'mot_de_passe.min' => 'Le mot de passe doit contenir au moins '.\App\Support\MotDePasse::LONGUEUR_MIN.' caractères.',
             'mot_de_passe.confirmed' => 'Les deux mots de passe ne sont pas identiques.',
         ]);
 

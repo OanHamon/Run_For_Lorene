@@ -81,7 +81,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon compte'])] class extend
             'actuel.required' => 'Indique ton mot de passe actuel.',
             'actuel.current_password' => 'Ce n\'est pas ton mot de passe actuel. Tu l\'as oublié ? Déconnecte-toi, puis reçois un code par email.',
             'nouveau.required' => 'Choisis un mot de passe.',
-            'nouveau.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'nouveau.min' => 'Le mot de passe doit contenir au moins '.\App\Support\MotDePasse::LONGUEUR_MIN.' caractères.',
             'nouveau.confirmed' => 'Les deux mots de passe ne sont pas identiques.',
         ]);
 
@@ -171,7 +171,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon compte'])] class extend
             <div>
                 <label for="nouveau" class="rfl-label">Nouveau mot de passe</label>
                 <input id="nouveau" wire:model="nouveau" type="password" autocomplete="new-password" class="rfl-champ" aria-describedby="nouveau-aide">
-                <p id="nouveau-aide" class="mt-1 text-xs text-gris-texte">8 caractères au moins.</p>
+                <p id="nouveau-aide" class="mt-1 text-xs text-gris-texte">{{ \App\Support\MotDePasse::AIDE }}</p>
                 @error('nouveau')<p class="rfl-erreur">{{ $message }}</p>@enderror
             </div>
             <div>

@@ -167,7 +167,7 @@ test('un super admin crée un compte admin, activé puis connecté par la connex
 
     // L'activation ne connecte pas : elle mène à la connexion admin (mot de passe puis code).
     $this->post('/admin/deconnexion');
-    $this->post(Activation::url($noe), ['mot_de_passe' => 'un-bon-mot', 'mot_de_passe_confirmation' => 'un-bon-mot'])
+    $this->post(Activation::url($noe), ['mot_de_passe' => 'Un-bon-mot1', 'mot_de_passe_confirmation' => 'Un-bon-mot1'])
         ->assertRedirect(route('admin.connexion'));
     $this->assertGuest('web');
     $this->assertGuest('admin');

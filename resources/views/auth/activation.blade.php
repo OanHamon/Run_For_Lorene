@@ -8,7 +8,7 @@
         <div>
             <label for="mot_de_passe" class="rfl-label">Mot de passe</label>
             <input id="mot_de_passe" name="mot_de_passe" type="password" autocomplete="new-password" required autofocus class="rfl-champ" aria-describedby="mdp-aide">
-            <p id="mdp-aide" class="mt-1 text-xs text-gris-texte">8 caractères au moins.</p>
+            <p id="mdp-aide" class="mt-1 text-xs text-gris-texte">{{ \App\Support\MotDePasse::AIDE }}</p>
             @error('mot_de_passe')<p class="rfl-erreur">{{ $message }}</p>@enderror
         </div>
         <div>

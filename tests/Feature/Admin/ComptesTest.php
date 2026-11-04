@@ -80,12 +80,12 @@ test("le lien d'activation fait choisir le mot de passe, connecte et mène à la
 
     // Mots de passe trop court, puis différents : refusés.
     $this->post($lien, ['mot_de_passe' => 'court', 'mot_de_passe_confirmation' => 'court'])->assertSessionHasErrors('mot_de_passe');
-    $this->post($lien, ['mot_de_passe' => 'un-bon-mot', 'mot_de_passe_confirmation' => 'autre-chose'])->assertSessionHasErrors('mot_de_passe');
+    $this->post($lien, ['mot_de_passe' => 'Un-bon-mot1', 'mot_de_passe_confirmation' => 'Autre-chose1'])->assertSessionHasErrors('mot_de_passe');
 
-    $this->post($lien, ['mot_de_passe' => 'un-bon-mot', 'mot_de_passe_confirmation' => 'un-bon-mot'])->assertRedirect('/espace');
+    $this->post($lien, ['mot_de_passe' => 'Un-bon-mot1', 'mot_de_passe_confirmation' => 'Un-bon-mot1'])->assertRedirect('/espace');
 
     $marie = $marie->fresh();
-    expect(Hash::check('un-bon-mot', $marie->mot_de_passe))->toBeTrue()
+    expect(Hash::check('Un-bon-mot1', $marie->mot_de_passe))->toBeTrue()
         ->and($marie->hasVerifiedEmail())->toBeTrue()
         ->and(Auth::guard('web')->id())->toBe($marie->id_user);
 });
@@ -96,12 +96,12 @@ test("le lien ne sert qu'une fois", function () {
     Auth::logout();
     $lien = lienActivation($marie);
 
-    $this->post($lien, ['mot_de_passe' => 'un-bon-mot', 'mot_de_passe_confirmation' => 'un-bon-mot'])->assertRedirect();
+    $this->post($lien, ['mot_de_passe' => 'Un-bon-mot1', 'mot_de_passe_confirmation' => 'Un-bon-mot1'])->assertRedirect();
     Auth::logout();
 
     $this->get($lien)->assertOk()->assertSee('Ton compte est déjà prêt');
-    $this->post($lien, ['mot_de_passe' => 'pirate123', 'mot_de_passe_confirmation' => 'pirate123'])->assertSee('déjà prêt');
-    expect(Hash::check('un-bon-mot', $marie->fresh()->mot_de_passe))->toBeTrue();
+    $this->post($lien, ['mot_de_passe' => 'Pirate123', 'mot_de_passe_confirmation' => 'Pirate123'])->assertSee('déjà prêt');
+    expect(Hash::check('Un-bon-mot1', $marie->fresh()->mot_de_passe))->toBeTrue();
 });
 
 test("un lien expiré, modifié, ou parti vers une adresse corrigée n'est plus valable", function () {
