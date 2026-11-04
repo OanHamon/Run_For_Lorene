@@ -12,15 +12,19 @@
             <p class="mt-4 rfl-alerte-erreur" role="alert">{{ session('erreur') }}</p>
         @endif
 
-        <p class="mt-3 text-sm text-gris-texte">
-            Pas d'inquiétude : rien n'a été débité et ta commande est gardée telle quelle, tu n'as rien à ressaisir.
-        </p>
+        @if ($commande->statut === \App\Models\Commande::EN_COURS && ! session('erreur'))
+            <p class="mt-3 text-sm text-gris-texte">
+                Pas d'inquiétude : rien n'a été débité et ta commande est gardée telle quelle, tu n'as rien à ressaisir.
+            </p>
+        @elseif ($commande->statut !== \App\Models\Commande::EN_COURS)
+            <p class="mt-3 text-sm text-gris-texte">Cette commande n'est plus en attente de paiement. Retrouve tes inscriptions dans ton espace.</p>
+        @endif
 
         <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             @if ($commande->statut === \App\Models\Commande::EN_COURS)
                 <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
                     @csrf
-                    <button type="submit" class="rfl-btn w-full sm:w-auto">Réessayer · {{ number_format((float) $commande->montant_total, fmod((float) $commande->montant_total, 1.0) == 0.0 ? 0 : 2, ',', ' ') }} €</button>
+                    <button type="submit" class="rfl-btn w-full sm:w-auto">Réessayer · {{ \App\Support\Format::euros($commande->montant_total) }}</button>
                 </form>
             @endif
         </div>

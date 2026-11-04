@@ -688,14 +688,16 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                                         <span class="{{ $c ? 'text-gris-texte' : 'font-bold text-moutarde-texte' }}">{{ $c ? 'Acceptée le '.\Illuminate\Support\Carbon::parse($c->date_depot)->translatedFormat('j F Y').' · v'.$c->version : 'À accepter' }}</span>
                                     </li>
                                 @endforeach
+                                @if ($this->questionsDecharge->isNotEmpty() || $this->questionnaireDecharge)
                                 <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
                                     <span class="text-vert-sombre">Questionnaire de décharge</span>
                                     <span class="{{ $this->questionnaireDecharge ? 'text-gris-texte' : 'font-bold text-moutarde-texte' }}">{{ $this->questionnaireDecharge ? 'Rempli le '.$this->questionnaireDecharge->document->date_depot->translatedFormat('j F Y') : 'À remplir' }}</span>
                                 </li>
+                                @endif
                             </ul>
 
                             <label class="mt-3 flex items-start gap-3 rounded-2xl border border-bordure bg-fond/50 px-4 py-3 text-sm text-vert-sombre">
-                                <input wire:model.live="droitImage" type="checkbox" @disabled(! $this->modifiable) class="mt-0.5 h-4 w-4 shrink-0">
+                                <input wire:model.live="droitImage" type="checkbox" @disabled(! $this->modifiable) class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
                                 <span>
                                     <span class="font-bold">Droit à l'image</span> : {{ $this->estMoi ? "j'autorise l'utilisation de mon image" : "j'autorise l'utilisation de l'image de {$p->user->prenom}" }} sur les photos et vidéos de l'événement.
                                     <span class="block text-gris-texte">Facultatif, modifiable à tout moment.</span>

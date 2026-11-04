@@ -4,6 +4,8 @@ namespace App\Notifications;
 
 use App\Models\Commande;
 use App\Models\Inscription;
+use App\Support\Billet;
+use App\Support\Format;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -25,14 +27,13 @@ class CommandeConfirmee extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $commande = $this->commande->load('inscriptions.participant.user', 'inscriptions.tarif.course', 'don');
-        $euros = fn ($m) => number_format((float) $m, 2, ',', ' ').' €';
 
         $donSeul = $commande->inscriptions->isEmpty();
 
         $mail = (new MailMessage)
             ->subject($donSeul ? 'Merci pour ton don à Run For Lorène' : 'Ton inscription à Run For Lorène est enregistrée')
             ->greeting("Merci {$notifiable->prenom} !")
-            ->line("Ta commande n° {$commande->id_commande} de {$euros($commande->montant_total)} est bien réglée.");
+            ->line("Ta commande n° {$commande->id_commande} de ".Format::euros($commande->montant_total).' est bien réglée.');
 
         foreach ($commande->inscriptions as $inscription) {
             $ligne = "{$inscription->participant->user->prenom} {$inscription->participant->user->nom} · {$inscription->tarif->course->nom}";
@@ -43,11 +44,16 @@ class CommandeConfirmee extends Notification implements ShouldQueue
                 default => ' · à compléter dans ton espace : '.implode(' et ', $inscription->documentsManquants()).' (obligatoire pour prendre le départ)',
             };
 
+            // Billet à présenter au retrait des dossards, comme dans « Inscription validée ».
+            if ($inscription->statut === Inscription::VALIDEE) {
+                $ligne .= ' · [ouvrir le billet]('.Billet::url($inscription).')';
+            }
+
             $mail->line($ligne);
         }
 
         if ($commande->don) {
-            $mail->line("Et merci pour ton don de {$euros($commande->don->montant)} !");
+            $mail->line('Et merci pour ton don de '.Format::euros($commande->don->montant).' !');
         }
 
         return $mail
