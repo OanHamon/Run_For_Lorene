@@ -245,13 +245,13 @@ test('« Mon compte » : modifier ses informations et choisir un mot de passe fa
         ->set('nouveau_confirmation', 'courte')
         ->call('enregistrerMotDePasse')
         ->assertHasErrors('nouveau')
-        ->set('nouveau', 'un-bon-mot-de-passe')
-        ->set('nouveau_confirmation', 'un-bon-mot-de-passe')
+        ->set('nouveau', 'Un-bon-mot-de-passe1')
+        ->set('nouveau_confirmation', 'Un-bon-mot-de-passe1')
         ->call('enregistrerMotDePasse')
         ->assertHasNoErrors();
 
     expect($user->fresh()->telephone)->toBe('0611223344')
-        ->and(Hash::check('un-bon-mot-de-passe', $user->fresh()->mot_de_passe))->toBeTrue();
+        ->and(Hash::check('Un-bon-mot-de-passe1', $user->fresh()->mot_de_passe))->toBeTrue();
 });
 
 test("reprise par l'admin d'une inscription payée puis annulée : l'ancienne commande est notée au journal", function () {

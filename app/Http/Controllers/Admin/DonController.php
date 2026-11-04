@@ -38,7 +38,7 @@ class DonController extends Controller
         abort_unless($evenement, 404);
 
         // Noms et adresses des donateurs qui sortent du site : chaque export est tracé.
-        $journal->noter('export.dons', $evenement, array_filter($request->only(['q', 'recu', 'anonyme'])));
+        $journal->noter('export.dons', $evenement, array_filter($request->only(['recu'])));
 
         $lignes = function () use ($request, $evenement) {
             foreach ($this->requete($request, $evenement)->lazy() as $don) {

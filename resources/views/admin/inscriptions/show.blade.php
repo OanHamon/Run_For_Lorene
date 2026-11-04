@@ -37,7 +37,7 @@
     @if ($manquants)
         <div class="mb-6 rfl-alerte">
             <p class="font-display text-vert">Dossier incomplet</p>
-            <p class="mt-1 text-sm text-gris-texte">Il manque {{ implode(' et ', $manquants) }}. Le participant le remplit depuis son espace ; le dossard est attribué ensuite.</p>
+            <p class="mt-1 text-sm text-gris-texte">Il manque {{ implode(' et ', $manquants) }}. Le participant {{ count($manquants) > 1 ? 'les complète' : 'le complète' }} depuis son espace ; le dossard est attribué ensuite.</p>
         </div>
     @endif
 

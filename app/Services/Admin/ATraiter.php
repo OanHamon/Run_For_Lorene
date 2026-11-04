@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin;
 
+use App\Models\Admin;
 use App\Models\Evenement;
 use App\Models\Inscription;
 use App\Models\User;
@@ -39,7 +40,10 @@ class ATraiter
         }
 
         $paiements = Statistiques::paiementsAVerifier();
-        $groupes[] = $this->groupe('paiements', 'Paiements à vérifier', 'Argent reçu sur une commande qui ne le reflète pas : à confirmer ou à rembourser.',
+        // Seul un super admin peut confirmer ou rembourser : les autres sont invités à le prévenir.
+        $groupes[] = $this->groupe('paiements', 'Paiements à vérifier', $admin->peutAdmin(Admin::SUPER)
+            ? 'Argent reçu sur une commande qui ne le reflète pas : à confirmer ou à rembourser.'
+            : 'Argent reçu sur une commande qui ne le reflète pas : préviens un super admin, lui seul peut confirmer ou rembourser.',
             $paiements->map(fn ($a) => [
                 'libelle' => "Commande n° {$a->paiement->id_commande} · ".Format::euros($a->paiement->montant),
                 'detail' => 'Reçu le '.$a->paiement->date_paiement?->format('d/m/Y').' : '.$a->motif,

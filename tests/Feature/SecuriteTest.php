@@ -72,7 +72,7 @@ test('« Mon compte » : le mot de passe actuel est limité à 5 essais par minu
 
     $compte = Volt::test('espace.compte');
     foreach (range(1, 5) as $_) {
-        $compte->set('actuel', 'faux')->set('nouveau', 'nouveau-mdp-123')->set('nouveau_confirmation', 'nouveau-mdp-123')
+        $compte->set('actuel', 'faux')->set('nouveau', 'Nouveau-mdp-123')->set('nouveau_confirmation', 'Nouveau-mdp-123')
             ->call('enregistrerMotDePasse')->assertHasErrors('actuel');
     }
 

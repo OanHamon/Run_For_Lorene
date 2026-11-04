@@ -81,7 +81,7 @@ class Retraits
                 ->update(['date_retrait' => today()]);
 
             if ($maj === 1) {
-                RemiseDossard::create(['action' => RemiseDossard::REMISE, 'par' => $par, 'id_inscription' => $inscription->id_inscription, 'id_poste' => $poste?->id_poste, 'id_admin' => $admin?->id_user]);
+                RemiseDossard::create(['action' => RemiseDossard::REMISE, 'par' => mb_substr($par, 0, 100), 'id_inscription' => $inscription->id_inscription, 'id_poste' => $poste?->id_poste, 'id_admin' => $admin?->id_user]);
             }
 
             return $maj === 1;
@@ -103,7 +103,7 @@ class Retraits
             $maj = Inscription::whereKey($inscription->id_inscription)->whereNotNull('date_retrait')->update(['date_retrait' => null]);
 
             if ($maj === 1) {
-                RemiseDossard::create(['action' => RemiseDossard::ANNULATION, 'par' => $par, 'id_inscription' => $inscription->id_inscription, 'id_poste' => $poste?->id_poste, 'id_admin' => $admin?->id_user]);
+                RemiseDossard::create(['action' => RemiseDossard::ANNULATION, 'par' => mb_substr($par, 0, 100), 'id_inscription' => $inscription->id_inscription, 'id_poste' => $poste?->id_poste, 'id_admin' => $admin?->id_user]);
             }
 
             return $maj;
