@@ -25,6 +25,8 @@ Volt::route('inscription', 'inscription.tunnel')->name('inscription.tunnel');
 
 // Billet QR en plein écran (lien signé de l'email et de l'espace, sans connexion).
 Route::get('billet/{inscription}', BilletController::class)->middleware(['signed', 'throttle:60,1'])->name('billet');
+// Le même billet en PDF, à imprimer (aussi joint aux emails qui donnent le dossard).
+Route::get('billet/{inscription}/pdf', [BilletController::class, 'pdf'])->middleware(['signed', 'throttle:20,1'])->name('billet.pdf');
 
 // TRACK (empreinte en particules) : page de mise au point, uniquement en local.
 Route::get('dev/track', fn () => app()->isLocal() ? view('dev.track') : abort(404))->name('dev.track');

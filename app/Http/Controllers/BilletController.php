@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Inscription;
 use App\Support\Billet;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
@@ -22,6 +23,18 @@ class BilletController extends Controller
             'valide' => $inscription->statut === Inscription::VALIDEE,
             'qr' => $inscription->statut === Inscription::VALIDEE ? Billet::svg($inscription, 260) : null,
             'jeton' => $inscription->statut === Inscription::VALIDEE ? Billet::jeton($inscription) : null,
+        ]);
+    }
+
+    /** Billet PDF à imprimer, seulement pour une inscription validée. */
+    public function pdf(Inscription $inscription): Response
+    {
+        abort_unless($inscription->statut === Inscription::VALIDEE, 404);
+
+        return response(Billet::pdf($inscription), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.Billet::nomFichier($inscription).'"',
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 }

@@ -28,7 +28,9 @@
                 </div>
             @endif
 
-            <p class="mt-6 text-sm text-gris-texte">Sans téléphone, donne simplement ton nom.</p>
+            <a href="{{ \App\Support\Billet::urlPdf($inscription) }}" class="mt-6 inline-block rfl-btn-secondaire" data-test="billet-pdf">Télécharger le billet à imprimer (PDF)</a>
+
+            <p class="mt-6 text-sm text-gris-texte">Sans téléphone, donne simplement ton nom ou ton numéro de dossard.</p>
         </div>
     @endif
 </x-tunnel-shell>

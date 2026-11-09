@@ -33,13 +33,19 @@ class InscriptionValidee extends Notification implements ShouldQueue
         $course = "{$inscription->tarif->course->nom} · {$inscription->evenement->nom}, le {$inscription->evenement->date_evenement->translatedFormat('l j F Y')}";
         $lien = Activation::lienEspace($notifiable, route('espace.inscription', $inscription, absolute: false));
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject($inscription->dossard ? "Dossard n° {$inscription->dossard} pour Run For Lorène" : 'Inscription validée pour Run For Lorène')
             ->greeting("Bonjour {$notifiable->prenom},")
             ->line(($moi ? 'Ton dossier est complet : ton inscription' : "Le dossier de {$inscription->participant->user->prenom} est complet : son inscription")." est validée ({$course}).")
             ->line($inscription->dossard ? "Numéro de dossard : {$inscription->dossard}." : "Le numéro de dossard sera communiqué par l'association.")
-            ->line('Ton billet, à présenter au retrait des dossards : [ouvrir ton billet (ton empreinte)]('.Billet::url($inscription).').')
+            ->line('Ton billet, à présenter au retrait des dossards, est joint à cet email (PDF, à imprimer ou à garder sur ton téléphone). Tu peux aussi [l\'ouvrir en plein écran]('.Billet::url($inscription).').')
             ->action($lien['active'] ? 'Voir mon espace' : 'Créer mon mot de passe', $lien['url'])
             ->salutation("À très vite sur la ligne de départ,\nL'équipe Run For Lorène");
+
+        if ($inscription->statut === Inscription::VALIDEE) {
+            $mail->attachData(Billet::pdf($inscription), Billet::nomFichier($inscription), ['mime' => 'application/pdf']);
+        }
+
+        return $mail;
     }
 }

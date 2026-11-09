@@ -3,6 +3,7 @@
     "type": "module",
     "scripts": {
         "test:track": "node tests/js/track-code.mjs",
+        "test:billet": "node tests/js/track-billet.mjs",
         "build": "vite build",
         "dev": "vite"
     },

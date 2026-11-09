@@ -490,7 +490,10 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                         <summary class="cursor-pointer text-gris-texte">Afficher le QR code</summary>
                         <div class="mx-auto mt-2 w-fit" aria-label="QR code du billet">{!! \App\Support\Billet::svg($i, 160) !!}</div>
                     </details>
-                    <a href="{{ \App\Support\Billet::url($i) }}" target="_blank" rel="noopener" class="mt-2 inline-block text-sm rfl-lien">Ouvrir en plein écran</a>
+                    <div class="mt-2 flex flex-col items-center gap-1 text-sm">
+                        <a href="{{ \App\Support\Billet::url($i) }}" target="_blank" rel="noopener" class="rfl-lien">Ouvrir en plein écran</a>
+                        <a href="{{ \App\Support\Billet::urlPdf($i) }}" target="_blank" rel="noopener" class="rfl-lien" data-test="billet-pdf">Télécharger le billet à imprimer (PDF)</a>
+                    </div>
                 </section>
             @endif
 

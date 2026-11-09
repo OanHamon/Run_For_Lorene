@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Commande;
 use App\Models\Inscription;
+use App\Support\Billet;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -44,6 +45,17 @@ class CommandeConfirmee extends Notification implements ShouldQueue
             };
 
             $mail->line($ligne);
+        }
+
+        // Un billet PDF par inscription validée (empreinte, QR de secours, dossard), à imprimer.
+        $validees = $commande->inscriptions->where('statut', Inscription::VALIDEE);
+        if ($validees->isNotEmpty()) {
+            $mail->line($validees->count() > 1
+                ? 'Les billets, à présenter au retrait des dossards, sont joints à cet email (PDF, à imprimer ou à garder sur ton téléphone).'
+                : 'Le billet, à présenter au retrait des dossards, est joint à cet email (PDF, à imprimer ou à garder sur ton téléphone).');
+            foreach ($validees as $inscription) {
+                $mail->attachData(Billet::pdf($inscription), Billet::nomFichier($inscription), ['mime' => 'application/pdf']);
+            }
         }
 
         if ($commande->don) {
