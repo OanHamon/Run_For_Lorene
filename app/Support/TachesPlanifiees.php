@@ -19,7 +19,13 @@ class TachesPlanifiees
 
     public static function noter(Event $event, bool $reussie): void
     {
-        Cache::forever('tache-planifiee:'.self::nom($event), ['le' => now()->toIso8601String(), 'reussie' => $reussie]);
+        self::noterNom(self::nom($event), $reussie);
+    }
+
+    /** Même chose pour une tâche lancée par le réveil (App\Services\Reveil), hors planificateur. */
+    public static function noterNom(string $nom, bool $reussie): void
+    {
+        Cache::forever("tache-planifiee:{$nom}", ['le' => now()->toIso8601String(), 'reussie' => $reussie]);
     }
 
     /** @return array{le: string, reussie: bool}|null */

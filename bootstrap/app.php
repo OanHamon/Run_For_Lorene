@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ReveilController;
 use App\Http\Middleware\CompteParticipant;
 use App\Http\Middleware\ConfirmationAdmin;
 use App\Http\Middleware\EntetesSecurite;
@@ -25,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('admin')
                 ->name('admin.')
                 ->group(base_path('routes/admin.php'));
+
+            // Réveil du site (hébergement mutualisé) : hors groupe « web », ni session ni cookie.
+            Route::get('reveil/{cle}', ReveilController::class)
+                ->middleware('throttle:10,1')
+                ->name('reveil');
         },
     )
     ->withMiddleware(function (Middleware $middleware) {

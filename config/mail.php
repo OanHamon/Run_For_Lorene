@@ -37,6 +37,13 @@ return [
 
     'mailers' => [
 
+        // API Brevo (HTTPS) : le mailer de production (MAIL_MAILER=brevo). Sur un hébergement
+        // mutualisé, le SMTP sortant est souvent bridé ; l'API passe par le port 443.
+        'brevo' => [
+            'transport' => 'brevo',
+            'key' => env('BREVO_API_KEY'),
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),

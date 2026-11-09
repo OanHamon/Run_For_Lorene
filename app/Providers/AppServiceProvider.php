@@ -5,15 +5,21 @@ namespace App\Providers;
 use App\Services\Paiement\Passerelle;
 use App\Services\Paiement\PasserelleSimulation;
 use App\Services\Paiement\PasserelleStripe;
+use App\Support\FileSansWorker;
 use App\Support\TachesPlanifiees;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use RuntimeException;
 use Stripe\StripeClient;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Mailer\Bridge\Brevo\Transport\BrevoTransportFactory;
+use Symfony\Component\Mailer\Transport\Dsn;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(StripeClient::class, fn () => new StripeClient((string) config('services.stripe.secret')));
+
+        // Client HTTP de l'API Brevo (remplacé par un faux client dans les tests).
+        $this->app->singleton(HttpClientInterface::class, fn () => HttpClient::create(['timeout' => 15]));
 
         $this->app->bind(Passerelle::class, function ($app) {
             if (config('paiement.passerelle') === 'stripe') {
@@ -47,6 +56,13 @@ class AppServiceProvider extends ServiceProvider
         if ($proxies = config('rfl.proxies_de_confiance')) {
             TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
         }
+
+        // Emails par l'API Brevo (transport Symfony), clé BREVO_API_KEY.
+        Mail::extend('brevo', fn (array $config) => (new BrevoTransportFactory(null, $this->app->make(HttpClientInterface::class)))
+            ->create(new Dsn('brevo+api', 'default', (string) ($config['key'] ?? ''))));
+
+        // Mutualisé sans worker : les emails mis en file partent juste après la réponse.
+        FileSansWorker::enregistrer($this->app);
 
         // Dernière exécution des tâches planifiées, affichée dans « État technique ».
         Event::listen(ScheduledTaskFinished::class, fn ($e) => TachesPlanifiees::noter($e->task, $e->task->exitCode === 0 || $e->task->exitCode === null));

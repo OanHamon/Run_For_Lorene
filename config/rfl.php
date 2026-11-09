@@ -29,4 +29,14 @@ return [
     */
     'beta' => (bool) env('RFL_BETA', false),
     'beta_feedback' => env('RFL_BETA_FEEDBACK_URL'),
+
+    /*
+    | Hébergement mutualisé (OVH Personal) : pas de worker permanent ni de cron à la minute.
+    | `file_sans_worker` : chaque requête qui met un email en file l'envoie juste après sa
+    | réponse (App\Support\FileSansWorker). `reveil_cle` : clé secrète de l'adresse
+    | /reveil/{clé}, appelée chaque minute par un service externe (cron-job.org) pour lancer
+    | les tâches planifiées et vider la file (App\Services\Reveil). Vide : adresse désactivée.
+    */
+    'file_sans_worker' => (bool) env('FILE_SANS_WORKER', false),
+    'reveil_cle' => env('REVEIL_CLE'),
 ];
