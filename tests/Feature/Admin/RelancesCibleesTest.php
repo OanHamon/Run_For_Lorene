@@ -29,7 +29,7 @@ function relance(array $champs = []): array
 test('les relances sont réservées au niveau 2', function () {
     $this->actingAs(admin(1))->get('/admin/relances')->assertForbidden();
     $this->actingAs(admin(2))->get('/admin/relances')->assertOk()
-        ->assertSee('Envoyer un message')->assertSee('Envois programmés')->assertSee('Relances automatiques du site');
+        ->assertSee('Envoyer un message')->assertSee('Envois programmés')->assertSee('Relance automatique du site')->assertDontSee('Paiement non abouti');
 });
 
 test("l'assistant se lit en quatre étapes, prérempli par le modèle", function () {
@@ -205,12 +205,11 @@ test('un moment déjà passé, ou après l\'événement, est refusé', function 
 });
 
 test('les relances automatiques du site se règlent depuis la page', function () {
-    $this->actingAs(admin(2))->put('/admin/relances/reglages', ['documents_actif' => '1', 'documents_jours' => 21, 'documents_heure' => '18:00', 'paiement_heures' => 48])
+    $this->actingAs(admin(2))->put('/admin/relances/reglages', ['documents_actif' => '1', 'documents_jours' => 21, 'documents_heure' => '18:00'])
         ->assertSessionHas('statut');
 
     expect(ReglagesRelances::documents())->toBe(['actif' => true, 'jours_avant' => 21, 'heure' => '18:00'])
-        ->and(ReglagesRelances::paiement())->toBe(['actif' => false, 'heures_apres' => 48])
-        ->and(Reglage::count())->toBe(2);
+        ->and(Reglage::count())->toBe(1);
 });
 
 test("les listes montrent l'objet lisible, sans accolades", function () {

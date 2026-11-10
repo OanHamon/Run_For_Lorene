@@ -33,33 +33,8 @@
                 <p class="mb-6 rfl-alerte-info text-sm text-vert" role="status">{{ session('statut') }}</p>
             @endif
 
-            {{-- Paiements en attente --}}
-            @foreach ($commandesEnAttente as $commande)
-                <div class="mb-6 rfl-alerte">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <p class="font-display text-vert">Action requise : paiement en attente ({{ $euros($commande->montant_total) }})</p>
-                            <p class="mt-1 text-sm text-gris-texte">
-                                {{ $commande->inscriptions->map(fn ($i) => $i->participant->user->prenom.' · '.$i->tarif->course->nom)->join(', ') ?: 'Don' }}.
-                                La place n'est garantie qu'une fois le paiement reçu.
-                            </p>
-                        </div>
-                        <div class="flex shrink-0 flex-wrap items-center gap-3">
-                            <form method="POST" action="{{ route('inscription.modifier', $commande) }}">
-                                @csrf
-                                <button type="submit" class="rfl-btn-secondaire px-5 py-2 text-sm">Modifier</button>
-                            </form>
-                            <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
-                                @csrf
-                                <button type="submit" class="rfl-btn px-5 py-2.5 text-sm">Payer {{ $euros($commande->montant_total) }}</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-
             {{-- Brouillon en cours --}}
-            @if ($brouillons > 0 && $ouvert && $commandesEnAttente->isEmpty())
+            @if ($brouillons > 0 && $ouvert)
                 <div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-bordure bg-white px-5 py-4">
                     <div>
                         <p class="font-display text-vert">Inscription non terminée</p>
@@ -88,20 +63,15 @@
                     </div>
                     <div class="rounded-3xl border border-bordure bg-white p-4">
                         <p class="text-sm text-gris-texte">Dossiers validés</p>
-                        <p class="mt-1 font-display text-xl text-vert">{{ $inscriptionsEvenement->where('statut', Inscription::VALIDEE)->count() }} / {{ $inscriptionsEvenement->whereNotIn('statut', [Inscription::ANNULEE, Inscription::BROUILLON])->count() }}</p>
+                        <p class="mt-1 font-display text-xl text-vert">{{ $inscriptionsEvenement->where('statut', Inscription::VALIDEE)->count() }} / {{ $inscriptionsEvenement->whereNotIn('statut', [Inscription::ANNULEE, Inscription::BROUILLON, Inscription::EN_ATTENTE_PAIEMENT])->count() }}</p>
                         @if ($incompletes->isNotEmpty())
                             <span class="inline-block rounded-full bg-moutarde/20 px-2 py-0.5 text-xs font-bold text-vert-sombre">À compléter</span>
                         @endif
                     </div>
                     <div class="rounded-3xl border border-bordure bg-white p-4">
                         <p class="text-sm text-gris-texte">Paiement</p>
-                        @if ($commandesEnAttente->isNotEmpty())
-                            <p class="mt-1 font-display text-xl text-vert">{{ $euros($commandesEnAttente->sum('montant_total')) }}</p>
-                            <span class="inline-block rounded-full bg-moutarde/20 px-2 py-0.5 text-xs font-bold text-vert-sombre">En attente</span>
-                        @else
-                            <p class="mt-1 font-display text-xl text-vert">{{ $euros($inscriptionsEvenement->whereIn('statut', [Inscription::VALIDEE, Inscription::DOSSIER_INCOMPLET])->sum('prix_paye')) }}</p>
-                            <span class="inline-block rounded-full bg-vert-clair px-2 py-0.5 text-xs font-bold text-vert">Réglé</span>
-                        @endif
+                        <p class="mt-1 font-display text-xl text-vert">{{ $euros($inscriptionsEvenement->whereIn('statut', [Inscription::VALIDEE, Inscription::DOSSIER_INCOMPLET])->sum('prix_paye')) }}</p>
+                        <span class="inline-block rounded-full bg-vert-clair px-2 py-0.5 text-xs font-bold text-vert">Réglé</span>
                     </div>
                     <div class="rounded-3xl border border-bordure bg-white p-4">
                         <p class="text-sm text-gris-texte">Jour J</p>

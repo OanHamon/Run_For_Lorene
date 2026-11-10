@@ -62,8 +62,8 @@
 
         {{-- 3. Relances automatiques du site --}}
         <section class="mb-8 rfl-carte p-6" aria-labelledby="titre-auto">
-            <h2 id="titre-auto" class="font-display text-xl text-vert">Relances automatiques du site</h2>
-            <p class="mt-1 mb-4 text-base text-gris-texte">Elles partent toutes seules, pour tous les événements. Chaque personne ne les reçoit qu'une fois.</p>
+            <h2 id="titre-auto" class="font-display text-xl text-vert">Relance automatique du site</h2>
+            <p class="mt-1 mb-4 text-base text-gris-texte">Une fois cochée, elle part toute seule, pour tous les événements. Chaque personne ne la reçoit qu'une fois. Pas de relance de paiement : l'inscription se fait d'une traite.</p>
 
             <form method="POST" action="{{ route('admin.relances.reglages') }}" class="space-y-4">
                 @csrf
@@ -82,21 +82,6 @@
                     </p>
                     @error('documents_jours', 'reglages')<p class="rfl-erreur">{{ $message }}</p>@enderror
                     @error('documents_heure', 'reglages')<p class="rfl-erreur">{{ $message }}</p>@enderror
-                </fieldset>
-
-                <fieldset class="rounded-2xl bg-fond p-4">
-                    <legend class="sr-only">Paiement non abouti</legend>
-                    <label class="flex items-center gap-3 text-base font-bold">
-                        <input type="checkbox" name="paiement_actif" value="1" class="h-5 w-5" @checked(old('paiement_actif', $paiement['actif']))>
-                        Paiement non abouti
-                    </label>
-                    <p class="mt-2 flex flex-wrap items-center gap-2 text-base">
-                        Envoyer
-                        <input type="number" name="paiement_heures" min="1" max="168" value="{{ old('paiement_heures', $paiement['heures_apres']) }}" class="rfl-champ-compact w-20 text-center" aria-label="Nombre d'heures après le paiement non abouti">
-                        heures après un paiement qui n'a pas abouti
-                    </p>
-                    @error('paiement_heures', 'reglages')<p class="rfl-erreur">{{ $message }}</p>@enderror
-                    <p class="mt-2 text-sm text-gris-texte">À décocher si l'inscription doit se faire d'une traite, sans relance après coup.</p>
                 </fieldset>
 
                 <button type="submit" class="rfl-btn px-6 py-3">Enregistrer</button>

@@ -31,15 +31,11 @@ class EspaceController extends Controller
         $brouillons = $evenement
             ? Inscription::whereIn('id_participant', $idsParticipants)
                 ->where('id_evenement', $evenement->id_evenement)
-                ->where('statut', Inscription::BROUILLON)
+                // Inscription d'une traite : une commande restée en cours redevient un brouillon
+                // en reprenant le tunnel (AbandonnerCommande).
+                ->whereIn('statut', [Inscription::BROUILLON, Inscription::EN_ATTENTE_PAIEMENT])
                 ->count()
             : 0;
-
-        $commandesEnAttente = Commande::with('inscriptions.participant.user', 'inscriptions.tarif.course', 'don')
-            ->where('id_user', $user->id_user)
-            ->where('statut', Commande::EN_COURS)
-            ->orderByDesc('id_commande')
-            ->get();
 
         $dons = Don::with('commande')
             ->whereHas('commande', fn ($q) => $q->where('id_user', $user->id_user)->where('statut', Commande::PAYEE))
@@ -51,7 +47,6 @@ class EspaceController extends Controller
             'evenement' => $evenement,
             'inscriptions' => $inscriptions,
             'brouillons' => $brouillons,
-            'commandesEnAttente' => $commandesEnAttente,
             'dons' => $dons,
             'incompletes' => $inscriptions->where('statut', Inscription::DOSSIER_INCOMPLET),
         ]);

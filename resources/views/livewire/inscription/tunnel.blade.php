@@ -12,6 +12,7 @@ use App\Services\Inscriptions\Consentements;
 use App\Services\Inscriptions\Eligibilite;
 use App\Services\Inscriptions\PasserCommande;
 use App\Services\Inscriptions\Questionnaires;
+use App\Services\Paiement\AbandonnerCommande;
 use App\Services\Paiement\DemarrerPaiement;
 use App\Support\Telephone;
 use Illuminate\Support\Carbon;
@@ -37,6 +38,10 @@ use Livewire\Volt\Component;
  * Tout est enregistré côté serveur à chaque « Continuer » : le panier est l'ensemble des
  * inscriptions en brouillon des participants dont le compte est responsable (lui-même et
  * ses participants gérés). Le don, qui appartient à la commande, est gardé en session.
+ *
+ * Inscription d'une traite : le récapitulatif mène directement au paiement. Une commande
+ * restée en cours (paiement quitté puis retour ici) est abandonnée à l'arrivée : ses
+ * inscriptions redeviennent des brouillons et on reprend au récapitulatif.
  */
 new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lorène'])] class extends Component {
     public const ETAPES = [
@@ -46,7 +51,6 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         'documents' => [4, 'Documents'],
         'don' => [5, 'Don'],
         'recap' => [6, 'Récapitulatif'],
-        'attente' => [7, 'Paiement'],
     ];
 
     /** Champs de l'étape Documents, propres à chaque participant. */
@@ -138,10 +142,26 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             return;
         }
 
-        if ($this->commandeEnAttente) {
-            $this->etape = 'attente';
+        if ($commande = $this->commandeEnAttente) {
+            $don = $commande->don;
+            $donSeul = $commande->inscriptions->isEmpty();
 
-            return;
+            // Refusé si le paiement vient d'aboutir chez Stripe : la confirmation attend le webhook.
+            if (! app(AbandonnerCommande::class)($commande)) {
+                $this->redirectRoute('inscription.confirmation', $commande);
+
+                return;
+            }
+
+            // Le don choisi est repris tel quel : on revient directement au récapitulatif.
+            session([
+                'tunnel.don' => $don ? (string) (float) $don->montant : '',
+                'tunnel.recu' => (bool) $don?->recu_fiscal_demande,
+                'tunnel.anonyme' => (bool) $don?->anonyme,
+            ]);
+
+            $this->donSeul = $this->donSeul || $donSeul;
+            unset($this->commandeEnAttente, $this->panier);
         }
 
         $this->don = (string) session('tunnel.don', '');
@@ -203,7 +223,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         return Evenement::courant();
     }
 
-    /** Commande en attente de paiement pour cet événement. */
+    /** Commande restée en attente de paiement pour cet événement (abandonnée au retour dans le tunnel). */
     #[Computed]
     public function commandeEnAttente(): ?Commande
     {
@@ -1083,44 +1103,6 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             <p class="mt-1 mb-6 text-sm text-gris-texte">Identifie-toi d'abord : ton don est rattaché à ton compte, pour ton reçu fiscal et ton historique.</p>
         @endif
         <livewire:auth.identification :destination="route('inscription.tunnel', $donSeul ? ['don' => 1] : [])" />
-    @endif
-
-    {{-- Paiement en attente --}}
-    @if ($etape === 'attente' && $this->commandeEnAttente)
-        @php($commande = $this->commandeEnAttente)
-        <h1 class="font-display text-2xl text-vert">Un paiement t'attend</h1>
-        <p class="mt-1 mb-6 text-sm text-gris-texte">Ta commande est prête, il ne reste plus qu'à la régler. Tu peux aussi la modifier avant de payer.</p>
-
-        <ul class="divide-y divide-bordure rounded-2xl border border-bordure">
-            @foreach ($commande->inscriptions as $i)
-                <li class="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                    <span><span class="font-bold text-vert-sombre">{{ $i->participant->user->prenom }} {{ $i->participant->user->nom }}</span><br><span class="text-gris-texte">{{ $i->tarif->course->nom }}</span></span>
-                    <span class="font-bold text-vert-sombre">{{ $this->euros((float) $i->prix_paye) }}</span>
-                </li>
-            @endforeach
-            @if ($commande->don)
-                <li class="flex items-center justify-between px-4 py-3 text-sm">
-                    <span class="text-vert-sombre">Don</span>
-                    <span class="font-bold text-vert-sombre">{{ $this->euros((float) $commande->don->montant) }}</span>
-                </li>
-            @endif
-        </ul>
-
-        <div class="mt-4 flex items-center justify-between border-t border-bordure pt-4">
-            <p class="font-display text-lg text-vert">Total</p>
-            <p class="font-display text-lg text-vert">{{ $this->euros((float) $commande->montant_total) }}</p>
-        </div>
-
-        <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <form method="POST" action="{{ route('inscription.modifier', $commande) }}">
-                @csrf
-                <button type="submit" class="rfl-lien">Modifier ma commande</button>
-            </form>
-            <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
-                @csrf
-                <button type="submit" class="rfl-btn w-full sm:w-auto">Payer {{ $this->euros((float) $commande->montant_total) }}</button>
-            </form>
-        </div>
     @endif
 
     {{-- Participant (écran 05) --}}

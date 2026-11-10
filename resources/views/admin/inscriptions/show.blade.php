@@ -10,7 +10,7 @@
     $course = $i->tarif->course;
     $peutGerer = auth()->user()->peutAdmin(2);
     $manquants = in_array($i->statut, [Inscription::ANNULEE, Inscription::BROUILLON], true) ? [] : $i->documentsManquants();
-    $relancable = in_array($i->statut, [Inscription::EN_ATTENTE_PAIEMENT, Inscription::DOSSIER_INCOMPLET], true);
+    $relancable = $i->statut === Inscription::DOSSIER_INCOMPLET;
     $ligne = fn ($libelle, $valeur) => $valeur === null || $valeur === '' ? '' : '<div class="flex justify-between gap-4 py-1.5"><dt class="text-gris-texte">'.e($libelle).'</dt><dd class="text-right font-bold">'.e($valeur).'</dd></div>';
 @endphp
 <x-admin-shell :title="$p->user->name">

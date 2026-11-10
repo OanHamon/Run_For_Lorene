@@ -84,7 +84,7 @@ test('le réveil lance une tâche à échéance une seule fois, et rattrape une 
     $this->travelTo(now()->setTime(3, 37)); // le réveil de 3 h 00 a été manqué
 
     // Tout a tourné récemment, sauf la purge de 3 h : son dernier passage date d'hier.
-    foreach (['rfl:relancer-documents', 'rfl:relancer-paiements', 'rfl:envois-programmes'] as $nom) {
+    foreach (['rfl:relancer-documents', 'rfl:abandonner-commandes', 'rfl:envois-programmes'] as $nom) {
         TachesPlanifiees::noterNom($nom, true);
     }
     $this->travel(-1)->days();
