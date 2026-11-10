@@ -32,7 +32,7 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 - [ ] Choisir la branche de production (proposé : fusionner `admin` dans `master`, déployer depuis `master`)
 - [ ] **Méthode de déploiement sans SSH** (à valider) : action GitHub qui construit une branche `production-ovh` (`vendor/` sans dev + front compilé), déploiement Git d'OVH sur cette branche, `.htaccess` racine vers `public/`, `.ovhconfig`, migrations lancées par le réveil après chaque nouvelle version, guide `docs/DEPLOIEMENT.md`
 - [ ] **Créer le premier compte admin sans terminal** : aujourd'hui seul le seeder de démo en crée un, et il ne doit jamais tourner en production (faux événement, faux comptes)
-- [ ] **Pages d'erreur en français** aux couleurs de la charte : 404, 419 (« page expirée », fréquente dans le tunnel), 500, 503 (maintenance)
+- [x] **Pages d'erreur en français** aux couleurs de la charte : 404, 419 (« page expirée », fréquente dans le tunnel), 500, 503 (maintenance) ; replis 4xx/5xx (401, 403, 429…). Gabarit `<x-erreur>`, vues dans `resources/views/errors/`
 - [x] **Logs** : passer à des logs journaliers avec durée limitée (`LOG_STACK=daily`, `LOG_DAILY_DAYS=14`) — `.env.example` à jour
 - [ ] **Inscription « d'une traite »** (décision du 30/10) : décider ce qui disparaît (relance de paiement à 24 h, écran « Un paiement t'attend », alerte dans l'espace, reprise du paiement, place réservée 30 min), puis aligner le code et `docs/spec.md`
 - [x] Corriger le `CLAUDE.md` : le projet est en **Laravel 12**, pas 13
@@ -123,7 +123,7 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 
 ## 🟢 À améliorer (non bloquant)
 
-- [ ] Page de maintenance aux couleurs de la charte pendant un déploiement
+- [x] Page de maintenance aux couleurs de la charte pendant un déploiement : `php artisan down --render="errors::503"` (page pré-rendue, servie sans démarrer l'application)
 - [ ] Rendu PDF : réutiliser l'image de l'empreinte si plusieurs emails la demandent (gain de temps)
 - [ ] Version monochrome blanche du logo Effervescence Jeunes pour les fonds foncés (à demander à Pop Com)
 - [ ] Mettre à jour les écrans Figma 06, 08, 10 et 09 (questionnaire de santé, Stripe, Apple Pay)
