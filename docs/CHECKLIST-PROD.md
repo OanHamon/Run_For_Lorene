@@ -32,7 +32,7 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 - [x] Branche de production : `master` (avancée jusqu'à `admin`, on y fusionne ce qui est prêt et on déploie depuis `master`) — 10 nov. 2026
 - [ ] **Méthode de déploiement sans SSH** (à valider) : action GitHub qui construit une branche `production-ovh` (`vendor/` sans dev + front compilé), déploiement Git d'OVH sur cette branche, `.htaccess` racine vers `public/`, `.ovhconfig`, migrations lancées par le réveil après chaque nouvelle version, guide `docs/DEPLOIEMENT.md`
 - [ ] **Premier compte admin** : créé à la main dans la base OVH (phpMyAdmin), jamais via le seeder de démo. Une ligne dans `users` (`email`, `nom`, `prenom`, `email_verifie_le = NOW()`, `mot_de_passe` = hash bcrypt généré en local avec `php -r "echo password_hash('…', PASSWORD_BCRYPT);"`, `created_at`/`updated_at`), puis une ligne dans `admins` (`id_user`, `niveau_acces = 3`). Se connecter sur `/admin/connexion` (mot de passe puis code reçu par email) : vérifie aussi Brevo
-- [ ] **Pages d'erreur en français** aux couleurs de la charte : 404, 419 (« page expirée », fréquente dans le tunnel), 500, 503 (maintenance)
+- [x] **Pages d'erreur en français** aux couleurs de la charte : 404, 419 (« page expirée », fréquente dans le tunnel), 500, 503 (maintenance) ; replis 4xx/5xx (401, 403, 429…). Gabarit `<x-erreur>`, vues dans `resources/views/errors/`
 - [x] **Logs** : passer à des logs journaliers avec durée limitée (`LOG_STACK=daily`, `LOG_DAILY_DAYS=14`) — `.env.example` à jour
 - [x] **Inscription « d'une traite »** : le paiement ne peut pas être esquivé (vérifié : seul le webhook Stripe signé valide une inscription). Un paiement non abouti remet la commande en brouillon (webhook `expired`/`async_payment_failed`, tâche `rfl:abandonner-commandes` toutes les 5 min, retour dans le tunnel). Supprimés : relance de paiement, écran « Un paiement t'attend », alerte et bouton « Payer » dans l'espace, relance admin d'un paiement en attente. Gardé : place réservée pendant la session Stripe (30 min). Relance automatique des documents en pause par défaut. Spec et parcours à jour — 10 nov. 2026
 - [x] Corriger le `CLAUDE.md` : le projet est en **Laravel 12**, pas 13
@@ -123,7 +123,7 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 
 ## 🟢 À améliorer (non bloquant)
 
-- [ ] Page de maintenance aux couleurs de la charte pendant un déploiement
+- [x] Page de maintenance aux couleurs de la charte pendant un déploiement : `php artisan down --render="errors::503"` (page pré-rendue, servie sans démarrer l'application)
 - [ ] Rendu PDF : réutiliser l'image de l'empreinte si plusieurs emails la demandent (gain de temps)
 - [ ] Version monochrome blanche du logo Effervescence Jeunes pour les fonds foncés (à demander à Pop Com)
 - [ ] Mettre à jour les écrans Figma 06, 08, 10 et 09 (questionnaire de santé, Stripe, Apple Pay)
