@@ -26,16 +26,16 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 
 ### Code et dépôt 🧑‍💻
 
-- [ ] Fusionner `worktree-billet-pdf` (mode mutualisé) dans `admin`, puis `composer install`
-- [ ] Remettre `docs/DECISION.md` dans git (`git add docs/DECISION.md`) : le commit des dépendances a supprimé l'ancien `DECISION.md` sans ajouter le nouveau
-- [ ] Ranger ou supprimer `resources/svg/track/Shooe.svg` (non suivi)
+- [x] Fusionner `worktree-billet-pdf` (mode mutualisé) dans `admin`, puis `composer install` — déjà fusionné (même commit `5e4de89`), `composer install` OK, 319 tests verts — 10 nov. 2026
+- [x] `docs/DECISION.md` : notes personnelles, gardé hors du dépôt (ajouté au `.gitignore`) — 10 nov. 2026
+- [x] `resources/svg/track/Shooe.svg` supprimé (doublon exact de `semelles.svg`) — 10 nov. 2026
 - [ ] Choisir la branche de production (proposé : fusionner `admin` dans `master`, déployer depuis `master`)
 - [ ] **Méthode de déploiement sans SSH** (à valider) : action GitHub qui construit une branche `production-ovh` (`vendor/` sans dev + front compilé), déploiement Git d'OVH sur cette branche, `.htaccess` racine vers `public/`, `.ovhconfig`, migrations lancées par le réveil après chaque nouvelle version, guide `docs/DEPLOIEMENT.md`
 - [ ] **Créer le premier compte admin sans terminal** : aujourd'hui seul le seeder de démo en crée un, et il ne doit jamais tourner en production (faux événement, faux comptes)
 - [ ] **Pages d'erreur en français** aux couleurs de la charte : 404, 419 (« page expirée », fréquente dans le tunnel), 500, 503 (maintenance)
-- [ ] **Logs** : passer à des logs journaliers avec durée limitée (`LOG_STACK=daily`, `LOG_DAILY_DAYS=14`)
+- [x] **Logs** : passer à des logs journaliers avec durée limitée (`LOG_STACK=daily`, `LOG_DAILY_DAYS=14`) — `.env.example` à jour
 - [ ] **Inscription « d'une traite »** (décision du 30/10) : décider ce qui disparaît (relance de paiement à 24 h, écran « Un paiement t'attend », alerte dans l'espace, reprise du paiement, place réservée 30 min), puis aligner le code et `docs/spec.md`
-- [ ] Corriger le `CLAUDE.md` : le projet est en **Laravel 12**, pas 13
+- [x] Corriger le `CLAUDE.md` : le projet est en **Laravel 12**, pas 13
 
 ### Hébergement OVH 🏠 + 🧑‍💻
 
@@ -64,7 +64,7 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://…`
 - [ ] `APP_KEY` générée **une seule fois** et sauvegardée en lieu sûr : la changer **rend tous les billets invalides** (signature) et **rend illisibles les réponses de santé** (chiffrées)
-- [ ] `SESSION_SECURE_COOKIE=true`, `LOG_LEVEL=warning`
+- [ ] `SESSION_SECURE_COOKIE=true`, `LOG_LEVEL=warning`, `LOG_STACK=daily`, `LOG_DAILY_DAYS=14`
 - [ ] `DB_*` de la base OVH
 - [ ] `MAIL_MAILER=brevo`, `BREVO_API_KEY`, `MAIL_FROM_ADDRESS` (domaine de l'association)
 - [ ] `QUEUE_CONNECTION=database`, `FILE_SANS_WORKER=true`, `REVEIL_CLE` (longue, aléatoire)

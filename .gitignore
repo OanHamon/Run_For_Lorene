@@ -22,3 +22,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Notes personnelles, hors dépôt
+/docs/DECISION.md

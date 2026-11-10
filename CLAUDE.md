@@ -12,7 +12,7 @@ Application Laravel qui remplace TimePulse pour l'inscription aux courses Run Fo
 
 ## Stack
 
-- Laravel 13, PHP 8.3+, MySQL (InnoDB, `utf8mb4_unicode_ci`), base locale `rfl`.
+- Laravel 12, PHP 8.3+, MySQL (InnoDB, `utf8mb4_unicode_ci`), base locale `rfl`.
 - Front : Blade, JS léger pour les panneaux du tunnel. Pas de SPA.
 - Paiement : Stripe Checkout (mode test en local) et webhooks.
 - Emails : Brevo, envoyés via les files d'attente Laravel.
