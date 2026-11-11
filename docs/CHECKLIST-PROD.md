@@ -29,12 +29,12 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 - [x] Fusionner `worktree-billet-pdf` (mode mutualisé) dans `admin`, puis `composer install` — déjà fusionné (même commit `5e4de89`), `composer install` OK, 319 tests verts — 10 nov. 2026
 - [x] `docs/DECISION.md` : notes personnelles, gardé hors du dépôt (ajouté au `.gitignore`) — 10 nov. 2026
 - [x] `resources/svg/track/Shooe.svg` supprimé (doublon exact de `semelles.svg`) — 10 nov. 2026
-- [ ] Choisir la branche de production (proposé : fusionner `admin` dans `master`, déployer depuis `master`)
+- [x] Branche unique : on travaille et on déploie directement sur `master` ; `admin` y est fusionnée et n'est plus utilisée — 11 nov. 2026
 - [ ] **Méthode de déploiement sans SSH** (à valider) : action GitHub qui construit une branche `production-ovh` (`vendor/` sans dev + front compilé), déploiement Git d'OVH sur cette branche, `.htaccess` racine vers `public/`, `.ovhconfig`, migrations lancées par le réveil après chaque nouvelle version, guide `docs/DEPLOIEMENT.md`
-- [ ] **Créer le premier compte admin sans terminal** : aujourd'hui seul le seeder de démo en crée un, et il ne doit jamais tourner en production (faux événement, faux comptes)
+- [ ] **Premier compte admin** : créé à la main dans la base OVH (phpMyAdmin), jamais via le seeder de démo. Une ligne dans `users` (`email`, `nom`, `prenom`, `email_verifie_le = NOW()`, `mot_de_passe` = hash bcrypt généré en local avec `php -r "echo password_hash('…', PASSWORD_BCRYPT);"`, `created_at`/`updated_at`), puis une ligne dans `admins` (`id_user`, `niveau_acces = 3`). Se connecter sur `/admin/connexion` (mot de passe puis code reçu par email) : vérifie aussi Brevo
 - [x] **Pages d'erreur en français** aux couleurs de la charte : 404, 419 (« page expirée », fréquente dans le tunnel), 500, 503 (maintenance) ; replis 4xx/5xx (401, 403, 429…). Gabarit `<x-erreur>`, vues dans `resources/views/errors/`
 - [x] **Logs** : passer à des logs journaliers avec durée limitée (`LOG_STACK=daily`, `LOG_DAILY_DAYS=14`) — `.env.example` à jour
-- [ ] **Inscription « d'une traite »** (décision du 30/10) : décider ce qui disparaît (relance de paiement à 24 h, écran « Un paiement t'attend », alerte dans l'espace, reprise du paiement, place réservée 30 min), puis aligner le code et `docs/spec.md`
+- [x] **Inscription « d'une traite »** : le paiement ne peut pas être esquivé (vérifié : seul le webhook Stripe signé valide une inscription). Un paiement non abouti remet la commande en brouillon (webhook `expired`/`async_payment_failed`, tâche `rfl:abandonner-commandes` toutes les 5 min, retour dans le tunnel). Supprimés : relance de paiement, écran « Un paiement t'attend », alerte et bouton « Payer » dans l'espace, relance admin d'un paiement en attente. Gardé : place réservée pendant la session Stripe (30 min). Relance automatique des documents en pause par défaut. Spec et parcours à jour — 10 nov. 2026
 - [x] Corriger le `CLAUDE.md` : le projet est en **Laravel 12**, pas 13
 
 ### Hébergement OVH 🏠 + 🧑‍💻
@@ -111,7 +111,7 @@ géré par une autre personne de l'association. Accès : utilisateur local `OAN2
 - [ ] Le site tourne en **PHP 8.5** (le développement se fait en 8.3) : relancer la suite de tests en 8.5 ou faire la recette complète sur OVH
 - [ ] Un email part dans la seconde après une inscription (file vidée après la page)
 - [ ] Le réveil passe chaque minute (État technique → « Réveil du site »)
-- [ ] La purge de nuit et les relances tournent (État technique → tâches planifiées)
+- [ ] La purge de nuit, l'abandon des commandes non payées et les envois programmés tournent (État technique → tâches planifiées)
 - [ ] Les appels sortants vers Stripe et Brevo passent depuis l'hébergement
 - [ ] Génération d'un billet PDF (environ 2 s) sans dépasser la mémoire ni le temps max
 - [ ] **Billet imprimé réel** : imprimer en couleur et en noir et blanc, scanner l'empreinte puis le QR avec le poste de retrait sur un vrai téléphone

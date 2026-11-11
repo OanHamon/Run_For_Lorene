@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Notifications\InscriptionValidee;
 use App\Notifications\RelanceInscription;
 use App\Services\Inscriptions\MettreAJourStatut;
-use App\Services\Inscriptions\Relances;
 use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
@@ -21,7 +20,17 @@ beforeEach(function () {
     $this->evenement = Evenement::courant();
 });
 
-test("relance documents : 15 jours avant l'événement, une seule fois, seulement les dossiers incomplets", function () {
+test('la relance automatique des documents est en pause par défaut', function () {
+    inscriptionPayee($this->user, $this->marche, Inscription::DOSSIER_INCOMPLET);
+
+    $this->travelTo($this->evenement->date_evenement->copy()->subDays(15)->setTime(10, 0));
+    $this->artisan('rfl:relancer-documents')->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
+test("relance documents, une fois activée : 15 jours avant l'événement, une seule fois, seulement les dossiers incomplets", function () {
+    Reglage::ecrire('relance.documents', ['actif' => true, 'jours_avant' => 15, 'heure' => '10:00']);
     $incomplete = inscriptionPayee($this->user, $this->marche, Inscription::DOSSIER_INCOMPLET);
     $autre = User::factory()->create();
     inscriptionPayee($autre, $this->marche, Inscription::VALIDEE);
@@ -44,29 +53,38 @@ test("relance documents : 15 jours avant l'événement, une seule fois, seulemen
     expect($incomplete->fresh()->statut)->toBe(Inscription::DOSSIER_INCOMPLET);
 });
 
-test('relance paiement : 24 h après une tentative non aboutie, une seule fois, jamais pendant un paiement en cours', function () {
+test('pas de relance de paiement : une commande non payée redevient un brouillon, sans email', function () {
     $inscription = inscriptionPayee($this->user, $this->marche, Inscription::EN_ATTENTE_PAIEMENT);
     $commande = $inscription->commande;
-    $commande->update(['statut' => Commande::EN_COURS]);
-    $paiement = Paiement::create(['prestataire' => 'simulation', 'reference' => 'sim_x', 'montant' => 10, 'statut' => Paiement::ECHOUE, 'id_commande' => $commande->id_commande]);
+    $commande->update(['statut' => Commande::EN_COURS, 'date_commande' => now()]);
+    Paiement::create(['prestataire' => 'simulation', 'reference' => 'sim_x', 'montant' => 10, 'statut' => Paiement::EN_ATTENTE, 'id_commande' => $commande->id_commande]);
 
-    $this->artisan('rfl:relancer-paiements');
-    Notification::assertNothingSent(); // échec il y a quelques secondes
+    // Session de paiement encore ouverte : on n'y touche pas.
+    $this->travel(20)->minutes();
+    $this->artisan('rfl:abandonner-commandes')->assertSuccessful();
+    expect($commande->fresh()->statut)->toBe(Commande::EN_COURS);
 
-    $this->travel(25)->hours();
-    Paiement::create(['prestataire' => 'simulation', 'reference' => 'sim_y', 'montant' => 10, 'statut' => Paiement::EN_ATTENTE, 'id_commande' => $commande->id_commande]);
-    $this->artisan('rfl:relancer-paiements');
-    Notification::assertNothingSent(); // nouvelle tentative ouverte : la personne paie
+    // Session terminée (31 min) et marge passée : la commande est abandonnée, l'inscription libérée.
+    $this->travel(20)->minutes();
+    $this->artisan('rfl:abandonner-commandes')->assertSuccessful();
 
-    $this->travel(2)->hours();
-    $this->artisan('rfl:relancer-paiements');
-    $this->artisan('rfl:relancer-paiements');
-    Notification::assertNothingSent(); // la tentative expirée date de moins de 24 h
+    expect($commande->fresh()->statut)->toBe(Commande::ABANDONNEE)
+        ->and($inscription->fresh()->statut)->toBe(Inscription::BROUILLON)
+        ->and($inscription->fresh()->id_commande)->toBeNull();
+    Notification::assertNothingSent();
+    $this->artisan('list')->doesntExpectOutputToContain('rfl:relancer-paiements');
+});
 
-    $this->travel(24)->hours();
-    $this->artisan('rfl:relancer-paiements');
-    $this->artisan('rfl:relancer-paiements');
-    Notification::assertSentToTimes($this->user, RelanceInscription::class, 1);
+test('une commande payée pendant la session n\'est jamais abandonnée', function () {
+    $inscription = inscriptionPayee($this->user, $this->marche, Inscription::EN_ATTENTE_PAIEMENT);
+    $commande = $inscription->commande;
+    $commande->update(['statut' => Commande::EN_COURS, 'date_commande' => now()->subHour()]);
+    Paiement::create(['prestataire' => 'simulation', 'reference' => 'sim_ok', 'montant' => 10, 'statut' => Paiement::REUSSI, 'id_commande' => $commande->id_commande]);
+
+    $this->artisan('rfl:abandonner-commandes')->assertSuccessful();
+
+    expect($commande->fresh()->statut)->toBe(Commande::EN_COURS)
+        ->and($inscription->fresh()->statut)->toBe(Inscription::EN_ATTENTE_PAIEMENT);
 });
 
 test('dossier complété après le paiement : email « inscription validée » avec le dossard', function () {
@@ -89,7 +107,4 @@ test('les relances automatiques se règlent et se mettent en pause depuis l\'adm
     $this->travelTo($this->evenement->date_evenement->copy()->subDays(30)->setTime(18, 5));
     $this->artisan('rfl:relancer-documents');
     Notification::assertSentToTimes($this->user, RelanceInscription::class, 1);
-
-    Reglage::ecrire('relance.paiement', ['actif' => false, 'heures_apres' => 24]);
-    expect(app(Relances::class)->paiements())->toBe(0);
 });

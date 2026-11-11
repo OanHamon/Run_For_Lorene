@@ -150,7 +150,7 @@ flowchart LR
 
 ---
 
-## 3. Récapitulatif, paiement et reprises
+## 3. Récapitulatif et paiement (d'une traite)
 
 ```mermaid
 flowchart LR
@@ -179,13 +179,10 @@ flowchart LR
     PAY -->|"carte refusée · abandon · session expirée"| ECH["09b · Le paiement n'a pas abouti"]:::ecran
     ECH --> ECH1[/"Choix :<br/>Réessayer · X €<br/>Modifier ma commande"/]:::saisie
     ECH1 -->|"Réessayer"| PAY
-    ECH -.->|"parcours interrompu"| ESP(["Commande gardée : espace (alerte « paiement en attente ») ou retour sur /inscription"]):::fin
+    ECH -.->|"parcours interrompu / session expirée"| AB
     ECH1 -->|"Modifier"| AB{{"Commande abandonnée<br/>inscriptions → BROUILLON<br/>don repris"}}:::serveur --> R
 
-    RET["Retour sur /inscription<br/>avec une commande en attente"]:::ecran --> ATT["Un paiement t'attend<br/>inscriptions + don + total"]:::ecran
-    ATT --> ATT1[/"Choix : Payer X € · Modifier ma commande"/]:::saisie
-    ATT1 -->|"Payer"| PAY
-    ATT1 -->|"Modifier"| AB
+    RET["Retour sur /inscription<br/>avec une commande non payée"]:::ecran --> AB
 ```
 
 ---
@@ -199,8 +196,8 @@ flowchart LR
     classDef serveur fill:#E3F3EF,stroke:#00695F,color:#16403B
     classDef prevu fill:#FFFFFF,stroke:#999,stroke-dasharray:5 4,color:#777
 
-    ESP["Tableau de bord · Bonjour Prénom<br/>alertes : paiement en attente, brouillon,<br/>dossier incomplet · indicateurs<br/>tableau des inscriptions · Mes dons"]:::ecran
-    ESP --> A1[/"Actions :<br/>Inscrire quelqu'un → tunnel<br/>Reprendre → tunnel<br/>Payer X € → Stripe<br/>Modifier la commande → récap"/]:::saisie
+    ESP["Tableau de bord · Bonjour Prénom<br/>alertes : inscription non terminée,<br/>dossier incomplet · indicateurs<br/>tableau des inscriptions · Mes dons"]:::ecran
+    ESP --> A1[/"Actions :<br/>Inscrire quelqu'un → tunnel<br/>Reprendre → tunnel (récapitulatif)"/]:::saisie
     ESP -->|"clic sur une inscription"| F["Mon inscription<br/>statut · n° de dossard<br/>suivi en 4 étapes"]:::ecran
     ESP -.- PV[/"Billet QR · reçu fiscal PDF<br/>participants gérés · profil<br/>prévus au spec, pas encore codés"/]:::prevu
 
@@ -217,7 +214,7 @@ flowchart LR
     S1 -.->|"complété"| SV{{"DOSSIER INCOMPLET → VALIDÉE<br/>+ dossard"}}:::serveur
 
     F --> P["④ Paiement<br/>Fait · En attente · À faire"]:::ecran
-    P --> P1[/"Payer X € · Reprendre l'inscription"/]:::saisie
+    P --> P1[/"Reprendre l'inscription (pas de paiement depuis l'espace)"/]:::saisie
 
     F --> D[/"Supprimer l'inscription (confirmation)<br/>seulement si brouillon ou en attente de paiement<br/>sinon : écrire à l'association"/]:::saisie
 ```
@@ -233,7 +230,7 @@ stateDiagram-v2
     brouillon --> en_attente_paiement : récapitulatif confirmé<br/>(commande créée, montant figé)
     brouillon --> [*] : « Retirer » au récap<br/>ou suppression depuis l'espace
     en_attente_paiement --> brouillon : « Modifier ma commande »<br/>(commande abandonnée)
-    en_attente_paiement --> en_attente_paiement : paiement échoué / abandonné<br/>(réessayer, ou reprise depuis l'espace si interrompu)
+    en_attente_paiement --> brouillon : paiement non abouti<br/>(session expirée, échec, retour dans le tunnel)
     en_attente_paiement --> validee : paiement réussi (webhook)<br/>+ consentements + questionnaire
     en_attente_paiement --> dossier_incomplet : paiement réussi<br/>mais décharge ou questionnaire manquant
     en_attente_paiement --> annulee : abandon définitif / admin
@@ -301,4 +298,4 @@ stateDiagram-v2
 - **Option t-shirt** (écran 07) : absente du tunnel ; seule l'étape Don existe.
 - **Don seul sans inscription** : le bouton « Faire un don » de la page événement pointe vers une ancre, sans parcours dédié.
 - **Espace participant** : le billet QR, le reçu fiscal PDF, la gestion des participants gérés et le profil ne sont pas encore codés.
-- **Emails** : confirmation de paiement, validation, relances (J-15, paiement en attente 24 h) prévus au spec, à vérifier au lot 4-5.
+- **Emails** : confirmation de paiement, validation, relance documents à J-15 (en pause par défaut). Pas de relance de paiement : l'inscription se fait d'une traite.

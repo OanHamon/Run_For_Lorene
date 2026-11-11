@@ -104,7 +104,8 @@ class PaiementController extends Controller
 
         return match ($issue) {
             'reussi' => tap(redirect()->route('inscription.confirmation', $commande), fn () => $enregistrer->reussi($paiement->reference, (float) $paiement->montant, 0)),
-            'echec' => tap(redirect()->route('inscription.echec', $commande)->with('erreur', 'Ta banque a refusé le paiement.'), fn () => $enregistrer->echoue($paiement->reference)),
+            // Comme Stripe Checkout : une carte refusée ne ferme pas la session, on peut réessayer.
+            'echec' => redirect()->route('inscription.echec', $commande)->with('erreur', 'Ta banque a refusé le paiement.'),
             default => redirect()->route('inscription.echec', $commande),
         };
     }

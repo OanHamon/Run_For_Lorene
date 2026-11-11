@@ -44,7 +44,6 @@ class RelanceController extends Controller
                 ? RelanceProgrammee::with('evenement', 'admin')->where('id_evenement', $evenement->id_evenement)->orderByDesc('id_programmee')->get()
                 : collect(),
             'documents' => ReglagesRelances::documents(),
-            'paiement' => ReglagesRelances::paiement(),
             'relances' => $evenement
                 ? Relance::with('admin')->where('id_evenement', $evenement->id_evenement)->orderByDesc('created_at')->paginate(20)
                 : null,
@@ -161,20 +160,15 @@ class RelanceController extends Controller
         $d = $request->validateWithBag('reglages', [
             'documents_jours' => ['required', 'integer', 'min:1', 'max:90'],
             'documents_heure' => ['required', 'date_format:H:i'],
-            'paiement_heures' => ['required', 'integer', 'min:1', 'max:168'],
         ], [
             'documents_jours.*' => 'Indique un nombre de jours entre 1 et 90.',
             'documents_heure.*' => 'Indique une heure, par exemple 10:00.',
-            'paiement_heures.*' => 'Indique un nombre d\'heures entre 1 et 168 (une semaine).',
         ]);
 
         Reglage::ecrire('relance.documents', ['actif' => $request->boolean('documents_actif'), 'jours_avant' => (int) $d['documents_jours'], 'heure' => $d['documents_heure']]);
-        Reglage::ecrire('relance.paiement', ['actif' => $request->boolean('paiement_actif'), 'heures_apres' => (int) $d['paiement_heures']]);
         $documents = ReglagesRelances::documents();
-        $paiement = ReglagesRelances::paiement();
         $this->journal->noter('relance.reglages', null, [
             'documents' => $documents['actif'] ? "{$documents['jours_avant']} j avant, à {$documents['heure']}" : 'en pause',
-            'paiement' => $paiement['actif'] ? "{$paiement['heures_apres']} h après" : 'en pause',
         ]);
 
         return back()->with('statut', 'Relances automatiques enregistrées.');

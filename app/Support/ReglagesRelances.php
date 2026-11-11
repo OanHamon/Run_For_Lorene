@@ -5,15 +5,13 @@ namespace App\Support;
 use App\Models\Reglage;
 
 /**
- * Réglages des deux relances automatiques du site, modifiables dans l'admin (page Relances).
- * Par défaut, les valeurs du spec : documents manquants 15 jours avant l'événement à 10 h,
- * paiement non abouti 24 h après la tentative.
+ * Réglage de la relance automatique du site (documents manquants), modifiable dans l'admin
+ * (page Relances) : 15 jours avant l'événement à 10 h, en pause par défaut. La relance de
+ * paiement a disparu avec l'inscription d'une traite.
  */
 class ReglagesRelances
 {
-    public const DOCUMENTS = ['actif' => true, 'jours_avant' => 15, 'heure' => '10:00'];
-
-    public const PAIEMENT = ['actif' => true, 'heures_apres' => 24];
+    public const DOCUMENTS = ['actif' => false, 'jours_avant' => 15, 'heure' => '10:00'];
 
     /** @return array{actif: bool, jours_avant: int, heure: string} */
     public static function documents(): array
@@ -21,13 +19,5 @@ class ReglagesRelances
         $r = Reglage::lire('relance.documents', self::DOCUMENTS);
 
         return ['actif' => (bool) $r['actif'], 'jours_avant' => (int) $r['jours_avant'], 'heure' => (string) $r['heure']];
-    }
-
-    /** @return array{actif: bool, heures_apres: int} */
-    public static function paiement(): array
-    {
-        $r = Reglage::lire('relance.paiement', self::PAIEMENT);
-
-        return ['actif' => (bool) $r['actif'], 'heures_apres' => (int) $r['heures_apres']];
     }
 }

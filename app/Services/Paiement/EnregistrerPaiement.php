@@ -121,10 +121,28 @@ class EnregistrerPaiement
         return strtolower($devise) === 'eur' && (float) $paiement->montant + 0.009 >= (float) $commande->montant_total;
     }
 
+    /**
+     * Tentative terminée sans paiement (session expirée, paiement refusé). Inscription d'une
+     * traite : sans autre tentative ouverte, la commande est abandonnée et ses inscriptions
+     * redeviennent des brouillons, sans place gardée ni relance.
+     */
     public function echoue(string $reference): void
     {
-        Paiement::where('reference', $reference)
+        $paiement = Paiement::where('reference', $reference)->first();
+
+        if (! $paiement) {
+            return;
+        }
+
+        Paiement::whereKey($paiement->id_paiement)
             ->where('statut', Paiement::EN_ATTENTE)
             ->update(['statut' => Paiement::ECHOUE, 'updated_at' => now()]);
+
+        $commande = $paiement->commande;
+
+        if ($commande->statut === Commande::EN_COURS && $commande->paiements()->where('statut', Paiement::EN_ATTENTE)->doesntExist()) {
+            // Résolue ici : elle a besoin d'une passerelle, qui n'existe pas sur un serveur sans paiement.
+            app(AbandonnerCommande::class)($commande);
+        }
     }
 }

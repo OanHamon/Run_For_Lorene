@@ -311,15 +311,25 @@ test('les actions du tunnel sont refusées sans compte vérifié', function () {
     expect(Participant::count())->toBe($avant);
 });
 
-test('un paiement en attente est proposé à la place du tunnel', function () {
+test("inscription d'une traite : revenir dans le tunnel sans avoir payé repart du récapitulatif, sans place gardée", function () {
     $this->actingAs($this->parent);
 
     $tunnel = Volt::test('inscription.tunnel');
     inscrire($tunnel, 'moi', 'Sam', '1985-06-01', ($this->course)('Marche 5 km')->id_course)
-        ->call('donPasser')
+        ->set('don', '5')
+        ->call('donSuivant')
         ->call('payer');
+    $commande = Commande::sole();
 
-    Volt::test('inscription.tunnel')->assertSet('etape', 'attente')->assertSee('Un paiement t\'attend', false);
+    Volt::test('inscription.tunnel')
+        ->assertSet('etape', 'recap')
+        ->assertSet('don', '5')
+        ->assertDontSee('Un paiement t\'attend', false);
+
+    expect($commande->fresh()->statut)->toBe(Commande::ABANDONNEE)
+        ->and(Inscription::sole()->statut)->toBe(Inscription::BROUILLON)
+        ->and(Inscription::sole()->id_commande)->toBeNull()
+        ->and(Paiement::sole()->statut)->toBe(Paiement::ECHOUE);
 });
 
 test('une commande à 0 € est validée sans passer par le paiement', function () {
@@ -444,13 +454,22 @@ test('don seul depuis « Faire un don » : sans inscription, même inscriptions 
     $this->get(route('inscription.confirmation', $commande))->assertSee('Merci pour ton don !');
 });
 
-test('don seul en attente de paiement : retrouvé dans le tunnel, « Modifier » ramène au don', function () {
+test('don seul non payé : revenir dans le tunnel ramène au don, montant gardé', function () {
     $this->actingAs($this->parent);
     Livewire\Livewire::withQueryParams(['don' => 1])->test('inscription.tunnel')
         ->set('don', '20')->call('donSuivant')->call('payer');
     $commande = Commande::sole();
 
-    Volt::test('inscription.tunnel')->assertSet('etape', 'attente');
+    Volt::test('inscription.tunnel')->assertSet('etape', 'don')->assertSet('don', '20');
+
+    expect($commande->fresh()->statut)->toBe(Commande::ABANDONNEE);
+});
+
+test('« Modifier ma commande » sur un don seul ramène au don', function () {
+    $this->actingAs($this->parent);
+    Livewire\Livewire::withQueryParams(['don' => 1])->test('inscription.tunnel')
+        ->set('don', '20')->call('donSuivant')->call('payer');
+    $commande = Commande::sole();
 
     $this->post(route('inscription.modifier', $commande))->assertRedirect(route('inscription.tunnel', ['don' => 1]));
     expect($commande->fresh()->statut)->toBe(Commande::ABANDONNEE);

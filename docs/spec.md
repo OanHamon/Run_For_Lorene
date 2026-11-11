@@ -211,7 +211,7 @@ Une inscription n'est validée qu'avec un paiement réussi (ou une gratuité adm
 
 &#91;embedded content: cycle de vie d'une inscription · 5 états\]
 
-Un paiement échoué ou abandonné laisse l'inscription « en attente de paiement » : le participant peut relancer le paiement depuis son espace. Le dossard n'est attribué qu'au passage en « validée ».
+**Inscription d'une traite** (décision du 30/10/2026) : le récapitulatif mène directement au paiement. « En attente de paiement » ne dure que le temps de la session Stripe (30 minutes, place réservée). Si le paiement n'aboutit pas (session expirée, échec, parcours interrompu), la commande est abandonnée et l'inscription redevient un brouillon : ni place gardée, ni relance, ni paiement proposé plus tard depuis l'espace. Le participant repart du récapitulatif. Le dossard n'est attribué qu'au passage en « validée ».
 
 Transitions (version texte du schéma) :
 
@@ -220,7 +220,8 @@ Transitions (version texte du schéma) :
 - En attente de paiement → Dossier incomplet : paiement réussi mais décharge ou questionnaire de santé manquant (cas résiduel : le tunnel les exige avant de payer, par exemple nouvelle version de la décharge publiée entre-temps).
 - Dossier incomplet → Validée : décharge et questionnaire complétés depuis l'espace (et vérifiés si besoin).
 - Brouillon → Validée ou Dossier incomplet : inscription gratuite créée par un admin, sans paiement.
-- En attente de paiement → Annulée : abandon définitif ou annulation par un admin.
+- En attente de paiement → Brouillon : paiement non abouti (session expirée, échec, retour dans le tunnel sans avoir payé) ou « Modifier ma commande ».
+- En attente de paiement → Annulée : annulation par un admin.
 - Le dossard est attribué à l'entrée dans l'état Validée.
 
 ### Comptes et participants
@@ -249,7 +250,7 @@ Pas d'autorisation parentale pour les mineurs : décision de l'association.
 ### Tarifs, options et dossards
 
 - **Tarif applicable** : celui de la course dont la période `valide_du` à `valide_au` contient la date du jour, et dont la tranche d'âge (si renseignée) correspond au participant.
-- **Capacité** : `quota` compte les inscriptions validées et en attente de paiement de moins de 30 minutes (proposition : place réservée 30 minutes pendant le paiement) ; vide = illimité.
+- **Capacité** : `quota` compte les inscriptions validées et celles dont la session de paiement est encore ouverte (place réservée 30 minutes pendant le paiement) ; vide = illimité.
 - **Options** : le t-shirt est une option avec une déclinaison par taille et un stock par taille ; stock épuisé = taille grisée.
 - **Dossards** : attribués automatiquement au passage en « validée », premier numéro libre dans la plage `dossard_debut` à `dossard_fin` de la course. Plage pleine = alerte admin. Un admin peut modifier un dossard à la main, l'unicité par événement reste vérifiée.
 
@@ -274,7 +275,7 @@ Le parcours tient en 11 écrans, maquettés dans Figma : une page publique, un t
 | 07 | Options et don (étape 5/7) | Taille de t-shirt (tailles épuisées grisées), montants de don suggérés et montant libre | Tout est facultatif, bouton « Passer » |
 | 08 | Récapitulatif (étape 6/7) | Blocs épreuve, participant, documents, options, don, avec lien « Modifier » ; total | « Modifier » refait glisser le bon panneau ; possibilité d'ajouter un autre participant à la même commande |
 | 09 | Paiement (étape 7/7) | Redirection vers Stripe Checkout (carte, Apple Pay) | Place réservée pendant le paiement |
-| 09b | Paiement non abouti | Message rassurant (commande gardée, rien à ressaisir), bouton « Réessayer », lien « Modifier ma commande » ; aucune invitation à payer plus tard | L'inscription reste « en attente de paiement » ; si le parcours est interrompu, l'espace et le tunnel proposent de payer la commande gardée |
+| 09b | Paiement non abouti | Session encore ouverte (retour depuis Stripe, carte refusée) : « Réessayer » et « Modifier ma commande ». Session terminée : rien n'est gardé, bouton « Reprendre mon inscription » vers le récapitulatif | Inscription d'une traite : aucune invitation à payer plus tard ; une commande non payée redevient un brouillon |
 | 10 | Confirmation | Récapitulatif, rappel des documents manquants avec date limite, bouton vers l'espace | Email de confirmation envoyé en parallèle |
 | 11 | Espace participant | Menu latéral (tableau de bord, inscriptions, documents, dons, profil, participants gérés) ; alerte « action requise », 4 indicateurs (épreuve, statut, paiement, J-x), suivi en étapes, billet QR, tableaux documents et dons | Billet téléchargeable seulement si « validée » ; t-shirt modifiable jusqu'à une date limite |
 
@@ -311,7 +312,7 @@ Stripe Checkout encaisse, les webhooks font foi, Brevo envoie les emails et les 
 2. Apple Pay et Google Pay sont activés dans le tableau de bord Stripe ; aucun code spécifique, Checkout les affiche automatiquement.
 3. Le retour sur la page de succès n'est qu'un affichage : seul le webhook `checkout.session.completed` passe le paiement en « réussi ».
 4. Le webhook vérifie la signature, est idempotent (un même événement reçu deux fois ne change rien) et enregistre `reference`, `montant` et `frais`.
-5. `checkout.session.expired` et les échecs laissent l'inscription « en attente de paiement » et libèrent la place réservée.
+5. `checkout.session.expired` et `checkout.session.async_payment_failed` abandonnent la commande : les inscriptions redeviennent des brouillons et la place est libérée. La tâche `rfl:abandonner-commandes` (toutes les 5 minutes) fait de même si le webhook s'est perdu ; une session payée chez Stripe n'est jamais abandonnée.
 6. Les remboursements passent par l'API Stripe depuis l'admin ; le webhook `charge.refunded` crée la ligne REMBOURSEMENT.
 
 ### Emails (Brevo)
@@ -323,8 +324,7 @@ Stripe Checkout encaisse, les webhooks font foi, Brevo envoie les emails et les 
 | Paiement réussi | Titulaire | Récapitulatif de la commande, documents manquants et date limite |
 | Inscription validée | Titulaire | Numéro de dossard, billet QR, infos pratiques |
 | Document refusé | Titulaire | Motif et lien pour redéposer |
-| Relance documents | Titulaire | Rappel automatique 15 jours avant l'événement si la décharge ou le questionnaire de santé manque |
-| Paiement en attente | Titulaire | Rappel 24 h après l'abandon, lien pour payer |
+| Relance documents | Titulaire | Rappel 15 jours avant l'événement si la décharge ou le questionnaire de santé manque. En pause pour l'instant (à activer dans l'admin, page Relances) |
 | Reçu de don | Titulaire | Reçu fiscal en PDF, si demandé |
 
 - Emails en file d'attente (queue Laravel) pour ne pas ralentir le parcours.

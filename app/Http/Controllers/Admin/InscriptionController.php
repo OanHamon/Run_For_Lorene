@@ -360,7 +360,7 @@ class InscriptionController extends Controller
 
     public function relancer(Inscription $inscription): RedirectResponse
     {
-        abort_unless(in_array($inscription->statut, [Inscription::EN_ATTENTE_PAIEMENT, Inscription::DOSSIER_INCOMPLET], true), 403);
+        abort_unless($inscription->statut === Inscription::DOSSIER_INCOMPLET, 403);
 
         $titulaire = $inscription->titulaire();
 

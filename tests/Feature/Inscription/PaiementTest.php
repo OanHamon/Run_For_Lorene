@@ -193,7 +193,7 @@ test("la simulation de paiement n'existe qu'en local : refusée sur un serveur d
     expect(fn () => app(Passerelle::class))->toThrow(RuntimeException::class);
 });
 
-test("webhook : session expirée → l'inscription reste en attente de paiement et la place est libérée", function () {
+test("webhook : session expirée → l'inscription redevient un brouillon et la place est libérée (inscription d'une traite)", function () {
     $this->marche->update(['quota' => 5]);
     [$commande, $paiement] = commandeEnAttente($this->user, $this->marche);
     expect($this->marche->placesRestantes())->toBe(4);
@@ -201,9 +201,14 @@ test("webhook : session expirée → l'inscription reste en attente de paiement 
     webhookStripe('checkout.session.expired', ['id' => $paiement->reference, 'payment_status' => 'unpaid', 'amount_total' => 1200])->assertOk();
 
     expect($paiement->fresh()->statut)->toBe(Paiement::ECHOUE)
-        ->and(Inscription::sole()->statut)->toBe(Inscription::EN_ATTENTE_PAIEMENT)
-        ->and($commande->fresh()->statut)->toBe(Commande::EN_COURS)
+        ->and(Inscription::sole()->statut)->toBe(Inscription::BROUILLON)
+        ->and(Inscription::sole()->id_commande)->toBeNull()
+        ->and($commande->fresh()->statut)->toBe(Commande::ABANDONNEE)
         ->and($this->marche->placesRestantes())->toBe(5);
+
+    // L'écran d'échec ne propose plus de payer : on repasse par le récapitulatif.
+    $this->get(route('inscription.echec', $commande))->assertOk()
+        ->assertSee('Reprendre mon inscription')->assertDontSee('Réessayer');
 });
 
 test('la place réservée pendant le paiement expire avec la session de paiement', function () {
@@ -264,10 +269,10 @@ test('double-clic sur « Payer » : la tentative dont la session Stripe est en c
         ->and($commande->paiements()->where('statut', Paiement::EN_ATTENTE)->sole()->reference)->toBe('cs_test_second');
 });
 
-test('les boutons « Payer » sont protégés contre le double envoi', function () {
+test('le bouton « Réessayer » est protégé contre le double envoi ; l\'espace ne propose plus de payer', function () {
     [$commande] = commandeEnAttente($this->user, $this->marche);
 
-    $this->get(route('espace'))->assertSee('data-envoi-unique', false);
+    $this->get(route('espace'))->assertDontSee(route('inscription.payer', $commande))->assertSee('Reprendre');
     $this->get(route('inscription.echec', $commande))->assertSee('data-envoi-unique', false);
 });
 

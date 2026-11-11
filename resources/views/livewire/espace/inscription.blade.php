@@ -530,12 +530,7 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                     @endif
                 </dl>
 
-                @if ($etapes['paiement'] === 'en_cours')
-                    <form method="POST" action="{{ route('inscription.payer', $i->commande) }}" data-envoi-unique class="border-t border-bordure p-4">
-                        @csrf
-                        <button type="submit" class="{{ $bouton }} w-full">Payer {{ $this->euros((float) $i->commande->montant_total) }}</button>
-                    </form>
-                @elseif ($i->statut === Inscription::BROUILLON)
+                @if (in_array($i->statut, [Inscription::BROUILLON, Inscription::EN_ATTENTE_PAIEMENT], true))
                     <div class="border-t border-bordure p-4">
                         <a href="{{ route('inscription.tunnel') }}" class="{{ $bouton }} w-full">Reprendre l'inscription</a>
                     </div>
@@ -793,9 +788,6 @@ new #[Layout('components.espace-shell', ['title' => 'Mon inscription'])] class e
                         <h2 id="titre-suppression" class="font-display text-vert">Supprimer l'inscription</h2>
                         <p class="mt-1 text-sm text-gris-texte">
                             Rien n'a été payé : tu peux la supprimer.
-                            @if ($i->statut === Inscription::EN_ATTENTE_PAIEMENT && $i->commande->inscriptions->count() > 1)
-                                Elle fait partie d'une commande avec d'autres personnes : leur paiement sera à relancer.
-                            @endif
                         </p>
                         @error('suppression') <p class="mt-3 rfl-alerte-erreur" role="alert">{{ $message }}</p> @enderror
                     </div>
