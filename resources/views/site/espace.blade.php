@@ -12,6 +12,9 @@
     $joursRestants = $evenement ? (int) today()->diffInDays($evenement->date_evenement, false) : null;
     $inscriptionsEvenement = $evenement ? $inscriptions->where('id_evenement', $evenement->id_evenement) : collect();
     $ouvert = $evenement?->inscriptionsOuvertes();
+    // Rien en cours pour l'événement : l'inscription devient l'action principale de la page.
+    $aInscrire = $ouvert && $commandesEnAttente->isEmpty()
+        && $inscriptionsEvenement->where('statut', '!=', Inscription::ANNULEE)->isEmpty();
 @endphp
 <x-espace-shell title="Mon espace">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -21,7 +24,7 @@
                         <p class="mt-1 text-sm text-gris-texte">{{ $evenement->nom }} &middot; {{ $evenement->date_evenement->translatedFormat('l j F Y') }} &middot; Nantes</p>
                     @endif
                 </div>
-                @if ($ouvert)
+                @if ($ouvert && ! $aInscrire)
                     <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="rfl-btn px-5 py-2.5 text-sm">Inscrire quelqu'un</a>
                 @endif
             </div>
@@ -54,7 +57,22 @@
                 </div>
             @endif
 
-            @if ($evenement)
+            @if ($aInscrire)
+                <section class="mb-6 grid overflow-hidden rounded-3xl border border-bordure bg-white sm:grid-cols-[minmax(0,1fr)_220px]">
+                    <div class="flex flex-col items-start p-6 sm:p-8">
+                        <img src="/images/pictos/evenement.png" alt="" class="h-14 w-14">
+                        <h2 class="mt-4 font-display text-2xl text-vert">Rejoins {{ $evenement->nom }}</h2>
+                        <p class="mt-2 max-w-md text-vert-sombre">Tu n'as pas encore d'inscription pour cette édition. Inscris-toi, ou inscris un proche : ça prend quelques minutes.</p>
+                        <a href="{{ route('inscription.tunnel', ['nouveau' => 1]) }}" class="mt-6 w-full rfl-btn px-8 py-3.5 text-lg sm:w-auto">Nouvelle inscription</a>
+                    </div>
+                    {{-- Chiffre clé : moutarde sur vert profond, comme le dossard. --}}
+                    <div class="order-first flex flex-col items-center justify-center bg-vert px-6 py-5 text-center sm:order-last">
+                        <p class="text-sm text-white/85">Départ dans</p>
+                        <p class="mt-1 font-display text-5xl text-moutarde">J-{{ max($joursRestants, 0) }}</p>
+                        <p class="mt-1 text-sm text-white">{{ $evenement->date_evenement->translatedFormat('j F Y') }}</p>
+                    </div>
+                </section>
+            @elseif ($evenement)
                 <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <div class="rounded-3xl border border-bordure bg-white p-4">
                         <p class="text-sm text-gris-texte">Inscriptions</p>
@@ -81,6 +99,7 @@
                 </div>
             @endif
 
+            @if ($inscriptions->isNotEmpty() || ! $aInscrire)
             <div class="mb-6 overflow-hidden rounded-3xl border border-bordure bg-white">
                 <div class="flex items-center justify-between px-6 py-4">
                     <h2 class="font-display text-vert">Inscriptions</h2>
@@ -89,9 +108,6 @@
                 @if ($inscriptions->isEmpty())
                     <div class="border-t border-bordure px-6 py-8 text-center text-sm text-gris-texte">
                         Aucune inscription pour l'instant.
-                        @if ($ouvert)
-                            <a href="{{ route('inscription.tunnel') }}" class="rfl-lien">S'inscrire à {{ $evenement->nom }}</a>
-                        @endif
                     </div>
                 @else
                     <div class="relative overflow-x-auto">
@@ -129,6 +145,7 @@
                     </div>
                 @endif
             </div>
+            @endif
 
             @if ($dons->isNotEmpty())
                 <div class="overflow-hidden rounded-3xl border border-bordure bg-white">
