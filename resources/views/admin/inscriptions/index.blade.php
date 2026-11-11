@@ -86,7 +86,7 @@
             <div class="flex items-end gap-2">
                 <button type="submit" class="rfl-btn px-5 py-2.5 text-sm">Filtrer</button>
                 @if (array_filter($filtres))
-                    <a href="{{ route('admin.inscriptions.index') }}" class="rfl-lien text-sm">Effacer</a>
+                    <a href="{{ route('admin.inscriptions.index', request()->only('vue')) }}" class="rfl-lien text-sm">Effacer</a>
                 @endif
             </div>
         </form>

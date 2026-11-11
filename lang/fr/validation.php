@@ -34,6 +34,10 @@ return [
     ],
     'numeric' => 'Le champ :attribute doit être un nombre.',
     'password' => [
+        'letters' => 'Le mot de passe doit contenir au moins une lettre.',
+        'mixed' => 'Le mot de passe doit contenir au moins une majuscule et une minuscule.',
+        'numbers' => 'Le mot de passe doit contenir au moins un chiffre.',
+        'symbols' => 'Le mot de passe doit contenir au moins un caractère spécial.',
         'uncompromised' => 'Ce mot de passe figure dans une fuite de données connue : choisis-en un autre.',
     ],
     'regex' => 'Le format du champ :attribute n\'est pas valide.',

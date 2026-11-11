@@ -88,6 +88,7 @@ class RelanceController extends Controller
     public function apercu(Request $request): View
     {
         $programmee = $request->filled('programmee') ? RelanceProgrammee::findOrFail($request->integer('programmee')) : null;
+        abort_if($programmee?->etat() === 'terminee', 404);
         $evenement = $programmee?->evenement ?? EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
 
@@ -100,6 +101,7 @@ class RelanceController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $programmee = $request->filled('programmee') ? RelanceProgrammee::findOrFail($request->integer('programmee')) : null;
+        abort_if($programmee?->etat() === 'terminee', 404);
         $evenement = $programmee?->evenement ?? EvenementAdmin::choisi($request);
         abort_unless($evenement, 404);
 
@@ -110,6 +112,13 @@ class RelanceController extends Controller
 
         if ($etat['quand'] === 'maintenant') {
             $relance = $this->relances->envoyer($evenement, $etat['modele'], $etat['sujet'], $etat['message'], $cible, $request->boolean('inclure_recents'), $request->user());
+
+            // Un envoi programmé passé en « Tout de suite » est remplacé par cet envoi :
+            // il ne doit pas repartir à sa date.
+            if ($programmee) {
+                $this->journal->noter('relance.programmee_supprimee', $programmee, ['objet' => $programmee->sujet]);
+                $programmee->delete();
+            }
 
             return $relance->nb_destinataires === 0
                 ? redirect()->route('admin.relances.index')->with('erreur', 'Aucun email envoyé : personne ne correspond.')

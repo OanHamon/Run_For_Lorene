@@ -131,6 +131,11 @@ new class extends Component {
 
         $user = $this->utilisateur();
 
+        // Les propriétés viennent du navigateur : un compte admin est refusé avant tout essai.
+        if ($user && $this->refuserAdmin($user)) {
+            return null;
+        }
+
         // Limites par compte (quelle que soit l'adresse IP) et par adresse IP (quel que soit le compte).
         $cleCompte = 'mdp:'.($user?->id_user ?? $this->email);
         $cleIp = 'mdp-ip:'.request()->ip();
@@ -199,6 +204,7 @@ new class extends Component {
             'password' => ['required', 'string', Password::defaults()],
         ], [
             'email.unique' => 'Un compte existe déjà avec cette adresse.',
+            'password.min' => 'Le mot de passe doit contenir au moins '.\App\Support\MotDePasse::LONGUEUR_MIN.' caractères.',
         ], [
             'prenom' => 'prénom',
             'password' => 'mot de passe',
@@ -244,6 +250,10 @@ new class extends Component {
             return null;
         }
 
+        if ($this->refuserAdmin($user)) {
+            return null;
+        }
+
         $resultat = app(CodeEmail::class)->verifier($user, $this->code);
 
         if ($resultat === 'invalide') {
@@ -278,7 +288,7 @@ new class extends Component {
     {
         $user = $this->utilisateur();
 
-        if (! $user) {
+        if (! $user || $this->refuserAdmin($user)) {
             return;
         }
 
@@ -448,7 +458,7 @@ new class extends Component {
                 <input wire:model="password" id="nouveau-password" :type="voir ? 'text' : 'password'" autocomplete="new-password" required class="rfl-champ pr-24" aria-describedby="password-aide">
                 <button type="button" x-on:click="voir = !voir" class="absolute inset-y-0 right-4 text-sm rfl-lien" x-text="voir ? 'Masquer' : 'Afficher'">Afficher</button>
             </div>
-            <p id="password-aide" class="mt-2 text-xs text-gris-texte">8 caractères minimum.</p>
+            <p id="password-aide" class="mt-2 text-xs text-gris-texte">{{ \App\Support\MotDePasse::AIDE }}</p>
             @error('password') <p class="rfl-erreur">{{ $message }}</p> @enderror
             @error('email') <p class="rfl-erreur">{{ $message }}</p> @enderror
 

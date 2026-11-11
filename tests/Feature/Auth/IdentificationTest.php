@@ -43,7 +43,7 @@ test('création de compte : le compte est connecté seulement après le code re�
         ->assertSet('email', 'lea.durand@exemple.fr')
         ->set('prenom', 'Léa')
         ->set('nom', 'Durand')
-        ->set('password', 'motdepasse1')
+        ->set('password', 'Motdepasse1')
         ->call('creerCompte')
         ->assertHasNoErrors()
         ->assertSet('mode', 'code');
@@ -218,7 +218,7 @@ test("un compte créé par un tiers avec mon adresse : son mot de passe est effa
     // Le tiers crée le compte avec l'adresse de la victime, sans pouvoir la vérifier.
     Volt::test('auth.identification')
         ->set('email', 'victime@exemple.fr')->call('continuerEmail')
-        ->set('prenom', 'Pirate')->set('nom', 'X')->set('password', 'motdepassedutiers')
+        ->set('prenom', 'Pirate')->set('nom', 'X')->set('password', 'Motdepassedutiers1')
         ->call('creerCompte');
 
     $user = User::where('email', 'victime@exemple.fr')->first();
@@ -251,13 +251,13 @@ test("un compte créé par un tiers avec mon adresse : son mot de passe est effa
 test('le titulaire qui a créé son compte garde son mot de passe après le code', function () {
     $composant = Volt::test('auth.identification')
         ->set('email', 'lea@exemple.fr')->call('continuerEmail')
-        ->set('prenom', 'Léa')->set('nom', 'Durand')->set('password', 'motdepasse1')
+        ->set('prenom', 'Léa')->set('nom', 'Durand')->set('password', 'Motdepasse1')
         ->call('creerCompte');
 
     $user = User::where('email', 'lea@exemple.fr')->first();
     $composant->set('code', codeEnvoyeA($user))->call('validerCode')->assertRedirect(route('espace'));
 
-    expect(Hash::check('motdepasse1', $user->fresh()->mot_de_passe))->toBeTrue();
+    expect(Hash::check('Motdepasse1', $user->fresh()->mot_de_passe))->toBeTrue();
 });
 
 test('la page « vérifie ton email » renvoie un compte déjà vérifié vers son espace', function () {
@@ -275,12 +275,12 @@ test("mot de passe oublié : après connexion par code, on redéfinit son mot de
     $composant->set('code', codeEnvoyeA($user))->call('validerCode');
 
     Volt::test('espace.compte')
-        ->set('nouveau', 'nouveaumotdepasse')
-        ->set('nouveau_confirmation', 'nouveaumotdepasse')
+        ->set('nouveau', 'Nouveaumotdepasse1')
+        ->set('nouveau_confirmation', 'Nouveaumotdepasse1')
         ->call('enregistrerMotDePasse')
         ->assertHasNoErrors();
 
-    expect(Hash::check('nouveaumotdepasse', $user->fresh()->mot_de_passe))->toBeTrue();
+    expect(Hash::check('Nouveaumotdepasse1', $user->fresh()->mot_de_passe))->toBeTrue();
 });
 
 test('après une connexion par mot de passe, le mot de passe actuel reste exigé', function () {
@@ -291,8 +291,8 @@ test('après une connexion par mot de passe, le mot de passe actuel reste exigé
         ->set('password', 'password')->call('seConnecter');
 
     Volt::test('espace.compte')
-        ->set('nouveau', 'nouveaumotdepasse')
-        ->set('nouveau_confirmation', 'nouveaumotdepasse')
+        ->set('nouveau', 'Nouveaumotdepasse1')
+        ->set('nouveau_confirmation', 'Nouveaumotdepasse1')
         ->call('enregistrerMotDePasse')
         ->assertHasErrors('actuel');
 });
@@ -317,8 +317,8 @@ test('nouveau mot de passe : autres appareils déconnectés et titulaire préven
     session()->put('auth.password_confirmed_at', time());
 
     Volt::test('espace.compte')
-        ->set('nouveau', 'nouveaumotdepasse')
-        ->set('nouveau_confirmation', 'nouveaumotdepasse')
+        ->set('nouveau', 'Nouveaumotdepasse1')
+        ->set('nouveau_confirmation', 'Nouveaumotdepasse1')
         ->call('enregistrerMotDePasse')
         ->assertHasNoErrors();
 
@@ -364,5 +364,47 @@ test("une session participant d'un compte devenu admin est fermée", function ()
     $user->admin()->create(['niveau_acces' => 1]);
 
     $this->get('/espace')->assertRedirect(route('admin.connexion'));
+    $this->assertGuest('web');
+});
+
+test('le mot de passe choisi doit avoir 6 caractères, une majuscule, une minuscule et un chiffre', function (string $mdp, bool $accepte) {
+    $composant = Volt::test('auth.identification')
+        ->set('email', 'lea@exemple.fr')->call('continuerEmail')
+        ->set('prenom', 'Léa')->set('nom', 'Durand')->set('password', $mdp)
+        ->call('creerCompte');
+
+    $accepte ? $composant->assertHasNoErrors() : $composant->assertHasErrors('password');
+})->with([
+    'trop court' => ['Ab1cd', false],
+    'sans majuscule' => ['abcdef1', false],
+    'sans minuscule' => ['ABCDEF1', false],
+    'sans chiffre' => ['Abcdefg', false],
+    'conforme' => ['Abcde1', true],
+]);
+
+test("le changement de mot de passe dans l'espace applique la même règle", function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    session()->put('auth.password_confirmed_at', time());
+
+    Volt::test('espace.compte')
+        ->set('nouveau', 'toutenminuscules')
+        ->set('nouveau_confirmation', 'toutenminuscules')
+        ->call('enregistrerMotDePasse')
+        ->assertHasErrors('nouveau');
+});
+
+test("un compte admin forcé sur l'écran du code ne reçoit pas de code participant et rien n'est effacé", function () {
+    $admin = admin(3, confirme: false);
+    $mdp = $admin->mot_de_passe;
+
+    Volt::test('auth.identification')
+        ->set('email', $admin->email)->set('mode', 'code')
+        ->call('renvoyerCode')->assertHasErrors('email')
+        ->set('mode', 'code')->set('code', '123456')
+        ->call('validerCode')->assertHasErrors('email');
+
+    Notification::assertNothingSentTo($admin);
+    expect($admin->fresh()->mot_de_passe)->toBe($mdp);
     $this->assertGuest('web');
 });

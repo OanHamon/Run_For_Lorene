@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    @include('partials.head', ['title' => 'Run For Lorène · RFL3'])
+    @include('partials.head', ['title' => 'Run For Lorène'.($evenement ? ' · '.$evenement->nom : '')])
 </head>
 <body class="bg-white font-sans text-vert-sombre antialiased">
     @include('partials.bandeau-beta')
@@ -13,17 +13,17 @@
             </a>
 
             <nav class="hidden items-center gap-7 font-display text-vert lg:flex" aria-label="Sections de la page">
-                <a href="#epreuves" class="hover:text-vert">Les épreuves</a>
-                <a href="#cause" class="hover:text-vert">La cause</a>
-                <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="hover:text-vert">Règlement</a>
-                <a href="#contact" class="hover:text-vert">Contact</a>
+                <a href="#epreuves" class="underline-offset-4 hover:underline">Les épreuves</a>
+                <a href="#cause" class="underline-offset-4 hover:underline">La cause</a>
+                <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="underline-offset-4 hover:underline">Règlement</a>
+                <a href="#contact" class="underline-offset-4 hover:underline">Contact</a>
             </nav>
 
             <div class="flex items-center gap-4">
                 @auth
                     <a href="{{ route('espace') }}" class="rfl-btn px-5 py-2.5">Mon espace</a>
                 @else
-                    <a href="{{ route('login') }}" class="hidden font-display text-vert hover:text-vert sm:inline">Se connecter</a>
+                    <a href="{{ route('login') }}" class="hidden font-display text-vert underline-offset-4 hover:underline sm:inline">Se connecter</a>
                     <a href="{{ route('inscription.tunnel') }}" class="rfl-btn px-5 py-2.5">S'inscrire</a>
                 @endauth
             </div>
@@ -36,14 +36,14 @@
             <div>
                 <div class="flex items-end gap-4">
                     <p class="font-display leading-none">
-                        <span class="block text-7xl text-moutarde sm:text-8xl">03</span>
+                        <span class="block text-7xl text-moutarde sm:text-8xl">{{ $evenement?->date_evenement->format('d') ?? '03' }}</span>
                     </p>
                     <p class="pb-1.5 font-display leading-tight">
-                        <span class="block text-2xl text-moutarde">avril</span>
-                        <span class="block tracking-[0.3em] text-white/90">2027</span>
+                        <span class="block text-2xl text-moutarde">{{ $evenement?->date_evenement->translatedFormat('F') ?? 'avril' }}</span>
+                        <span class="block tracking-[0.3em] text-white/90">{{ $evenement?->date_evenement->format('Y') ?? '2027' }}</span>
                     </p>
                     <p class="mb-1.5 ml-2 border-l-2 border-vert-doux pl-4 leading-snug text-white/90">
-                        Samedi à Nantes<br>3<sup>e</sup> édition
+                        {{ ucfirst($evenement?->date_evenement->translatedFormat('l') ?? 'samedi') }} à Nantes<br>3<sup>e</sup> édition
                     </p>
                 </div>
 
@@ -55,7 +55,7 @@
                     <a href="#cause" class="inline-flex items-center rounded-full border-2 border-white/70 px-7 py-3 font-display text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Faire un don</a>
                 </div>
 
-                <p class="mt-7 text-white/85">Déjà inscrit ? <a href="{{ route('espace') }}" class="font-bold text-white underline decoration-moutarde decoration-2 underline-offset-4">Retrouve ton espace</a></p>
+                <p class="mt-7 text-white/85">Déjà inscrit(e) ? <a href="{{ route('espace') }}" class="font-bold text-white underline decoration-moutarde decoration-2 underline-offset-4">Retrouve ton espace</a></p>
             </div>
 
             {{-- Le logo couleur ne se pose pas sur du vert : il vit dans le disque blanc, comme dans les diaporamas de la charte. --}}
@@ -75,7 +75,7 @@
         <dl class="mx-auto grid max-w-6xl grid-cols-1 gap-x-8 gap-y-7 px-5 pt-4 pb-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
             <div class="flex items-center gap-4">
                 <img src="/images/pictos/soleil.png" alt="" class="h-14 w-14 shrink-0">
-                <div><dt class="text-gris-texte">Quand</dt><dd class="font-display text-lg text-vert">Samedi 3 avril 2027</dd></div>
+                <div><dt class="text-gris-texte">Quand</dt><dd class="font-display text-lg text-vert">{{ ucfirst($evenement?->date_evenement->translatedFormat('l j F Y') ?? 'samedi 3 avril 2027') }}</dd></div>
             </div>
             <div class="flex items-center gap-4">
                 <img src="/images/pictos/evenement.png" alt="" class="h-14 w-14 shrink-0">
@@ -83,7 +83,7 @@
             </div>
             <div class="flex items-center gap-4">
                 <img src="/images/pictos/collectif.png" alt="" class="h-14 w-14 shrink-0">
-                <div><dt class="text-gris-texte">Format</dt><dd class="font-display text-lg text-vert">4 épreuves, sans chrono</dd></div>
+                <div><dt class="text-gris-texte">Format</dt><dd class="font-display text-lg text-vert">{{ $courses->isNotEmpty() ? $courses->count().' '.($courses->count() > 1 ? 'épreuves' : 'épreuve').', sans chrono' : 'Sans chrono' }}</dd></div>
             </div>
             <div class="flex items-center gap-4">
                 <img src="/images/pictos/don.png" alt="" class="h-14 w-14 shrink-0">
@@ -208,7 +208,7 @@
         <div class="mx-auto max-w-6xl px-5 pt-12 pb-10 sm:px-8">
             <div class="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
                 <div>
-                    <p class="font-display text-2xl text-white">Run for Lorène</p>
+                    <p class="font-display text-2xl text-white">Run For Lorène</p>
                     <p class="mt-3 max-w-xs leading-relaxed">Un événement Effervescence Jeunes, ensemble pour la santé mentale des jeunes.</p>
                 </div>
                 <div>

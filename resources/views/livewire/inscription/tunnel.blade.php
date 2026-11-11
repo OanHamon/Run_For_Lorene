@@ -876,6 +876,15 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
             return;
         }
 
+        // Ni affirmations actives ni décharge publiée : rien à enregistrer, le volet
+        // reviendrait en boucle sans explication.
+        if ($this->questionsDecharge->isEmpty() && ! app(Consentements::class)->textes($this->evenement)->has('decharge')) {
+            report(new RuntimeException('Décharge : ni affirmation active ni texte publié.'));
+            $this->addError('accepteDecharge', "La décharge n'est pas encore publiée. Réessaie plus tard ou contacte l'association.");
+
+            return;
+        }
+
         app(Questionnaires::class)->remplirDecharge($inscription, $this->reponsesDecharge, Auth::id(), request()->ip());
 
         $this->voletSuivant('decharge');
@@ -1192,7 +1201,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         @error('courseId') <p class="mb-4 rfl-alerte-erreur" role="alert">{{ $message }}</p> @enderror
 
         @if ($this->courses->isEmpty())
-            <p class="rounded-2xl bg-moutarde/15 px-4 py-3 text-sm text-vert-sombre">Aucune épreuve n'est ouverte à l'âge de {{ $this->estMoi ? 'ce participant' : $this->participant->user->prenom }} ({{ $this->participant->ageAu($this->evenement->date_evenement) }} ans le jour J). Vérifie la date de naissance.</p>
+            <p class="rounded-2xl bg-moutarde/15 px-4 py-3 text-sm text-vert-sombre">Aucune épreuve n'est ouverte {{ $this->estMoi ? 'à ton âge' : 'à l\'âge de '.$this->participant->user->prenom }} ({{ $this->participant->ageAu($this->evenement->date_evenement) }} ans le jour J). Vérifie la date de naissance.</p>
         @else
             <div class="space-y-3" role="radiogroup" aria-label="Épreuves">
                 @foreach ($this->courses as $course)
@@ -1286,7 +1295,7 @@ new #[Layout('components.tunnel-shell', ['title' => 'Inscription · Run For Lor�
         @if ($volet === 'conditions')
             <h1 class="font-display text-2xl text-vert">Conditions</h1>
             <p class="mt-1 mb-6 text-sm text-gris-texte">
-                Dernière étape avant le don.
+                {{ session()->has('tunnel.don') ? 'Dernière étape avant le récapitulatif.' : 'Dernière étape avant le don.' }}
                 @if ($pour) En tant que responsable, tu acceptes pour {{ $pour }}. @endif
             </p>
 

@@ -30,11 +30,12 @@
     @foreach ($blocs as $index => $bloc)
         @continue($bloc['questions']->isEmpty())
         <fieldset class="mt-4 border-t border-bordure pt-4">
+            {{-- La légende doit être le premier enfant du fieldset ; le titre visible reste à sa place. --}}
+            <legend class="sr-only">{{ $bloc['titre'] }}</legend>
             @if ($bloc['intro'])
                 <p class="font-bold text-vert-sombre">Engagement du participant</p>
                 <p class="mt-1 text-sm text-gris-texte">{{ $bloc['intro'] }}</p>
             @endif
-            <legend class="sr-only">{{ $bloc['titre'] }}</legend>
             <p class="mt-2 text-sm font-bold text-vert-sombre" aria-hidden="true">{{ $bloc['titre'] }}</p>
             <div class="mt-2 space-y-3">
                 @foreach ($bloc['questions'] as $q)
@@ -56,7 +57,11 @@
         <div><dt class="inline text-gris-texte">Fait le :</dt> <dd class="inline font-bold text-vert-sombre">{{ today()->translatedFormat('j F Y') }}</dd></div>
     </dl>
 
+    @php($textePdf = app(\App\Services\Inscriptions\Consentements::class)->textes($evenement)->get('decharge'))
     <div class="mt-4 border-t border-bordure pt-4">
+        @if ($textePdf?->fichierPresent())
+            <p class="mb-3 text-sm"><a href="{{ route('textes.show', 'decharge') }}" target="_blank" rel="noopener" class="rfl-lien underline">Lire la décharge complète (PDF)</a></p>
+        @endif
         <label class="flex items-start gap-3 text-sm text-vert-sombre">
             <input wire:model="{{ $approbation }}" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 rounded border-bordure text-vert focus:ring-vert">
             <span>J'ai lu et j'approuve l'ensemble de mes réponses à ce questionnaire.</span>

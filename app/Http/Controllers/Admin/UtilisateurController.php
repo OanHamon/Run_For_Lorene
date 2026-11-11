@@ -123,7 +123,7 @@ class UtilisateurController extends Controller
         }
         RateLimiter::hit($cle, 600);
 
-        $utilisateur->notify(new CompteCree);
+        $utilisateur->notify(new CompteCree(admin: $utilisateur->admin !== null));
         $this->journal->noter('user.activation', $utilisateur, ['email' => $utilisateur->email]);
 
         return back()->with('statut', "Nouveau lien envoyé à {$utilisateur->email}.");
@@ -239,7 +239,7 @@ class UtilisateurController extends Controller
 
         // Le lien parti vers la mauvaise adresse est désormais caduc (la clé dépend de l'email) : on en renvoie un.
         if ($utilisateur->mot_de_passe === null) {
-            $utilisateur->notify(new CompteCree);
+            $utilisateur->notify(new CompteCree(admin: $utilisateur->admin !== null));
 
             return back()->with('statut', "Email corrigé : {$donnees['email']}. Un nouveau lien pour créer le mot de passe vient d'y partir.");
         }

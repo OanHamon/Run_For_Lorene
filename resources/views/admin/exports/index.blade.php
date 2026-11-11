@@ -8,7 +8,7 @@
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @foreach ([
-                ['Inscrits', 'Toutes les inscriptions (filtres de la page Inscriptions), avec contacts d\'urgence.', route('admin.inscriptions.export'), 'Télécharger (CSV)'],
+                ['Inscrits', 'Toutes les inscriptions (hors brouillons), avec contacts d\'urgence. Pour une liste filtrée, exporte depuis la page Inscriptions.', route('admin.inscriptions.export'), 'Télécharger (CSV)'],
                 ['Dossards', 'Inscriptions validées : dossard, nom, course. Pour l\'impression des dossards.', route('admin.inscriptions.dossards'), 'Télécharger (CSV)'],
                 ['Retraits des dossards', 'Remis ou non, quand et par qui. À faire en fin de journée.', route('admin.exports.retraits'), 'Télécharger (CSV)'],
                 ['Dons', 'Dons de l\'événement, anonymes ou non, reçus demandés.', route('admin.dons.export'), 'Télécharger (CSV)'],

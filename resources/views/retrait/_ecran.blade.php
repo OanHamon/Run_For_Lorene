@@ -57,7 +57,7 @@
                 @forelse ($ecran['resultats'] as $r)
                     @include('retrait._fiche', ['i' => $r, 'grande' => false])
                 @empty
-                    <p class="text-sm text-gris-texte">Personne trouvée. Vérifie l'orthographe, ou essaie le nom de la personne qui a fait l'inscription.</p>
+                    <p class="text-sm text-gris-texte">Aucune personne trouvée. Vérifie l'orthographe, ou essaie le prénom seul.</p>
                 @endforelse
             </div>
         @endif

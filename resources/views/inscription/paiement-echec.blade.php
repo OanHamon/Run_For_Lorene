@@ -15,14 +15,17 @@
 
         {{-- Inscription d'une traite : l'inscription n'est enregistrée qu'une fois payée. --}}
         @if ($enCours)
-            <p class="mt-3 text-sm text-gris-texte">
-                Rien n'a été débité. Ton inscription n'est enregistrée qu'une fois payée : règle-la maintenant pour garder ta place.
-            </p>
+            {{-- Pas de « rien n'a été débité » sous un message d'erreur (ex. paiement déjà en cours). --}}
+            @unless (session('erreur'))
+                <p class="mt-3 text-sm text-gris-texte">
+                    Rien n'a été débité. Ton inscription n'est enregistrée qu'une fois payée : règle-la maintenant pour garder ta place.
+                </p>
+            @endunless
 
             <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <form method="POST" action="{{ route('inscription.payer', $commande) }}" data-envoi-unique>
                     @csrf
-                    <button type="submit" class="rfl-btn w-full sm:w-auto">Réessayer · {{ number_format((float) $commande->montant_total, fmod((float) $commande->montant_total, 1.0) == 0.0 ? 0 : 2, ',', ' ') }} €</button>
+                    <button type="submit" class="rfl-btn w-full sm:w-auto">Réessayer · {{ \App\Support\Format::euros($commande->montant_total) }}</button>
                 </form>
             </div>
 

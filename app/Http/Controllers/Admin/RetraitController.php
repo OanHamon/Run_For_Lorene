@@ -35,7 +35,7 @@ class RetraitController extends Controller
 
     public function scan(Request $request): RedirectResponse
     {
-        $evenement = EvenementAdmin::choisi($request);
+        $evenement = EvenementAdmin::choisi($request) ?? abort(404);
         $resultat = $this->retraits->parBillet($evenement, (string) $request->input('jeton'));
 
         return $resultat['inscription']
@@ -45,7 +45,7 @@ class RetraitController extends Controller
 
     public function remettre(Request $request, Inscription $inscription): RedirectResponse
     {
-        $inscription = $this->retraits->trouver(EvenementAdmin::choisi($request), $inscription->id_inscription) ?? abort(404);
+        $inscription = $this->retraits->trouver(EvenementAdmin::choisi($request) ?? abort(404), $inscription->id_inscription) ?? abort(404);
         $resultat = $this->retraits->remettre($inscription, $request->user()->name, admin: $request->user());
 
         return $this->retour($resultat, $inscription);
@@ -53,7 +53,7 @@ class RetraitController extends Controller
 
     public function annuler(Request $request, Inscription $inscription): RedirectResponse
     {
-        $inscription = $this->retraits->trouver(EvenementAdmin::choisi($request), $inscription->id_inscription) ?? abort(404);
+        $inscription = $this->retraits->trouver(EvenementAdmin::choisi($request) ?? abort(404), $inscription->id_inscription) ?? abort(404);
         $resultat = $this->retraits->annuler($inscription, $request->user()->name, admin: $request->user());
         if ($resultat['ok']) {
             $this->journal->noter('inscription.retrait_annule', $inscription, ['dossard' => $inscription->dossard]);
@@ -65,7 +65,7 @@ class RetraitController extends Controller
     /** Nouveau poste : le lien n'est affiché qu'une fois, à partager avec les bénévoles du poste. */
     public function ouvrirPoste(Request $request): RedirectResponse
     {
-        $evenement = EvenementAdmin::choisi($request);
+        $evenement = EvenementAdmin::choisi($request) ?? abort(404);
         $donnees = $request->validateWithBag('poste', [
             'libelle' => ['required', 'string', 'max:60'],
             'valable_du' => ['required', 'date'],
