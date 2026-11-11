@@ -13,8 +13,8 @@
     $inscriptionsEvenement = $evenement ? $inscriptions->where('id_evenement', $evenement->id_evenement) : collect();
     $ouvert = $evenement?->inscriptionsOuvertes();
     // Rien en cours pour l'événement : l'inscription devient l'action principale de la page.
-    $aInscrire = $ouvert && $commandesEnAttente->isEmpty()
-        && $inscriptionsEvenement->where('statut', '!=', Inscription::ANNULEE)->isEmpty();
+    // (Inscription d'une traite : plus de commande « en attente » à reprendre depuis l'espace.)
+    $aInscrire = $ouvert && $inscriptionsEvenement->where('statut', '!=', Inscription::ANNULEE)->isEmpty();
 @endphp
 <x-espace-shell title="Mon espace">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
