@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Livewire\Livewire;
 
 /**
  * Connexion au back-office, séparée de l'espace participant (garde « admin ») :
@@ -34,6 +35,10 @@ class ConnexionController extends Controller
 
     public function show(): View
     {
+        // Le bouton « Afficher » du mot de passe est en Alpine, fourni par les scripts Livewire :
+        // sans composant Livewire sur la page, Livewire ne les injecte pas d'office.
+        Livewire::forceAssetInjection();
+
         return view('admin.connexion.show');
     }
 

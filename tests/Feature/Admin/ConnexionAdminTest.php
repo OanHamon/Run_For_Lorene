@@ -26,6 +26,12 @@ test('sans connexion admin, le back-office renvoie vers sa propre connexion', fu
     $this->get('/admin/connexion')->assertOk()->assertSee('Administration')->assertSee('Connexion participant');
 });
 
+test('la page de connexion charge Alpine, pour le bouton « Afficher » du mot de passe', function () {
+    $page = $this->get('/admin/connexion')->assertOk();
+
+    expect($page->getContent())->toMatch('#<script[^>]+livewire[^>]*\.js#i');
+});
+
 test("mot de passe puis code : l'admin arrive sur la page demandée", function () {
     $admin = admin(3, confirme: false);
     $this->get('/admin/inscriptions?evenement=1');

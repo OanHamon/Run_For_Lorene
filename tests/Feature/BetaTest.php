@@ -8,13 +8,13 @@ test('hors beta, aucun bandeau', function () {
     $this->get(route('home'))->assertOk()->assertDontSee('data-test="bandeau-beta"', false);
 });
 
-test('en beta, chaque espace affiche le bandeau « Version de test » avec le lien de feedback', function () {
+test('en beta, chaque espace affiche le bandeau « Version démo » avec le lien de feedback', function () {
     config(['rfl.beta' => true, 'rfl.beta_feedback' => 'https://forms.gle/avis-beta']);
 
     $this->get(route('home'))->assertOk()
-        ->assertSee('Version de test')->assertSee('https://forms.gle/avis-beta');
+        ->assertSee('Version démo')->assertSee('https://forms.gle/avis-beta')->assertDontSee('4242');
 
-    $this->actingAs(admin(1))->get('/admin')->assertOk()->assertSee('Version de test');
+    $this->actingAs(admin(1))->get('/admin')->assertOk()->assertSee('Version démo');
 });
 
 test("en beta, l'état technique signale une clé Stripe live", function () {
