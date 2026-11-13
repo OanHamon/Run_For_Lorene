@@ -5,6 +5,16 @@
 
     RewriteEngine On
 
+    # Adresse unique en HTTPS : www.runforlorene.fr et http:// renvoient vers https://runforlorene.fr.
+    # Limité au domaine de production, sans effet en local. Port 80 = HTTP, comme le
+    # préconise OVH (derrière son répartiteur, %{HTTPS} n'est pas fiable).
+    RewriteCond %{HTTP_HOST} ^www\.runforlorene\.fr$ [NC]
+    RewriteRule ^ https://runforlorene.fr%{REQUEST_URI} [L,R=301]
+
+    RewriteCond %{HTTP_HOST} ^runforlorene\.fr$ [NC]
+    RewriteCond %{SERVER_PORT} ^80$
+    RewriteRule ^ https://runforlorene.fr%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
