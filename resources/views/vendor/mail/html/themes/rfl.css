@@ -1,0 +1,343 @@
+/*
+ * Thème des emails, aux couleurs de la charte Effervescence Jeunes.
+ * Mêmes valeurs que les tokens de resources/css/app.css et App\Support\Charte::COULEURS :
+ *   vert #006B61, vert-doux #5FBAAE, moutarde #D9B21E, vert-sombre #23463F, vert-clair #BEECE6,
+ *   gris-texte #4F6A64, fond #F1FAF8, bordure #D2E8E3, erreur #9F1239.
+ * Les clients mail ignorent souvent les polices web : Varela Round retombe sur une police arrondie
+ * ou sans-serif, Calibri est présente sous Windows / Outlook.
+ */
+
+/* Base */
+
+body,
+body *:not(html):not(style):not(br):not(tr):not(code) {
+    box-sizing: border-box;
+    font-family: Calibri, Carlito, 'Segoe UI', Helvetica, Arial, sans-serif;
+    position: relative;
+}
+
+body {
+    -webkit-text-size-adjust: none;
+    background-color: #F1FAF8;
+    color: #23463F;
+    height: 100%;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    width: 100% !important;
+}
+
+p,
+ul,
+ol,
+blockquote {
+    line-height: 1.5;
+    text-align: start;
+}
+
+a {
+    color: #006B61;
+}
+
+a img {
+    border: none;
+}
+
+/* Typography */
+
+h1,
+h2,
+h3 {
+    color: #006B61;
+    font-family: 'Varela Round', 'Arial Rounded MT Bold', 'Trebuchet MS', Helvetica, Arial, sans-serif;
+    font-weight: normal;
+    margin-top: 0;
+    text-align: start;
+}
+
+h1 {
+    font-size: 24px;
+    line-height: 1.3;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 19px;
+}
+
+h3 {
+    font-size: 16px;
+}
+
+p {
+    color: #23463F;
+    font-size: 17px;
+    line-height: 1.55em;
+    margin-top: 0;
+    text-align: left;
+}
+
+p.sub {
+    font-size: 13px;
+}
+
+strong {
+    color: #23463F;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* Layout */
+
+.wrapper {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    background-color: #F1FAF8;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.content {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+/* Header */
+
+.header {
+    padding: 32px 0 24px;
+    text-align: center;
+}
+
+.header a {
+    color: #006B61;
+    font-size: 19px;
+    text-decoration: none;
+}
+
+/* Logo */
+
+.logo {
+    border: 0;
+    height: 92px;
+    max-height: 92px;
+    width: 90px;
+}
+
+/* Body */
+
+.body {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    background-color: #F1FAF8;
+    border-bottom: 1px solid #F1FAF8;
+    border-top: 1px solid #F1FAF8;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.inner-body {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 570px;
+    background-color: #ffffff;
+    border: 1px solid #D2E8E3;
+    border-radius: 28px;
+    margin: 0 auto;
+    padding: 0;
+    width: 570px;
+}
+
+.inner-body a {
+    word-break: break-word;
+}
+
+/* Subcopy */
+
+.subcopy {
+    border-top: 1px solid #D2E8E3;
+    margin-top: 28px;
+    padding-top: 24px;
+}
+
+.subcopy p {
+    color: #4F6A64;
+    font-size: 14px;
+}
+
+/* Footer */
+
+.footer {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 570px;
+    margin: 0 auto;
+    padding: 0;
+    text-align: center;
+    width: 570px;
+}
+
+.footer p {
+    color: #4F6A64;
+    font-size: 13px;
+    line-height: 1.5em;
+    text-align: left;
+}
+
+.footer a {
+    color: #006B61;
+    text-decoration: underline;
+}
+
+.footer-logo {
+    border: 0;
+    height: 47px;
+    width: 90px;
+}
+
+/* Tables */
+
+.table table {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 28px auto;
+    width: 100%;
+}
+
+.table th {
+    border-bottom: 1px solid #D2E8E3;
+    color: #006B61;
+    margin: 0;
+    padding-bottom: 8px;
+}
+
+.table td {
+    color: #23463F;
+    font-size: 16px;
+    line-height: 20px;
+    margin: 0;
+    padding: 10px 0;
+}
+
+.content-cell {
+    max-width: 100vw;
+    padding: 36px;
+}
+
+/* Buttons : pilule vert profond, comme rfl-btn */
+
+.action {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 30px auto;
+    padding: 0;
+    text-align: center;
+    width: 100%;
+    float: unset;
+}
+
+.button {
+    -webkit-text-size-adjust: none;
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-block;
+    font-size: 17px;
+    font-weight: bold;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.button-blue,
+.button-green,
+.button-primary,
+.button-success {
+    background-color: #006B61;
+    border-bottom: 13px solid #006B61;
+    border-left: 28px solid #006B61;
+    border-right: 28px solid #006B61;
+    border-top: 13px solid #006B61;
+}
+
+.button-red,
+.button-error {
+    background-color: #9F1239;
+    border-bottom: 13px solid #9F1239;
+    border-left: 28px solid #9F1239;
+    border-right: 28px solid #9F1239;
+    border-top: 13px solid #9F1239;
+}
+
+/* Panels : encadré vert clair, comme les blocs pédagogiques du site */
+
+.panel {
+    margin: 24px 0;
+}
+
+.panel-content {
+    background-color: #BEECE6;
+    border-radius: 16px;
+    color: #23463F;
+    padding: 18px 20px;
+}
+
+.panel-content p {
+    color: #23463F;
+}
+
+.panel-item {
+    padding: 0;
+}
+
+.panel-item p:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Code à usage unique : pastille vert profond, chiffres en moutarde (chiffre clé sur fond vert) */
+
+.code {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    margin: 8px auto 28px;
+}
+
+.code-cell {
+    background-color: #006B61;
+    border-radius: 999px;
+    padding: 16px 36px;
+    text-align: center;
+}
+
+.code-chiffres {
+    color: #D9B21E;
+    font-family: 'Varela Round', 'Arial Rounded MT Bold', 'Trebuchet MS', Helvetica, Arial, sans-serif;
+    font-size: 36px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    line-height: 44px;
+    white-space: nowrap;
+}
+
+.validite {
+    color: #4F6A64;
+    font-size: 15px;
+    text-align: center;
+}
+
+/* Utilities */
+
+.break-all {
+    word-break: break-all;
+}

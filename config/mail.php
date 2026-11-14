@@ -120,4 +120,21 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | Thème aux couleurs de la charte : resources/views/vendor/mail/html/themes/rfl.css.
+    |
+    */
+
+    'markdown' => [
+        'theme' => 'rfl',
+
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
 ];
