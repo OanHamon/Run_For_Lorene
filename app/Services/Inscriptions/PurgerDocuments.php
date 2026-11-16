@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Log;
  * supprimés pour de bon, archives comprises. Consentements, questionnaires et réponses de
  * santé partent avec eux (clés étrangères en cascade). Les inscriptions, commandes et
  * paiements restent : ils font partie de la comptabilité.
+ *
+ * Les candidatures bénévoles de l'événement partent aussi (photos, autorisations parentales,
+ * contacts d'urgence, allergies) : rien n'y relève de la comptabilité.
  */
 class PurgerDocuments
 {
@@ -31,6 +34,9 @@ class PurgerDocuments
                 $nombre = Document::withTrashed()
                     ->whereIn('id_inscription', $evenement->inscriptions()->select('id_inscription'))
                     ->forceDelete();
+
+                // Une par une : chaque suppression efface aussi les fichiers privés de la candidature.
+                $evenement->candidaturesBenevoles()->get()->each->delete();
 
                 $evenement->forceFill(['documents_purges_le' => now()])->save();
 

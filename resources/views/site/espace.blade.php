@@ -147,6 +147,28 @@
             </div>
             @endif
 
+            {{-- Bénévolat : la candidature, ou une invitation quand les candidatures sont ouvertes. --}}
+            @if ($candidature)
+                <div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-bordure bg-white px-6 py-4">
+                    <div>
+                        <p class="font-display text-vert">Ma candidature bénévole</p>
+                        <p class="mt-1 text-sm text-gris-texte">{{ $candidature->libelleStatut() }}{{ $candidature->envoyee() && ! $candidature->photo && ! $candidature->close() ? ' · photo du badge à déposer' : '' }}</p>
+                    </div>
+                    <a href="{{ route('espace.benevole') }}" class="shrink-0 rfl-btn-secondaire px-5 py-2.5 text-sm">{{ $candidature->envoyee() ? 'Voir' : 'Reprendre' }}</a>
+                </div>
+            @elseif ($benevolesOuvert && $evenement)
+                <div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-bordure bg-white px-6 py-4">
+                    <div class="flex items-center gap-4">
+                        <img src="/images/pictos/collectif.png" alt="" class="h-12 w-12 shrink-0">
+                        <div>
+                            <p class="font-display text-vert">Envie de donner un coup de main ?</p>
+                            <p class="mt-1 text-sm text-gris-texte">Rejoins l'équipe des bénévoles de {{ $evenement->nom }}.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('benevoles') }}" class="shrink-0 rfl-btn-secondaire px-5 py-2.5 text-sm">Devenir bénévole</a>
+                </div>
+            @endif
+
             @if ($dons->isNotEmpty())
                 <div class="overflow-hidden rounded-3xl border border-bordure bg-white">
                     <div class="flex items-center justify-between px-6 py-4">

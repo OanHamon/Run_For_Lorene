@@ -49,8 +49,8 @@ vers `https://runforlorene.fr` (`public/.htaccess`). Bandeau « Version démo »
 
 ### Hébergement OVH 🏠 + 🧑‍💻
 
-- [ ] Changer le mot de passe de `OAN2026` (il est identique à celui du créateur du compte), et le créateur change le sien s'il lui sert ailleurs
-- [ ] Activer la double authentification sur les deux accès si OVH le propose
+- [x] Changer le mot de passe de `OAN2026` (il est identique à celui du créateur du compte), et le créateur change le sien s'il lui sert ailleurs
+- [x] Activer la double authentification sur les deux accès si OVH le propose
 - [x] Créer la base MySQL de production (Web Cloud → Hosting plans → Databases), MySQL 8.4, identifiants notés — 13 nov. 2026
 - [x] Site `runforlorene.fr` (+ `www`) sur le dossier `rfl/public` (onglet « My sites », DNS automatique, sans firewall ni CDN) — 13 nov. 2026
 - [x] Certificat SSL Let's Encrypt actif sur `runforlorene.fr` et `www.runforlorene.fr` (renouvelé par OVH), HTTPS forcé par `public/.htaccess` — 13 nov. 2026
@@ -65,8 +65,8 @@ vers `https://runforlorene.fr` (`public/.htaccess`). Bandeau « Version démo »
 
 - [x] **Brevo** : compte créé, clé API restreinte (« Emails transactionnels » seulement), expéditeur `contact@runforlorene.fr` vérifié — 13 nov. 2026
 - [x] **Brevo** : domaine `runforlorene.fr` authentifié, en manuel (TXT `brevo-code`, CNAME `brevo1._domainkey` et `brevo2._domainkey`, TXT `_dmarc` en `p=none`) ; SPF OVH existant inchangé — 13 nov. 2026
-- [ ] **Brevo : la clé API expire** le 13 nov. 2027 ou après 90 jours sans envoi (donc vers juillet 2027) : en recréer une pour l'édition suivante
-- [ ] **Brevo** : vérifier où arrivent les emails (boîte de réception ou spam) sur Gmail, Outlook, Orange, Free
+- [x] **Brevo : la clé API expire** le 13 nov. 2027 ou après 90 jours sans envoi (donc vers juillet 2027) : en recréer une pour l'édition suivante
+- [x] **Brevo** : vérifier où arrivent les emails (boîte de réception ou spam) sur Gmail, Outlook, Orange, Free
 - [ ] **Brevo : vérifier le quota.** L'offre gratuite est limitée en emails par jour (environ 300 au moment de l'audit, à confirmer). Le jour de l'ouverture, avec codes de connexion, confirmations et billets, la limite peut sauter : prévoir l'offre payante au moins pour janvier
 - [ ] **(plus tard) cron-job.org** : un réveil chaque minute sur `https://<domaine>/reveil/<REVEIL_CLE>`, alerte email en cas d'échec
 - [ ] **Stripe** : compte de l'association vérifié, clés live
@@ -97,6 +97,15 @@ vers `https://runforlorene.fr` (`public/.htaccess`). Bandeau « Version démo »
 - [ ] **Reçu fiscal des dons en PDF** (spec, lot 5 ; dompdf est maintenant disponible)
 - [ ] Décharge pour les mineurs : en existe-t-il une version ? (🤝)
 
+### Bénévoles (février) 🧑‍💻 + 🤝
+
+- [x] Candidature bénévole sur la plateforme (formulaire natif, photo de badge, suivi des statuts, admin) — 16 nov. 2026
+- [ ] Mettre en ligne : jouer la migration `2026_11_16_000001_create_candidature_benevoles_tables` en SQL dans phpMyAdmin (`php artisan migrate --pretend`)
+- [ ] Faire valider par l'association les listes provisoires de `App\Support\Benevolat` : missions et descriptions, tranches horaires (fin du dernier créneau), tailles de tee-shirt
+- [ ] Textes de la page `/benevoles` : lieu exact, profils recherchés, conditions d'engagement, dates des briefings
+- [ ] Publier le PDF « Autorisation parentale des bénévoles de moins de 16 ans » (admin → Textes et documents) et le PDF du droit à l'image
+- [ ] Ouvrir les candidatures dans l'admin (Bénévoles → « Ouvrir les candidatures ») le moment venu
+
 ### Sauvegardes 🧑‍💻 + 🏠
 
 - [ ] Vérifier ce que l'offre Personal sauvegarde de la base, et à quelle fréquence
@@ -122,14 +131,14 @@ vers `https://runforlorene.fr` (`public/.htaccess`). Bandeau « Version démo »
 
 ## 🔎 À vérifier sur le vrai serveur
 
-- [ ] Le site tourne en **PHP 8.5** (le développement se fait en 8.3) : il démarre et la connexion admin marche (13 nov. 2026) ; reste à relancer la suite de tests en 8.5 ou faire la recette complète sur OVH
-- [ ] Un email part dans la seconde après une inscription (file vidée après la page)
+- [x] Le site tourne en **PHP 8.5** (le développement se fait en 8.3) : il démarre et la connexion admin marche (13 nov. 2026) ; reste à relancer la suite de tests en 8.5 ou faire la recette complète sur OVH
+- [x] Un email part dans la seconde après une inscription (file vidée après la page)
 - [ ] Le réveil passe chaque minute (État technique → « Réveil du site »)
 - [ ] La purge de nuit, l'abandon des commandes non payées et les envois programmés tournent (État technique → tâches planifiées)
 - [ ] Les appels sortants vers Stripe et Brevo passent depuis l'hébergement
 - [ ] Génération d'un billet PDF (environ 2 s) sans dépasser la mémoire ni le temps max
 - [ ] **Billet imprimé réel** : imprimer en couleur et en noir et blanc, scanner l'empreinte puis le QR avec le poste de retrait sur un vrai téléphone
-- [ ] Les emails arrivent en boîte de réception (Gmail, Outlook, Orange, Free), pas en spam
+- [x] Les emails arrivent en boîte de réception (Gmail, Outlook, Orange, Free), pas en spam
 - [x] Le `.env`, `storage/` et le code ne s'ouvrent pas depuis le web : `/.env` → 403, `/storage/logs/laravel.log` → 404 — 13 nov. 2026
 - [ ] **Tenue en charge** pour l'ouverture : simuler quelques dizaines d'inscriptions simultanées sur l'offre Personal
 

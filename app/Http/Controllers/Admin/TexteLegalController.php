@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class TexteLegalController extends Controller
 {
-    /** Types publiés par l'admin (pas d'autorisation parentale : décision de l'association). */
+    /** Types publiés par l'admin (pas d'autorisation parentale pour la course, décision de l'association ; une pour les bénévoles de moins de 16 ans). */
     public const TYPES = TextePublic::LIBELLES;
 
     public function store(Request $request, Evenement $evenement, Journal $journal): RedirectResponse

@@ -94,6 +94,7 @@ class NavigationAdmin
             ],
             'Participants' => [
                 ['libelle' => 'Inscriptions', 'route' => 'admin.inscriptions.index', 'motifs' => ['admin.inscriptions.*', 'admin.utilisateurs.*'], 'niveau' => Admin::LECTURE],
+                ['libelle' => 'Bénévoles', 'route' => 'admin.benevoles.index', 'motifs' => ['admin.benevoles.*'], 'niveau' => Admin::LECTURE],
                 ['libelle' => 'Relances', 'route' => 'admin.relances.index', 'motifs' => ['admin.relances.*'], 'niveau' => Admin::GESTION],
                 ['libelle' => 'Retrait des dossards', 'route' => 'admin.retrait.index', 'motifs' => ['admin.retrait.*'], 'niveau' => Admin::GESTION],
             ],

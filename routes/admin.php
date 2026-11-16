@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminsController;
 use App\Http\Controllers\Admin\ATraiterController;
+use App\Http\Controllers\Admin\BenevoleController;
 use App\Http\Controllers\Admin\CommandeController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\DonController;
@@ -52,7 +53,18 @@ Route::get('inscriptions/export', [InscriptionController::class, 'export'])->nam
 Route::get('inscriptions/dossards', [InscriptionController::class, 'exportDossards'])->name('inscriptions.dossards');
 Route::get('inscriptions/{inscription}', [InscriptionController::class, 'show'])->whereNumber('inscription')->name('inscriptions.show');
 
+// Candidatures bénévoles : liste et fiche (sans données sensibles) pour tous les admins.
+Route::get('benevoles', [BenevoleController::class, 'index'])->name('benevoles.index');
+Route::get('benevoles/{candidature}', [BenevoleController::class, 'show'])->whereNumber('candidature')->name('benevoles.show');
+
 Route::middleware('admin:2')->group(function () {
+    // Bénévoles : statuts, fichiers privés et exports (données sensibles).
+    Route::post('benevoles/{candidature}/statut', [BenevoleController::class, 'statut'])->name('benevoles.statut');
+    Route::get('benevoles/{candidature}/{fichier}', [BenevoleController::class, 'fichier'])
+        ->whereNumber('candidature')->whereIn('fichier', ['photo', 'autorisation'])->name('benevoles.fichier');
+    Route::get('benevoles/export', [BenevoleController::class, 'export'])->name('benevoles.export');
+    Route::get('benevoles/photos', [BenevoleController::class, 'photos'])->name('benevoles.photos');
+
     // Questionnaires de santé : réponses visibles des seuls niveaux habilités.
     Route::get('questionnaires', [QuestionnaireController::class, 'index'])->name('questionnaires.index');
     Route::get('questionnaires/{document}', [QuestionnaireController::class, 'show'])->name('questionnaires.show');
@@ -135,6 +147,7 @@ Route::middleware('admin:3')->group(function () {
     Route::delete('declinaisons/{declinaison}', [OptionController::class, 'supprimerDeclinaison'])->name('declinaisons.destroy');
 
     Route::post('evenements/{evenement}/textes', [TexteLegalController::class, 'store'])->name('textes.store');
+    Route::put('benevoles/ouverture', [BenevoleController::class, 'ouverture'])->name('benevoles.ouverture');
 
     Route::get('admins', [AdminsController::class, 'index'])->name('admins.index');
     Route::get('technique', TechniqueController::class)->name('technique');

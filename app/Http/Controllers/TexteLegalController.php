@@ -15,6 +15,8 @@ class TexteLegalController extends Controller
         'decharge' => 'Décharge de responsabilité',
         'rgpd' => 'Politique de protection des données',
         'droit_image' => 'Autorisation de droit à l\'image',
+        // Bénévoles de moins de 16 ans : modèle à télécharger, signer et déposer avec la candidature.
+        'autorisation_benevole' => 'Autorisation parentale des bénévoles de moins de 16 ans',
     ];
 
     public function __invoke(string $type): Response

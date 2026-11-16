@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin;
 
+use App\Models\CandidatureBenevole;
 use App\Models\Commande;
 use App\Models\Document;
 use App\Models\Inscription;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  * réinitialiser son accès).
  *
  * Partent avec lui : ses participants gérés (enfants sans compte), leurs brouillons
- * d'inscription et les documents de ces brouillons.
+ * d'inscription et les documents de ces brouillons, son brouillon de candidature bénévole.
  */
 class SupprimerCompte
 {
@@ -36,6 +37,8 @@ class SupprimerCompte
                 ->whereNotIn('id_inscription', Inscription::whereIn('id_participant', $participants)->where('statut', Inscription::BROUILLON)->select('id_inscription'))
                 ->exists() ? 'ce compte a déposé des documents sur d\'autres inscriptions' : null,
             JournalAdmin::where('id_admin', $user->id_user)->exists() ? 'ce compte a des actions au journal admin' : null,
+            CandidatureBenevole::where('id_user', $user->id_user)->where('statut', '!=', CandidatureBenevole::BROUILLON)->exists()
+                ? 'ce compte a envoyé une candidature bénévole' : null,
         ]));
     }
 
@@ -48,6 +51,8 @@ class SupprimerCompte
             // Brouillons d'inscription (leurs documents partent en cascade), puis les comptes des enfants, puis le compte.
             Inscription::whereIn('id_participant', $this->participants($user))->where('statut', Inscription::BROUILLON)->delete();
             Document::withTrashed()->where('id_deposant', $user->id_user)->forceDelete();
+            // Brouillon de candidature bénévole, avec ses fichiers privés.
+            CandidatureBenevole::where('id_user', $user->id_user)->get()->each->delete();
             User::whereIn('id_user', $geres)->delete();
             DB::table('sessions')->where('user_id', $user->id_user)->delete();
             $user->delete();

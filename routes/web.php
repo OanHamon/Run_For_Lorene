@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\ActivationController;
+use App\Http\Controllers\BenevolesController;
 use App\Http\Controllers\BilletController;
+use App\Http\Controllers\CandidatureFichierController;
 use App\Http\Controllers\Dev\QrController as DevQrController;
 use App\Http\Controllers\EspaceController;
 use App\Http\Controllers\PageController;
@@ -22,6 +24,9 @@ Route::get('activation/{user}', [ActivationController::class, 'show'])->middlewa
 Route::post('activation/{user}', [ActivationController::class, 'store'])->middleware('throttle:10,1');
 
 Volt::route('inscription', 'inscription.tunnel')->name('inscription.tunnel');
+
+// Bénévoles (brief complémentaire) : page publique, puis candidature avec le compte.
+Route::get('benevoles', BenevolesController::class)->name('benevoles');
 
 // Billet QR en plein écran (lien signé de l'email et de l'espace, sans connexion).
 Route::get('billet/{inscription}', BilletController::class)->middleware(['signed', 'throttle:60,1'])->name('billet');
@@ -51,6 +56,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('espace', EspaceController::class)->name('espace');
     Volt::route('espace/inscriptions/{inscription}', 'espace.inscription')->name('espace.inscription');
     Volt::route('espace/compte', 'espace.compte')->name('espace.compte');
+
+    Volt::route('benevoles/candidature', 'benevoles.candidature')->name('benevoles.candidature');
+    Volt::route('espace/benevole', 'espace.benevole')->name('espace.benevole');
+    Route::get('espace/benevole/{fichier}', [CandidatureFichierController::class, 'moi'])
+        ->whereIn('fichier', ['photo', 'autorisation'])
+        ->name('espace.benevole.fichier');
 });
 
 // Poste de retrait des dossards (bénévoles, sans compte) : lien secret créé dans l'admin.

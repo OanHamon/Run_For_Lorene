@@ -1,6 +1,10 @@
 @props(['title' => 'Mon espace'])
 
-@php($user = auth()->user())
+@php
+    $user = auth()->user();
+    // Candidature bénévole envoyée ou commencée : sa page apparaît dans le menu.
+    $benevole = \App\Models\CandidatureBenevole::duCompte($user) !== null;
+@endphp
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -12,6 +16,7 @@
     <div class="flex items-center justify-between rounded-b-[28px] bg-white px-5 py-3 ring-1 ring-bordure lg:hidden">
         <a href="{{ route('espace') }}"><img src="/images/logo-run-for-lorene.svg" alt="Run For Lorène" class="h-10 w-auto"></a>
         <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+            @if ($benevole)<a href="{{ route('espace.benevole') }}" class="text-sm rfl-lien">Bénévolat</a>@endif
             <a href="{{ route('espace.compte') }}" class="text-sm rfl-lien">Mon compte</a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -37,7 +42,7 @@
 
             <p class="mt-8 mb-2 px-3 font-display text-vert">Mon espace</p>
             <nav class="space-y-1 text-sm" aria-label="Espace participant">
-                @foreach ([['espace', ['espace', 'espace.inscription'], 'Tableau de bord'], ['espace.compte', ['espace.compte'], 'Mon compte']] as [$route, $motifs, $libelle])
+                @foreach (array_filter([['espace', ['espace', 'espace.inscription'], 'Tableau de bord'], $benevole ? ['espace.benevole', ['espace.benevole'], 'Bénévolat'] : null, ['espace.compte', ['espace.compte'], 'Mon compte']]) as [$route, $motifs, $libelle])
                     <a href="{{ route($route) }}" @if (request()->routeIs(...$motifs)) aria-current="page" @endif class="block rounded-full px-4 py-2 {{ request()->routeIs(...$motifs) ? 'bg-vert-clair font-bold text-vert-sombre' : 'text-vert-sombre hover:bg-fond' }}">{{ $libelle }}</a>
                 @endforeach
             </nav>
@@ -45,6 +50,7 @@
             <p class="mt-8 mb-2 px-3 font-display text-vert">Événement</p>
             <nav class="space-y-1 text-sm" aria-label="Événement">
                 <a href="{{ route('home') }}" class="block rounded-full px-4 py-2 text-vert-sombre hover:bg-fond">Page de l'événement</a>
+                <a href="{{ route('benevoles') }}" class="block rounded-full px-4 py-2 text-vert-sombre hover:bg-fond">Devenir bénévole</a>
                 <a href="{{ route('textes.show', 'reglement') }}" target="_blank" rel="noopener" class="block rounded-full px-4 py-2 text-vert-sombre hover:bg-fond">Règlement (PDF)</a>
             </nav>
 

@@ -343,12 +343,27 @@ Aucune newsletter ni case d'inscription à des communications.
 
 ### Bénévoles
 
-4. **Google Forms** : transfert hors UE, information des candidats, durée de conservation, qui y a
-   accès. Faut-il préférer un formulaire sur la plateforme ?
-5. **Bénévoles mineurs** : âge minimum, autorisation parentale, missions interdites (commissaire de
-   course, conduite).
-6. **Allergies alimentaires** : données de santé. Base légale et accès restreint.
-7. **Photo de badge** : finalité, durée, qui la voit. Distincte du droit à l'image.
+**Constat (16 nov. 2026).** La candidature se fait par un **formulaire sur la plateforme**, pas
+par Google Forms : les données restent chez OVH, rien ne part hors UE. Elle est liée au compte
+du site (connexion par code email). Contacts d'urgence, coordonnées du responsable légal et
+allergies sont chiffrés en base et réservés aux admins « Inscriptions et documents ».
+Règle de l'association : **pas d'âge minimum** ; **moins de 16 ans le jour de l'événement :
+autorisation parentale signée**, téléchargée sur le site puis déposée avec la candidature
+(PDF ou photo). Entre 16 et 17 ans, seules les coordonnées du responsable légal sont demandées.
+La photo du badge et l'autorisation sont des fichiers privés. Tout (candidature, photo,
+autorisation) est supprimé 12 mois après l'événement, avec les documents des inscriptions.
+
+4. **Autorisation parentale des bénévoles de moins de 16 ans : texte à rédiger** (type de
+   texte « Autorisation parentale des bénévoles de moins de 16 ans », à publier dans l'admin).
+   Que doit-elle contenir (missions autorisées, horaires, encadrement, droit à l'image du
+   mineur, personne à joindre) ? Une photo de la feuille signée suffit-elle comme preuve ?
+5. **Bénévoles mineurs de 16 et 17 ans** : faut-il aussi une autorisation, ou les coordonnées
+   du responsable légal suffisent-elles ? Missions interdites aux mineurs (commissaire de course,
+   conduite, service d'alcool) ?
+6. **Allergies alimentaires** : données de santé. Base légale et accès restreint (déjà chiffrées
+   et réservées au niveau 2 : est-ce suffisant ?).
+7. **Photo de badge** : finalité, durée, qui la voit. Distincte du droit à l'image. Conservée
+   12 mois après l'événement : est-ce trop long ?
 8. Statut du bénévole : convention ou charte de bénévolat, assurance de l'association couvrant les
    bénévoles, transport de matériel avec un véhicule personnel.
 

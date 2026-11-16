@@ -158,12 +158,13 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->participant()->exists()
             || $this->participantsGeres()->exists()
-            || $this->commandes()->exists();
+            || $this->commandes()->exists()
+            || $this->candidaturesBenevole()->exists();
     }
 
-    public function benevole(): HasOne
+    public function candidaturesBenevole(): HasMany
     {
-        return $this->hasOne(Benevole::class, 'id_user', 'id_user');
+        return $this->hasMany(CandidatureBenevole::class, 'id_user', 'id_user');
     }
 
     /**

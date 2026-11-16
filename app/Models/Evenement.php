@@ -91,4 +91,9 @@ class Evenement extends Model
     {
         return $this->hasMany(Inscription::class, 'id_evenement', 'id_evenement');
     }
+
+    public function candidaturesBenevoles(): HasMany
+    {
+        return $this->hasMany(CandidatureBenevole::class, 'id_evenement', 'id_evenement');
+    }
 }

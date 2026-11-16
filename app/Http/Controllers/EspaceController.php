@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CandidatureBenevole;
 use App\Models\Commande;
 use App\Models\Don;
 use App\Models\Evenement;
 use App\Models\Inscription;
 use App\Models\Participant;
+use App\Support\Benevolat;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -49,6 +51,8 @@ class EspaceController extends Controller
             'brouillons' => $brouillons,
             'dons' => $dons,
             'incompletes' => $inscriptions->where('statut', Inscription::DOSSIER_INCOMPLET),
+            'candidature' => CandidatureBenevole::duCompte($user),
+            'benevolesOuvert' => Benevolat::ouvert(),
         ]);
     }
 }
